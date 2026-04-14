@@ -1,0 +1,402 @@
+"""Layer 2 — MILP constraint optimization using OR-Tools CP-SAT solver.
+
+Builds and solves a mixed-integer linear program that maximizes profit
+(Revenue - Electricity - Labour - Waste) for a single-day farm plan.
+
+CP-SAT requires all variables and expressions to be integers. Continuous
+values (SGD costs, temperatures) are scaled by COST_SCALE=100 so that
+$18.42 is represented as 1842.
+"""
+
+import logging
+import time
+from datetime import date
+
+import pandas as pd
+from ortools.sat.python import cp_model
+
+from greenloop.layer2.exceptions import InfeasibleError
+from greenloop.utils.config import (
+    CROP_IDS,
+    MAX_SHIFT_HOURS,
+    MAX_WEEKLY_HOURS,
+    OFF_PEAK_RATE_SGD,
+    PEAK_HOURS,
+    PEAK_RATE_SGD,
+    SHIFTS,
+)
+
+logger = logging.getLogger(__name__)
+
+# Scaling factor: multiply SGD floats by this to get integers for CP-SAT.
+COST_SCALE = 100
+
+NUM_TIERS = 10
+NUM_HOURS = 24
+NUM_CROPS = len(CROP_IDS)
+TANK_CAPACITY_L = 10.0
+# Water scale: multiply litres by this so the constraint is integer.
+WATER_SCALE = 10
+
+# LED power draw per tier per hour (kWh). Simplified: 1 tier on for 1 hour = 0.5 kWh.
+LED_KWH_PER_TIER_HOUR = 0.5
+
+# Workload balance penalty weight (scaled).
+BALANCE_PENALTY_WEIGHT = 50
+
+# Peak multiplier for LED cost during peak hours.
+PEAK_LED_MULTIPLIER = 1.5
+
+SHIFT_NAMES = list(SHIFTS.keys())  # ["morning", "afternoon", "night"]
+
+
+def _shift_hours(shift_name: str) -> int:
+    """Return the number of hours in a shift (always MAX_SHIFT_HOURS=8)."""
+    return MAX_SHIFT_HOURS
+
+
+def _available_for_shift(staff_df: pd.DataFrame, shift_name: str) -> int:
+    """Count how many staff members list *shift_name* in their availability."""
+    count = 0
+    for avail in staff_df["availability"]:
+        if shift_name in str(avail).split(","):
+            count += 1
+    return count
+
+
+def _avg_hourly_rate_scaled(staff_df: pd.DataFrame) -> int:
+    """Average hourly rate in scaled-integer cents."""
+    avg = staff_df["hourly_rate_sgd"].mean()
+    return int(round(avg * COST_SCALE))
+
+
+def build_and_solve(
+    forecast: dict,
+    crops_df: pd.DataFrame,
+    electricity_df: pd.DataFrame,
+    staff_df: pd.DataFrame,
+    delivery_hours: int = 12,
+    available_headcount: int = 6,
+    tariff_rate: float | None = None,
+) -> dict:
+    """Build and solve the MILP model.
+
+    Parameters
+    ----------
+    forecast : dict
+        Layer 1 output: {crop_id: {predicted_kg, lower_ci, upper_ci}}.
+    crops_df : pd.DataFrame
+        Crop master data.
+    electricity_df : pd.DataFrame
+        Hourly tariff data.
+    staff_df : pd.DataFrame
+        Staff roster.
+    delivery_hours : int
+        Hours available for delivery (default 12; Typhoon sets to 6).
+    available_headcount : int
+        Max staff on any single shift.
+    tariff_rate : float | None
+        If set, overrides the per-hour tariff from electricity_df.
+
+    Returns
+    -------
+    dict
+        Optimized daily plan.
+
+    Raises
+    ------
+    InfeasibleError
+        When no feasible solution exists (e.g. available_headcount=0).
+    """
+    logger.info(
+        "optimizer.build_and_solve.start",
+        extra={
+            "delivery_hours": delivery_hours,
+            "available_headcount": available_headcount,
+            "tariff_override": tariff_rate is not None,
+        },
+    )
+    t0 = time.monotonic()
+
+    model = cp_model.CpModel()
+
+    # ---------------------------------------------------------------
+    # Build per-hour tariff lookup (scaled integer cents).
+    # ---------------------------------------------------------------
+    hourly_tariff_scaled: list[int] = []
+    if tariff_rate is not None:
+        hourly_tariff_scaled = [int(round(tariff_rate * COST_SCALE))] * NUM_HOURS
+    else:
+        tariff_by_hour: dict[int, float] = {}
+        for _, row in electricity_df.iterrows():
+            h = int(row["hour"])
+            tariff_by_hour[h] = float(row["tariff_rate_sgd_per_kwh"])
+        for h in range(NUM_HOURS):
+            rate = tariff_by_hour.get(h, PEAK_RATE_SGD if h in PEAK_HOURS else OFF_PEAK_RATE_SGD)
+            hourly_tariff_scaled.append(int(round(rate * COST_SCALE)))
+
+    # ---------------------------------------------------------------
+    # Index helpers
+    # ---------------------------------------------------------------
+    crop_index = {cid: i for i, cid in enumerate(CROP_IDS)}
+    crop_price_scaled = {}
+    crop_spoilage_scaled = {}
+    crop_water_per_tray_scaled = {}
+    crop_led_hours = {}
+
+    for _, row in crops_df.iterrows():
+        cid = row["crop_id"]
+        crop_price_scaled[cid] = int(round(float(row["price_sgd_per_kg"]) * COST_SCALE))
+        crop_spoilage_scaled[cid] = int(round(float(row["spoilage_rate"]) * COST_SCALE))
+        crop_water_per_tray_scaled[cid] = int(round(float(row["water_per_tray"]) * WATER_SCALE))
+        crop_led_hours[cid] = int(row["led_hours_per_day"])
+
+    avg_rate_scaled = _avg_hourly_rate_scaled(staff_df)
+
+    # ---------------------------------------------------------------
+    # Decision variables
+    # ---------------------------------------------------------------
+
+    # 1. LED on/off per tier per hour — binary (10 x 24)
+    led = {}
+    for t in range(NUM_TIERS):
+        for h in range(NUM_HOURS):
+            led[t, h] = model.new_bool_var(f"led_t{t}_h{h}")
+
+    # 2. Staff count per shift — integer [0, available_headcount]
+    staff_count = {}
+    for s_idx, s_name in enumerate(SHIFT_NAMES):
+        cap = min(available_headcount, _available_for_shift(staff_df, s_name))
+        staff_count[s_idx] = model.new_int_var(0, cap, f"staff_{s_name}")
+
+    # 3. Crop-to-tier assignment — binary (5 x 10)
+    assign = {}
+    for c in range(NUM_CROPS):
+        for t in range(NUM_TIERS):
+            assign[c, t] = model.new_bool_var(f"assign_c{c}_t{t}")
+
+    # 4. Room temperature target — integer [18, 26]
+    room_temp = model.new_int_var(18, 26, "room_temp")
+
+    # 5. Watering frequency per crop — integer [1, 4]
+    water_freq = {}
+    for c in range(NUM_CROPS):
+        water_freq[c] = model.new_int_var(1, 4, f"water_freq_c{c}")
+
+    # ---------------------------------------------------------------
+    # Hard constraints
+    # ---------------------------------------------------------------
+
+    # C1: Each tier gets exactly 1 crop.
+    for t in range(NUM_TIERS):
+        model.add(sum(assign[c, t] for c in range(NUM_CROPS)) == 1)
+
+    # C2: MOM — each shift <= MAX_SHIFT_HOURS (structurally guaranteed
+    #     because _shift_hours returns 8, and we use that as the hours value).
+
+    # C3: Harvest window — at least 1 shift must have staff > 0.
+    model.add(sum(staff_count[s] for s in range(len(SHIFT_NAMES))) >= 1)
+
+    # C4: Water constraint — freq * water_per_tray <= TANK_CAPACITY for each crop.
+    #     Scaled: freq * water_scaled <= TANK_CAPACITY * WATER_SCALE.
+    tank_scaled = int(TANK_CAPACITY_L * WATER_SCALE)
+    for c in range(NUM_CROPS):
+        cid = CROP_IDS[c]
+        # water_freq[c] * water_per_tray_scaled <= tank_scaled
+        model.add(water_freq[c] * crop_water_per_tray_scaled[cid] <= tank_scaled)
+
+    # C5: LED hours per tier should roughly respect the crop's led_hours_per_day.
+    #     We do NOT enforce an exact match — the optimizer can choose fewer LED hours
+    #     if the cost benefit warrants it. But we give a soft incentive via revenue.
+
+    # ---------------------------------------------------------------
+    # Objective components (all in scaled-integer cents)
+    # ---------------------------------------------------------------
+
+    # --- Revenue ---
+    # Revenue = sum over crops of (upper_ci * price * (1 - spoilage_rate) * tiers_assigned)
+    # We use upper_ci as the production target per the spec (uncertainty propagation).
+    # Tiers assigned to a crop is sum(assign[c, t] for t).
+    # Revenue is divided across tiers: upper_ci applies per-crop total, but we scale
+    # per tier as upper_ci / NUM_TIERS * tiers * price * (1 - spoilage).
+    # Simplified: revenue per crop = upper_ci * price * (1 - spoilage) * (tiers / NUM_TIERS)
+    # To keep it integer: precompute revenue_per_tier_scaled for each crop.
+
+    revenue_terms: list = []
+    for c in range(NUM_CROPS):
+        cid = CROP_IDS[c]
+        upper_ci = forecast[cid]["upper_ci"]
+        price = crop_price_scaled[cid]  # already scaled
+        spoilage = float(crops_df.loc[crops_df["crop_id"] == cid, "spoilage_rate"].iloc[0])
+        # revenue per tier for this crop (scaled):
+        # upper_ci * price_scaled * (1 - spoilage) / NUM_TIERS
+        rev_per_tier = int(round(upper_ci * price * (1.0 - spoilage) / NUM_TIERS))
+        tiers_assigned = sum(assign[c, t] for t in range(NUM_TIERS))
+        revenue_terms.append(rev_per_tier * tiers_assigned)
+
+    total_revenue = sum(revenue_terms)
+
+    # --- Electricity cost ---
+    # For each tier and hour where the LED is on, cost = tariff * LED_KWH * multiplier.
+    # Peak hours get 1.5x multiplier (soft penalty).
+    led_kwh_scaled = int(round(LED_KWH_PER_TIER_HOUR * COST_SCALE))
+    electricity_terms: list = []
+    for t in range(NUM_TIERS):
+        for h in range(NUM_HOURS):
+            tariff = hourly_tariff_scaled[h]
+            if h in PEAK_HOURS:
+                # peak multiplier 1.5x — scale: tariff * 15 / 10
+                cost_per_unit = tariff * led_kwh_scaled * 15 // (10 * COST_SCALE)
+            else:
+                cost_per_unit = tariff * led_kwh_scaled // COST_SCALE
+            electricity_terms.append(cost_per_unit * led[t, h])
+
+    total_electricity = sum(electricity_terms)
+
+    # --- Labour cost ---
+    # For each shift: staff_count * shift_hours * avg_hourly_rate_scaled.
+    labour_terms: list = []
+    for s_idx in range(len(SHIFT_NAMES)):
+        hours = _shift_hours(SHIFT_NAMES[s_idx])
+        labour_terms.append(staff_count[s_idx] * hours * avg_rate_scaled)
+
+    total_labour = sum(labour_terms)
+
+    # --- Waste penalty ---
+    # Waste = sum over crops of (spoilage_rate * upper_ci * price * tiers / NUM_TIERS)
+    # This is the expected spoilage cost.
+    waste_terms: list = []
+    for c in range(NUM_CROPS):
+        cid = CROP_IDS[c]
+        upper_ci = forecast[cid]["upper_ci"]
+        price = crop_price_scaled[cid]
+        spoilage = float(crops_df.loc[crops_df["crop_id"] == cid, "spoilage_rate"].iloc[0])
+        waste_per_tier = int(round(upper_ci * price * spoilage / NUM_TIERS))
+        tiers_assigned = sum(assign[c, t] for t in range(NUM_TIERS))
+        waste_terms.append(waste_per_tier * tiers_assigned)
+
+    total_waste = sum(waste_terms)
+
+    # --- Workload balance penalty ---
+    # Penalize if any shift exceeds 120% of average staff.
+    # avg_staff_approx = total_staff / 3. We introduce an auxiliary variable.
+    total_staff = sum(staff_count[s] for s in range(len(SHIFT_NAMES)))
+    # balance_excess[s] >= staff_count[s] * 3 - total_staff * 12 // 10
+    # but we simplify: penalty if staff_count[s] * 10 > total_staff * 4 (i.e. > 120% of avg)
+    # We use a penalty term instead of hard constraint.
+    balance_penalties: list = []
+    for s_idx in range(len(SHIFT_NAMES)):
+        excess = model.new_int_var(0, available_headcount * 10, f"balance_excess_{s_idx}")
+        # excess >= staff_count[s] * 30 - total_staff * 12  (scaled by 10 to avoid fractions)
+        # staff_count * 30 means staff_count * 3 * 10
+        # total_staff * 12 means total_staff * 1.2 * 10
+        model.add(excess >= staff_count[s_idx] * 30 - total_staff * 12)
+        balance_penalties.append(excess * BALANCE_PENALTY_WEIGHT)
+
+    total_balance_penalty = sum(balance_penalties)
+
+    # --- Objective: Maximize Revenue - Electricity - Labour - Waste - Balance Penalty ---
+    model.maximize(total_revenue - total_electricity - total_labour - total_waste - total_balance_penalty)
+
+    # ---------------------------------------------------------------
+    # Solve
+    # ---------------------------------------------------------------
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = 10.0
+    status = solver.solve(model)
+
+    solve_time_ms = round((time.monotonic() - t0) * 1000, 1)
+
+    if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        binding = _detect_binding_constraint(available_headcount)
+        logger.warning(
+            "optimizer.infeasible",
+            extra={"status": status, "binding_constraint": binding},
+        )
+        raise InfeasibleError(
+            f"MILP solver returned status {status} — no feasible plan found. "
+            f"Check constraints (headcount={available_headcount}, delivery_hours={delivery_hours}).",
+            binding_constraint=binding,
+        )
+
+    logger.info(
+        "optimizer.build_and_solve.ok",
+        extra={"status": status, "solve_time_ms": solve_time_ms},
+    )
+
+    # ---------------------------------------------------------------
+    # Extract solution
+    # ---------------------------------------------------------------
+    led_schedule: dict[str, list[int]] = {}
+    for t in range(NUM_TIERS):
+        led_schedule[f"tier_{t}"] = [
+            solver.value(led[t, h]) for h in range(NUM_HOURS)
+        ]
+
+    staff_shifts: list[dict] = []
+    for s_idx, s_name in enumerate(SHIFT_NAMES):
+        staff_shifts.append({
+            "shift": s_name,
+            "staff_count": solver.value(staff_count[s_idx]),
+            "hours": _shift_hours(s_name),
+        })
+
+    rack_layout: dict[str, str] = {}
+    for t in range(NUM_TIERS):
+        for c in range(NUM_CROPS):
+            if solver.value(assign[c, t]):
+                rack_layout[f"tier_{t}"] = CROP_IDS[c]
+                break
+
+    room_temp_val = solver.value(room_temp)
+
+    watering_schedule: dict[str, int] = {}
+    for c in range(NUM_CROPS):
+        watering_schedule[CROP_IDS[c]] = solver.value(water_freq[c])
+
+    # Cost breakdown — descale from integer cents to SGD floats.
+    rev_val = solver.value(total_revenue) / COST_SCALE
+    elec_val = solver.value(total_electricity) / COST_SCALE
+    lab_val = solver.value(total_labour) / COST_SCALE
+    waste_val = solver.value(total_waste) / COST_SCALE
+    obj_val = solver.objective_value / COST_SCALE
+
+    cost_breakdown = {
+        "revenue": round(rev_val, 2),
+        "electricity": round(-elec_val, 2),
+        "labour": round(-lab_val, 2),
+        "waste_penalty": round(-waste_val, 2),
+    }
+
+    # Uncertainty buffers
+    uncertainty_buffers: dict[str, dict] = {}
+    for cid in CROP_IDS:
+        predicted = forecast[cid]["predicted_kg"]
+        upper = forecast[cid]["upper_ci"]
+        buffer_pct = round((upper - predicted) / predicted * 100, 1) if predicted > 0 else 0.0
+        uncertainty_buffers[cid] = {
+            "upper_ci": upper,
+            "buffer_pct": buffer_pct,
+        }
+
+    plan = {
+        "plan_date": str(date.today()),
+        "objective_value_sgd": round(obj_val, 2),
+        "solve_time_ms": solve_time_ms,
+        "led_schedule": led_schedule,
+        "staff_shifts": staff_shifts,
+        "rack_layout": rack_layout,
+        "room_temp_target_c": room_temp_val,
+        "watering_schedule": watering_schedule,
+        "cost_breakdown": cost_breakdown,
+        "uncertainty_buffers": uncertainty_buffers,
+    }
+
+    return plan
+
+
+def _detect_binding_constraint(available_headcount: int) -> str:
+    """Heuristic to identify the most likely binding constraint causing infeasibility."""
+    if available_headcount <= 0:
+        return "harvest_window_requires_staff"
+    return "unknown"

@@ -8,6 +8,10 @@ are available in every test without manual setup. Works with any Kailash project
 import os
 from pathlib import Path
 
+# Skip the standalone Kailash SDK validator script — it's a manual-run utility,
+# not a pytest suite. Its `def test(name)` decorator confuses pytest's collector.
+collect_ignore_glob = ["tests/sdk/*"]
+
 
 def pytest_configure(config):
     """Load .env at the very start of the pytest session."""

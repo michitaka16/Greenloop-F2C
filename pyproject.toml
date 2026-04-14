@@ -3,14 +3,14 @@ requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "my-kailash-project"  # TODO: Replace with your project name
+name = "greenloop-farm-os"
 version = "0.1.0"
-description = "A Kailash SDK project"  # TODO: Replace with your project description
+description = "3-layer AI pipeline for Singapore vertical hydroponic farming"
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}  # TODO: Replace with your info
+    {name = "GreenLoop Team", email = "team@greenloop.sg"}
 ]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -20,70 +20,45 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    # Kailash SDK — all standard deps included in base install
-    "kailash>=2.7.0",
-    "kailash-nexus>=2.0.0",
-    "kailash-dataflow>=2.0.0",
-    "kailash-kaizen>=2.6.0",
-    "kailash-pact>=0.9.0",
-    "kailash-ml>=0.8.0",
-    "kaizen-agents>=0.8.0",
+    # Layer 1: Demand Forecasting
+    "xgboost>=2.0",
+    "scikit-learn>=1.4",
+    "shap>=0.45",
+    # Layer 2: Constraint Optimization
+    "ortools>=9.9",
+    # Layer 3: RL Environment Control
+    "stable-baselines3>=2.3",
+    "gymnasium>=1.0",
+    # Frontend
+    "streamlit>=1.38",
+    "plotly>=5.22",
+    # Data
+    "pandas>=2.2",
+    "numpy>=1.26",
     # Utilities
-    "rich>=13.0.0",
     "python-dotenv>=1.0.0",
-    "structlog>=23.1.0",
 ]
+
+[project.scripts]
+greenloop = "greenloop.cli:main"
 
 [project.optional-dependencies]
-ml = [
-    # PyTorch - On Windows, install separately: pip install torch --index-url https://download.pytorch.org/whl/cu118
-    "torch>=2.7.1",
-]
-align = [
-    "kailash-align>=0.4.0",
-]
-all = [
-    "kailash-align[all]>=0.4.0",
-]
 dev = [
-    # Testing (pytest>=7.2.0 removes vulnerable py dependency)
     "pytest>=7.2.0",
     "pytest-cov>=4.0",
-    "pytest-asyncio>=0.21.0",
-    # Linting & Formatting
-    "black>=23.0",
-    "isort>=5.12.0",
     "ruff>=0.1.0",
-    "mypy>=1.0",
-    # Security & Pre-commit
-    "detect-secrets>=1.5.0",
-    "pre-commit>=4.2.0",
 ]
 
-[project.urls]
-# TODO: Replace with your project URLs
-# "Homepage" = "https://github.com/your-org/your-project"
-# "Bug Tracker" = "https://github.com/your-org/your-project/issues"
-
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 exclude = ["tests*", ".*", "__pycache__*"]
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
-testpaths = ["tests"]
+testpaths = ["tests/unit", "tests/integration"]
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
-
-[tool.black]
-line-length = 100
-target-version = ["py311", "py312", "py313"]
-
-[tool.isort]
-profile = "black"
-line_length = 100
+# tests/sdk/ contains a standalone Kailash SDK validator script, not pytest tests
 
 [tool.ruff]
 line-length = 100
@@ -92,9 +67,3 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501"]
-
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_ignores = true
-ignore_missing_imports = true

@@ -30,7 +30,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.python-version
+# .python-version is kept in the repo — Streamlit Cloud and CI read it
 
 # IDE specific files
 .idea/
@@ -58,6 +58,11 @@ secrets/
 # Per-project learning data (generated at runtime)
 .claude/learning/
 .claude/rules/learned-instincts.md
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+
+# COC workspace state (per-session, not part of product)
+workspaces/
 
 # Internal docs (not for distribution)
 /docs/01-kailash-vibe-cc-internals/

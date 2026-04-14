@@ -1,0 +1,6 @@
+crop_id,name,growth_days,optimal_temp,water_per_tray,led_hours_per_day,price_sgd_per_kg,spoilage_rate
+kai_lan,Kai Lan,35,22.0,2.5,16,4.5,0.06
+baby_spinach,Baby Spinach,25,20.0,2.0,14,6.0,0.08
+lettuce_mambo,Lettuce (Mambo),30,21.0,2.2,14,3.8,0.07
+chye_sim,Japanese Chye Sim,28,22.0,2.3,15,4.0,0.05
+arugula,Arugula,21,19.0,1.8,12,8.0,0.04
