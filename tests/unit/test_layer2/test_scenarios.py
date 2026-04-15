@@ -5,20 +5,15 @@ import pytest
 
 from greenloop.layer2.optimizer import build_and_solve
 from greenloop.layer2.scenarios import apply_typhoon, compare_plans
+from greenloop.utils.config import CROP_IDS
 
 
 @pytest.fixture
 def crops_df():
-    return pd.DataFrame({
-        "crop_id": ["kai_lan", "baby_spinach", "lettuce_mambo", "chye_sim", "arugula"],
-        "name": ["Kai Lan", "Baby Spinach", "Lettuce (Mambo)", "Japanese Chye Sim", "Arugula"],
-        "growth_days": [35, 25, 30, 28, 21],
-        "optimal_temp": [22.0, 20.0, 21.0, 22.0, 19.0],
-        "water_per_tray": [2.5, 2.0, 2.2, 2.3, 1.8],
-        "led_hours_per_day": [16, 14, 14, 15, 12],
-        "price_sgd_per_kg": [4.5, 6.0, 3.8, 4.0, 8.0],
-        "spoilage_rate": [0.06, 0.08, 0.07, 0.05, 0.04],
-    })
+    """Load the real crops.csv so the fixture stays in lockstep with CROP_IDS."""
+    from greenloop.data.loader import load_crops
+
+    return load_crops()
 
 
 @pytest.fixture
@@ -46,12 +41,10 @@ def staff_df():
 
 @pytest.fixture
 def forecast():
+    """Synthetic forecast for every crop in CROP_IDS."""
     return {
-        "kai_lan": {"predicted_kg": 120.5, "lower_ci": 100.0, "upper_ci": 141.0},
-        "baby_spinach": {"predicted_kg": 95.0, "lower_ci": 80.0, "upper_ci": 110.0},
-        "lettuce_mambo": {"predicted_kg": 88.0, "lower_ci": 70.0, "upper_ci": 106.0},
-        "chye_sim": {"predicted_kg": 105.0, "lower_ci": 90.0, "upper_ci": 120.0},
-        "arugula": {"predicted_kg": 72.0, "lower_ci": 60.0, "upper_ci": 84.0},
+        cid: {"predicted_kg": 80.0, "lower_ci": 65.0, "upper_ci": 100.0}
+        for cid in CROP_IDS
     }
 
 

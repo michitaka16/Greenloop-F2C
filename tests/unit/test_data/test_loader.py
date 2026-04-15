@@ -18,9 +18,12 @@ class TestLoadCrops:
         df = load_crops()
         assert isinstance(df, pd.DataFrame)
 
-    def test_has_5_crops(self):
+    def test_row_count_matches_config_crop_ids(self):
+        """crops.csv length must equal the live CROP_IDS length."""
+        from greenloop.utils.config import CROP_IDS
+
         df = load_crops()
-        assert len(df) == 5
+        assert len(df) == len(CROP_IDS)
 
     def test_has_required_columns(self):
         df = load_crops()
@@ -30,9 +33,20 @@ class TestLoadCrops:
             assert col in df.columns
 
     def test_crop_ids_match_expected(self):
+        """crops.csv must stay in lockstep with greenloop.utils.config.CROP_IDS.
+
+        This test is the one structural gate that catches a new crop being
+        added to the data file but forgotten in the runtime config (or
+        vice versa). Adding a crop touches both files.
+        """
+        from greenloop.utils.config import CROP_IDS
+
         df = load_crops()
-        expected = {"kai_lan", "baby_spinach", "lettuce_mambo", "chye_sim", "arugula"}
-        assert set(df["crop_id"]) == expected
+        assert set(df["crop_id"]) == set(CROP_IDS)
+        assert len(CROP_IDS) == 10, (
+            f"Expected 10 crops; got {len(CROP_IDS)}. Update generate_seed_data.py, "
+            "regenerate crops.csv + shipments.csv, and retrain the models."
+        )
 
 
 class TestLoadShipments:

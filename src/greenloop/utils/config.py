@@ -15,8 +15,23 @@ MODELS_DIR = Path(os.environ.get("MODELS_DIR", PROJECT_ROOT / "models"))
 SGD_CURRENCY = "SGD"
 SG_TIMEZONE = "Asia/Singapore"
 
-# Crops
-CROP_IDS = ["kai_lan", "baby_spinach", "lettuce_mambo", "chye_sim", "arugula"]
+# Crops — order must match generate_seed_data.generate_crops() row order
+# so the optimizer's integer indices align with CSV row indices.
+CROP_IDS = [
+    # 5 staple leafy greens
+    "kai_lan",
+    "baby_spinach",
+    "lettuce_mambo",
+    "chye_sim",
+    "arugula",
+    # 2 more leafy (1 staple + 1 premium)
+    "pak_choi",
+    "kale",
+    # 3 high-margin herbs
+    "basil_thai",
+    "coriander",
+    "mint",
+]
 
 # Shifts
 SHIFTS = {

@@ -14,7 +14,14 @@ DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
 
 
 def generate_crops() -> pd.DataFrame:
-    """Generate crops.csv with 5 Singapore hydroponic crops."""
+    """Generate crops.csv with 10 Singapore hydroponic crops.
+
+    All 10 are commercially grown by SFA-licensed vertical farms in
+    Singapore (Sustenir, SG Veg Farm, Archisen, VertiVegies, Sky Greens):
+    5 leafy-green staples + 2 premium leafy + 3 herbs. All fit the
+    21-35 day growth envelope, standard NFT/DWC racks, and require no
+    pollination. Prices reflect wholesale SGD/kg in 2025-2026.
+    """
     return pd.DataFrame([
         {
             "crop_id": "kai_lan",
@@ -65,6 +72,57 @@ def generate_crops() -> pd.DataFrame:
             "led_hours_per_day": 12,
             "price_sgd_per_kg": 8.00,
             "spoilage_rate": 0.04,
+        },
+        # ── New: 2025-10 additions ────────────────────────────────
+        {
+            "crop_id": "pak_choi",
+            "name": "Pak Choi",
+            "growth_days": 25,
+            "optimal_temp": 21.0,
+            "water_per_tray": 2.1,
+            "led_hours_per_day": 14,
+            "price_sgd_per_kg": 3.50,
+            "spoilage_rate": 0.07,
+        },
+        {
+            "crop_id": "kale",
+            "name": "Kale (Curly)",
+            "growth_days": 35,
+            "optimal_temp": 20.0,
+            "water_per_tray": 2.0,
+            "led_hours_per_day": 14,
+            "price_sgd_per_kg": 9.50,
+            "spoilage_rate": 0.05,
+        },
+        {
+            "crop_id": "basil_thai",
+            "name": "Thai Basil",
+            "growth_days": 28,
+            "optimal_temp": 24.0,
+            "water_per_tray": 1.8,
+            "led_hours_per_day": 14,
+            "price_sgd_per_kg": 15.00,
+            "spoilage_rate": 0.04,
+        },
+        {
+            "crop_id": "coriander",
+            "name": "Coriander",
+            "growth_days": 28,
+            "optimal_temp": 21.0,
+            "water_per_tray": 1.9,
+            "led_hours_per_day": 13,
+            "price_sgd_per_kg": 12.00,
+            "spoilage_rate": 0.06,
+        },
+        {
+            "crop_id": "mint",
+            "name": "Mint",
+            "growth_days": 30,
+            "optimal_temp": 22.0,
+            "water_per_tray": 2.0,
+            "led_hours_per_day": 13,
+            "price_sgd_per_kg": 14.00,
+            "spoilage_rate": 0.05,
         },
     ])
 
@@ -127,6 +185,63 @@ def generate_shipments(rng: np.random.Generator) -> pd.DataFrame:
             "weekend_factor": 0.92,
             "seasonal_amp": 1.5,
             "seasonal_peak_week": 8,
+        },
+        # ── New crops ─────────────────────────────────────────────────
+        # pak_choi — highest-volume Chinese staple green. Price-sensitive,
+        # moderate weekend dip (wet-market crowd on weekends offsets
+        # supermarket dip).
+        "pak_choi": {
+            "base_kg": 60.0,
+            "noise_std": 6.0,   # ±10%
+            "price_base": 3.50,
+            "price_noise": 0.35,
+            "weekend_factor": 0.93,
+            "seasonal_amp": 4.0,
+            "seasonal_peak_week": 14,
+        },
+        # kale — premium, Sustenir's signature. Low volume, stable,
+        # slight weekend bump (brunch cafes).
+        "kale": {
+            "base_kg": 18.0,
+            "noise_std": 3.0,   # ±17%
+            "price_base": 9.50,
+            "price_noise": 0.90,
+            "weekend_factor": 1.04,
+            "seasonal_amp": 2.0,
+            "seasonal_peak_week": 11,
+        },
+        # basil_thai — hawker + restaurant demand. Weekend demand higher
+        # (dine-out volume). Very high margin.
+        "basil_thai": {
+            "base_kg": 10.0,
+            "noise_std": 2.0,   # ±20%
+            "price_base": 15.00,
+            "price_noise": 1.40,
+            "weekend_factor": 1.12,
+            "seasonal_amp": 1.5,
+            "seasonal_peak_week": 15,
+        },
+        # coriander — massive Singapore home-cooking + laksa/curry demand.
+        # Mid-week supply peak to catch weekend cook-at-home prep.
+        "coriander": {
+            "base_kg": 14.0,
+            "noise_std": 2.5,   # ±18%
+            "price_base": 12.00,
+            "price_noise": 1.10,
+            "weekend_factor": 1.05,
+            "seasonal_amp": 2.5,
+            "seasonal_peak_week": 13,
+        },
+        # mint — drinks + dessert demand. Weekend bump (hawker drinks,
+        # home mojitos). Seasonal peak in hot months.
+        "mint": {
+            "base_kg": 8.0,
+            "noise_std": 1.6,   # ±20%
+            "price_base": 14.00,
+            "price_noise": 1.20,
+            "weekend_factor": 1.08,
+            "seasonal_amp": 2.0,
+            "seasonal_peak_week": 6,
         },
     }
 

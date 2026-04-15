@@ -69,13 +69,19 @@ def cmd_solve(args: argparse.Namespace) -> int:
 
     # Reasonable default forecast for a smoke demo — the dashboard uses live
     # Layer 1 output. This command exists so integrators can sanity-check
-    # Layer 2 in isolation.
+    # Layer 2 in isolation. Values are indicative medians from the trained
+    # models; solver behaviour is what's being tested, not forecast accuracy.
     forecast = {
         "kai_lan": {"predicted_kg": 48.2, "lower_ci": 34.5, "upper_ci": 68.3},
         "baby_spinach": {"predicted_kg": 31.5, "lower_ci": 24.0, "upper_ci": 39.1},
         "lettuce_mambo": {"predicted_kg": 56.8, "lower_ci": 51.2, "upper_ci": 62.4},
         "chye_sim": {"predicted_kg": 36.1, "lower_ci": 28.0, "upper_ci": 44.2},
         "arugula": {"predicted_kg": 12.8, "lower_ci": 10.5, "upper_ci": 15.1},
+        "pak_choi": {"predicted_kg": 62.4, "lower_ci": 55.0, "upper_ci": 70.1},
+        "kale": {"predicted_kg": 18.6, "lower_ci": 14.8, "upper_ci": 22.9},
+        "basil_thai": {"predicted_kg": 10.2, "lower_ci": 7.5, "upper_ci": 13.4},
+        "coriander": {"predicted_kg": 14.5, "lower_ci": 10.9, "upper_ci": 18.7},
+        "mint": {"predicted_kg": 8.3, "lower_ci": 6.1, "upper_ci": 10.8},
     }
     plan = build_and_solve(
         forecast,

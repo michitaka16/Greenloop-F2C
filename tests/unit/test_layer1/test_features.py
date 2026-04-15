@@ -130,9 +130,16 @@ class TestBuildFeaturesWithRealData:
         assert not result[feature_cols].isna().any().any()
 
     def test_real_data_all_crops_present(self, real_shipments):
+        """Every crop in the live CROP_IDS list must survive feature engineering.
+
+        Rows get dropped during warmup (first 28 days per crop), so a crop
+        with <28 days of history would disappear. This test is the gate
+        catching that class of regression.
+        """
+        from greenloop.utils.config import CROP_IDS
+
         result = build_features(real_shipments)
-        expected_crops = {"kai_lan", "baby_spinach", "lettuce_mambo", "chye_sim", "arugula"}
-        assert set(result["crop_id"].unique()) == expected_crops
+        assert set(result["crop_id"].unique()) == set(CROP_IDS)
 
 
 class TestBuildFeaturesEdgeCases:

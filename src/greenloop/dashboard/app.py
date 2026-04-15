@@ -171,6 +171,11 @@ def _render_forecast_table(forecast):
         "lettuce_mambo": "Lettuce (Mambo)",
         "chye_sim": "Chye Sim",
         "arugula": "Arugula",
+        "pak_choi": "Pak Choi",
+        "kale": "Kale",
+        "basil_thai": "Thai Basil",
+        "coriander": "Coriander",
+        "mint": "Mint",
     }
 
     rows = []
