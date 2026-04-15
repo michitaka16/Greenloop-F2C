@@ -59,9 +59,13 @@ gates:
          the container is swapped in production.
 
 # ─── Deploy command (local-docker target) ──────────────────────────────
+# --env-file .env injects LLM_PROVIDER / {PROVIDER}_API_KEY / {PROVIDER}_MODEL
+# into the container so the AI narrative expander works without baking
+# secrets into the image. The .env stays gitignored.
 deploy_command: |
   docker rm -f greenloop 2>/dev/null || true
   docker run -d --name greenloop --restart unless-stopped \
+    --env-file .env \
     -p 8501:8501 greenloop-farm-os:latest
 
 # ─── Post-deploy verification ──────────────────────────────────────────

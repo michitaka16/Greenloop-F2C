@@ -29,6 +29,7 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 from greenloop.dashboard.design_decisions import render_design_decisions_panel
 from greenloop.data.loader import load_crops, load_electricity, load_staff, load_shipments
+from greenloop.llm import LLMUnavailable, explain_plan, llm_is_configured
 from greenloop.layer2.exceptions import InfeasibleError
 from greenloop.layer2.optimizer import build_and_solve
 from greenloop.layer2.scenarios import apply_typhoon, compare_plans
@@ -107,6 +108,10 @@ def main():
 
     # ── Top KPI strip — most VC-relevant numbers above the fold ──
     _render_kpi_strip(plan)
+
+    # ── Optional AI narrative (provider-agnostic; any OpenAI-compatible endpoint) ──
+    _render_ai_explainer(forecast, plan)
+
     st.divider()
 
     # ── Layout: 2 columns ──
@@ -217,6 +222,32 @@ def _render_forecast_table(forecast):
 # ---------------------------------------------------------------------------
 # KPI header strip — most VC-relevant numbers above the fold
 # ---------------------------------------------------------------------------
+def _render_ai_explainer(forecast, plan):
+    """Collapsed expander that, when opened, asks the configured LLM for a
+    plain-English brief on today's plan. Degrades to a setup hint if no
+    LLM is configured — never serves fake narrative."""
+    with st.expander("AI narrative brief (plain English)", expanded=False):
+        if plan is None:
+            st.caption("The plan is infeasible; nothing to narrate.")
+            return
+        if not llm_is_configured():
+            st.info(
+                "Set `LLM_PROVIDER` + the matching `{PROVIDER}_API_KEY` / "
+                "`{PROVIDER}_MODEL` in `.env` to enable AI commentary. "
+                "Supported: `openai`, `zai`, `minimax`."
+            )
+            return
+        if st.button("Generate brief", key="ai_explainer_btn"):
+            with st.spinner("Asking the model…"):
+                try:
+                    narrative = explain_plan(forecast, plan)
+                    st.markdown(narrative)
+                except LLMUnavailable as e:
+                    st.error(f"LLM unavailable: {e.reason}")
+                except Exception as e:  # noqa: BLE001 — surface provider errors verbatim
+                    st.error(f"LLM request failed: {type(e).__name__}: {e}")
+
+
 def _render_kpi_strip(plan):
     """Render the top-of-page KPI strip. Always visible, even when the plan is None."""
     c1, c2, c3, c4, c5 = st.columns(5)
