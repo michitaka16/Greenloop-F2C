@@ -11,8 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# uv: 50x faster than pip for this dep graph
-COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
+# uv: 50x faster than pip for this dep graph. Pinned for reproducibility.
+# Bump deliberately and verify the local+CI builds still pass.
+COPY --from=ghcr.io/astral-sh/uv:0.5.18 /uv /uvx /bin/
 
 WORKDIR /app
 
