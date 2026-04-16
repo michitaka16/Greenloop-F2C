@@ -6,9 +6,6 @@ percentile) for each crop. Handles quantile crossing by sorting values.
 
 import logging
 
-import numpy as np
-import pandas as pd
-
 logger = logging.getLogger(__name__)
 
 # Columns excluded from feature matrix (must match model.py)

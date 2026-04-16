@@ -1,7 +1,8 @@
 """Data loader module — loads CSV seed files into pandas DataFrames with validation."""
 
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 from greenloop.utils.config import DATA_DIR
 

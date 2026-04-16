@@ -4,9 +4,10 @@ Produces 5 CSV files with realistic Singapore hydroponic farm patterns.
 Reproducible via np.random.seed(42).
 """
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
 SEED = 42
 WEEKS = 24
@@ -352,7 +353,7 @@ def generate_sensors(rng: np.random.Generator) -> pd.DataFrame:
     # Moisture zones: decay linearly, jump when watered
     watering_hours = [7, 12, 17, 21]  # 4x daily watering
     moisture_zones = []
-    for zone in range(1, 5):
+    for _zone in range(1, 5):
         moisture = np.zeros(minutes)
         moisture[0] = 0.65 + rng.uniform(-0.05, 0.05)
         for i in range(1, minutes):

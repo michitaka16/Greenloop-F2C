@@ -12,11 +12,11 @@ through the same call.
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 from greenloop.llm.client import LLMUnavailable
 from greenloop.utils.llm import chat as _default_chat
-
 
 _SYSTEM_PROMPT = (
     "You are the ops narrator for a Singapore vertical hydroponic farm. "
@@ -33,7 +33,7 @@ _SYSTEM_PROMPT = (
 def _build_user_prompt(
     forecast: dict[str, Any],
     plan: dict[str, Any],
-    scenario_comparison: Optional[dict[str, Any]] = None,
+    scenario_comparison: dict[str, Any] | None = None,
 ) -> str:
     payload: dict[str, Any] = {"forecast": forecast, "plan": plan}
     if scenario_comparison:
@@ -47,7 +47,7 @@ def _build_user_prompt(
 def explain_plan(
     forecast: dict[str, Any],
     plan: dict[str, Any],
-    scenario_comparison: Optional[dict[str, Any]] = None,
+    scenario_comparison: dict[str, Any] | None = None,
     *,
     chat_fn: Callable[..., str] = _default_chat,
     max_tokens: int = 500,

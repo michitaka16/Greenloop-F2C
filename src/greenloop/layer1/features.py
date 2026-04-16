@@ -7,7 +7,6 @@ statistics, cyclical time encodings, and holiday flags for Singapore.
 import numpy as np
 import pandas as pd
 
-
 # Singapore public holidays (approximate fixed dates and known ranges).
 # For holidays that move year-to-year (CNY, Hari Raya, Deepavali),
 # we use representative dates covering the simulation period (2025-2026).
@@ -63,7 +62,7 @@ def build_features(shipments: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_values(["crop_id", "date"]).reset_index(drop=True)
 
     result_frames = []
-    for crop_id, crop_df in df.groupby("crop_id"):
+    for _crop_id, crop_df in df.groupby("crop_id"):
         crop_df = crop_df.sort_values("date").reset_index(drop=True)
 
         # Lag features (shift by N days; since data is daily per crop, shift by N rows)

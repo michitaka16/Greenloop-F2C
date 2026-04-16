@@ -7,7 +7,6 @@ forecasting models.
 import logging
 
 import numpy as np
-import pandas as pd
 import shap
 
 logger = logging.getLogger(__name__)
@@ -53,7 +52,7 @@ def get_feature_importance(model, features_df, crop_id):
     mean_abs_shap = np.abs(shap_values).mean(axis=0)
 
     # Build feature importance ranking
-    importance_pairs = list(zip(feature_cols, mean_abs_shap))
+    importance_pairs = list(zip(feature_cols, mean_abs_shap, strict=True))
     importance_pairs.sort(key=lambda x: x[1], reverse=True)
 
     top_10 = importance_pairs[:10]

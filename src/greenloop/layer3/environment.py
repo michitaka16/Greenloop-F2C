@@ -273,9 +273,7 @@ class HydroFarmEnv(gym.Env):
         Blocks the action if projected temperature would exceed safety limits.
         """
         projected_temp = self.temp + heater_kw * 0.5
-        if projected_temp > TEMP_SAFETY_MAX or projected_temp < TEMP_SAFETY_MIN:
-            return False
-        return True
+        return TEMP_SAFETY_MIN <= projected_temp <= TEMP_SAFETY_MAX
 
     def _get_info(self) -> dict:
         """Build the info dict returned by reset() and step()."""
