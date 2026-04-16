@@ -19,7 +19,6 @@ from greenloop.layer2.exceptions import InfeasibleError
 from greenloop.utils.config import (
     CROP_IDS,
     MAX_SHIFT_HOURS,
-    MAX_WEEKLY_HOURS,
     OFF_PEAK_RATE_SGD,
     PEAK_HOURS,
     PEAK_RATE_SGD,
@@ -138,7 +137,6 @@ def build_and_solve(
     # ---------------------------------------------------------------
     # Index helpers
     # ---------------------------------------------------------------
-    crop_index = {cid: i for i, cid in enumerate(CROP_IDS)}
     crop_price_scaled = {}
     crop_spoilage_scaled = {}
     crop_water_per_tray_scaled = {}
@@ -191,6 +189,11 @@ def build_and_solve(
     for t in range(NUM_TIERS):
         model.add(sum(assign[c, t] for c in range(NUM_CROPS)) == 1)
 
+    # C1b: Each crop gets at least 1 tier — prevents the optimizer from
+    #      putting all tiers on the single most profitable crop.
+    for c in range(NUM_CROPS):
+        model.add(sum(assign[c, t] for t in range(NUM_TIERS)) >= 1)
+
     # C2: MOM — each shift <= MAX_SHIFT_HOURS (structurally guaranteed
     #     because _shift_hours returns 8, and we use that as the hours value).
 
@@ -205,9 +208,16 @@ def build_and_solve(
         # water_freq[c] * water_per_tray_scaled <= tank_scaled
         model.add(water_freq[c] * crop_water_per_tray_scaled[cid] <= tank_scaled)
 
-    # C5: LED hours per tier should roughly respect the crop's led_hours_per_day.
-    #     We do NOT enforce an exact match — the optimizer can choose fewer LED hours
-    #     if the cost benefit warrants it. But we give a soft incentive via revenue.
+    # C5: LED hours per tier must respect the assigned crop's requirement.
+    #     If crop c is on tier t, the tier's LED-on hours must be at least
+    #     80% of the crop's daily requirement. This links LED decisions to
+    #     crop assignments and prevents the optimizer from turning all LEDs off.
+    for t in range(NUM_TIERS):
+        total_led_t = sum(led[t, h] for h in range(NUM_HOURS))
+        for c in range(NUM_CROPS):
+            cid = CROP_IDS[c]
+            min_hours = max(1, crop_led_hours[cid] * 4 // 5)  # 80%
+            model.add(total_led_t >= min_hours).only_enforce_if(assign[c, t])
 
     # ---------------------------------------------------------------
     # Objective components (all in scaled-integer cents)
@@ -296,7 +306,9 @@ def build_and_solve(
     total_balance_penalty = sum(balance_penalties)
 
     # --- Objective: Maximize Revenue - Electricity - Labour - Waste - Balance Penalty ---
-    model.maximize(total_revenue - total_electricity - total_labour - total_waste - total_balance_penalty)
+    model.maximize(
+        total_revenue - total_electricity - total_labour - total_waste - total_balance_penalty
+    )
 
     # ---------------------------------------------------------------
     # Solve
@@ -329,17 +341,17 @@ def build_and_solve(
     # ---------------------------------------------------------------
     led_schedule: dict[str, list[int]] = {}
     for t in range(NUM_TIERS):
-        led_schedule[f"tier_{t}"] = [
-            solver.value(led[t, h]) for h in range(NUM_HOURS)
-        ]
+        led_schedule[f"tier_{t}"] = [solver.value(led[t, h]) for h in range(NUM_HOURS)]
 
     staff_shifts: list[dict] = []
     for s_idx, s_name in enumerate(SHIFT_NAMES):
-        staff_shifts.append({
-            "shift": s_name,
-            "staff_count": solver.value(staff_count[s_idx]),
-            "hours": _shift_hours(s_name),
-        })
+        staff_shifts.append(
+            {
+                "shift": s_name,
+                "staff_count": solver.value(staff_count[s_idx]),
+                "hours": _shift_hours(s_name),
+            }
+        )
 
     rack_layout: dict[str, str] = {}
     for t in range(NUM_TIERS):

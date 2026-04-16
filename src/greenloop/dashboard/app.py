@@ -10,7 +10,6 @@ import time
 from datetime import date
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -27,24 +26,29 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 # Imports (after page config)
 # ---------------------------------------------------------------------------
-from greenloop.dashboard.design_decisions import render_design_decisions_panel
-from greenloop.data.loader import load_crops, load_electricity, load_staff, load_shipments
-from greenloop.llm import LLMUnavailable, explain_plan, llm_is_configured
-from greenloop.layer2.exceptions import InfeasibleError
-from greenloop.layer2.optimizer import build_and_solve
-from greenloop.layer2.scenarios import apply_typhoon, compare_plans
-from greenloop.layer3.environment import HydroFarmEnv
+from greenloop.dashboard.design_decisions import render_design_decisions_panel  # noqa: E402
+from greenloop.data.loader import (  # noqa: E402
+    load_crops,
+    load_electricity,
+    load_shipments,
+    load_staff,
+)
 
 # Layer 1 imports — if xgboost fails to load (usually missing libomp on macOS),
 # we fail loudly at dashboard startup rather than ship fake forecasts silently.
 # The `greenloop` CLI handles the libomp dylib lookup before this point.
-from greenloop.layer1.features import build_features
-from greenloop.layer1.model import load_models, train_models
-from greenloop.layer1.predict import predict_demand
+from greenloop.layer1.features import build_features  # noqa: E402
+from greenloop.layer1.model import load_models, train_models  # noqa: E402
+from greenloop.layer1.predict import predict_demand  # noqa: E402
+from greenloop.layer2.exceptions import InfeasibleError  # noqa: E402
+from greenloop.layer2.optimizer import build_and_solve  # noqa: E402
+from greenloop.layer2.scenarios import apply_typhoon, compare_plans  # noqa: E402
+from greenloop.layer3.environment import HydroFarmEnv  # noqa: E402
+from greenloop.llm import LLMUnavailable, explain_plan, llm_is_configured  # noqa: E402
 
 # Layer 3 PPO import — may fail without trained model
 try:
-    from greenloop.layer3.inference import load_agent, run_inference_step
+    from greenloop.layer3.inference import load_agent, run_inference_step  # noqa: E402
 
     LAYER3_AGENT_AVAILABLE = True
 except Exception:
@@ -203,15 +207,26 @@ def _render_forecast_table(forecast):
     preds = [forecast[c]["predicted_kg"] for c in crops_sorted]
     lowers = [forecast[c]["lower_ci"] for c in crops_sorted]
     uppers = [forecast[c]["upper_ci"] for c in crops_sorted]
-    errors_low = [p - l for p, l in zip(preds, lowers)]
-    errors_high = [u - p for u, p in zip(uppers, preds)]
+    errors_low = [p - lo for p, lo in zip(preds, lowers, strict=True)]
+    errors_high = [u - p for u, p in zip(uppers, preds, strict=True)]
 
     fig.add_trace(
         go.Bar(
             x=names,
             y=preds,
             error_y=dict(type="data", symmetric=False, array=errors_high, arrayminus=errors_low),
-            marker_color=["#2ecc71", "#3498db", "#9b59b6", "#e67e22", "#e74c3c"],
+            marker_color=[
+                "#2ecc71",  # Arugula — green
+                "#3498db",  # Baby Spinach — blue
+                "#9b59b6",  # Thai Basil — purple
+                "#e67e22",  # Chye Sim — orange
+                "#e74c3c",  # Coriander — red
+                "#1abc9c",  # Kai Lan — teal
+                "#f1c40f",  # Kale — yellow
+                "#2c3e50",  # Lettuce — dark blue
+                "#e91e63",  # Mint — pink
+                "#00bcd4",  # Pak Choi — cyan
+            ],
             name="Predicted (kg)",
         )
     )
@@ -375,7 +390,6 @@ def _render_rl_control():
             st.session_state.rl_rewards.append(reward)
 
     # Display current state
-    heater_labels = {0: "-2kW", 1: "-1kW", 2: "0kW", 3: "+1kW", 4: "+2kW"}
     col1, col2 = st.columns(2)
     with col1:
         st.metric("Temperature", f"{obs[0]:.1f}°C", delta=f"{obs[6]:.1f}°C from target")
@@ -394,9 +408,8 @@ def _render_rl_control():
     if st.session_state.rl_rewards:
         st.line_chart(st.session_state.rl_rewards, height=150)
 
-    if info := (st.session_state.get("rl_info")):
-        if info.get("constraint_violation"):
-            st.warning("Safety constraint triggered — action blocked")
+    if (info := st.session_state.get("rl_info")) and info.get("constraint_violation"):
+        st.warning("Safety constraint triggered — action blocked")
 
 
 # ---------------------------------------------------------------------------
