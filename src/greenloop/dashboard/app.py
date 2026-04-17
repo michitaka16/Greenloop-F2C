@@ -68,6 +68,12 @@ def get_data():
 
 
 @st.cache_data
+def get_electricity_days(electricity):
+    """Return sorted list of unique dates in electricity.csv."""
+    return sorted(electricity["date"].unique())
+
+
+@st.cache_data
 def get_forecast(_shipments):
     """Run Layer 1 forecast. Returns dict {crop_id: {predicted_kg, lower_ci, upper_ci}}."""
     features = build_features(_shipments)
@@ -83,7 +89,8 @@ def get_forecast(_shipments):
 # Streamlit App
 # ---------------------------------------------------------------------------
 def main():
-    crops, shipments, electricity, staff = get_data()
+    crops, shipments, electricity_df, staff = get_data()
+    available_days = get_electricity_days(electricity_df)
 
     # ── Header ──
     col_title, col_date = st.columns([3, 1])
@@ -96,9 +103,14 @@ def main():
 
     # ── Sidebar: Inputs ──
     st.sidebar.header("Farm Parameters")
-    tariff_rate = st.sidebar.number_input(
-        "Electricity rate (SGD/kWh)", min_value=0.05, max_value=1.00, value=0.28, step=0.01
+    selected_date = st.sidebar.selectbox(
+        "Electricity tariff date",
+        options=available_days,
+        index=len(available_days) - 1,
+        format_func=lambda d: d.strftime("%d %b %Y") if hasattr(d, "strftime") else str(d),
     )
+    # Filter electricity to the selected day
+    electricity = electricity_df[electricity_df["date"] == selected_date].copy()
     headcount = st.sidebar.slider("Available staff", 1, 10, 6)
 
     # ── Sidebar: Design decisions (Dimension A evidence for VC pitch) ──
@@ -108,10 +120,13 @@ def main():
     forecast = get_forecast(shipments)
 
     # ── Layer 2: Optimize ──
-    plan = _solve_plan(forecast, crops, electricity, staff, headcount, tariff_rate)
+    plan = _solve_plan(forecast, crops, electricity, staff, headcount)
 
     # ── Top KPI strip — most VC-relevant numbers above the fold ──
     _render_kpi_strip(plan)
+
+    # ── Electricity tariff chart ──
+    _render_electricity_chart(electricity)
 
     # ── Optional AI narrative (provider-agnostic; any OpenAI-compatible endpoint) ──
     _render_ai_explainer(forecast, plan)
@@ -139,13 +154,13 @@ def main():
         _render_rl_control()
 
     with bot_right:
-        _render_scenario_testing(forecast, crops, electricity, staff, headcount, tariff_rate, plan)
+        _render_scenario_testing(forecast, crops, electricity, staff, headcount, plan)
 
 
 # ---------------------------------------------------------------------------
 # Layer 2 solver
 # ---------------------------------------------------------------------------
-def _solve_plan(forecast, crops, electricity, staff, headcount, tariff_rate):
+def _solve_plan(forecast, crops, electricity, staff, headcount):
     """Solve Layer 2 MILP. Return plan dict or None on infeasibility."""
     try:
         return build_and_solve(
@@ -154,7 +169,6 @@ def _solve_plan(forecast, crops, electricity, staff, headcount, tariff_rate):
             electricity_df=electricity,
             staff_df=staff,
             available_headcount=headcount,
-            tariff_rate=tariff_rate,
         )
     except InfeasibleError as e:
         st.error(f"**No feasible plan:** {e}")
@@ -266,6 +280,52 @@ def _render_ai_explainer(forecast, plan):
                     st.error(f"LLM unavailable: {e.reason}")
                 except Exception as e:  # noqa: BLE001 — surface provider errors verbatim
                     st.error(f"LLM request failed: {type(e).__name__}: {e}")
+
+
+def _render_electricity_chart(electricity):
+    """Render a line chart of the day's hourly electricity tariff rates."""
+    st.subheader("Electricity Tariff (24h)")
+    electricity = electricity.sort_values("hour").reset_index(drop=True)
+    peak_hours = set(range(8, 22))  # 8am–10pm
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=list(electricity["hour"]),
+            y=list(electricity["tariff_rate_sgd_per_kwh"]),
+            mode="lines+markers",
+            line=dict(color="#3498db", width=2),
+            marker=dict(size=6),
+            name="Tariff (SGD/kWh)",
+        )
+    )
+    # Shade peak hours
+    for h in range(24):
+        if h in peak_hours:
+            fig.add_vrect(
+                x0=h - 0.5, x1=h + 0.5,
+                fillcolor="#e74c3c", opacity=0.06,
+                line_width=0,
+            )
+    fig.update_layout(
+        xaxis_title="Hour of day",
+        yaxis_title="SGD/kWh",
+        height=180,
+        margin=dict(l=20, r=20, t=30, b=20),
+        xaxis=dict(dtick=2, tick0=0),
+        showlegend=False,
+        annotations=[
+            dict(x=3, y=electricity["tariff_rate_sgd_per_kwh"].max() + 0.01,
+                 text="🌙 Off-peak (< 8am / ≥ 10pm)", showarrow=False,
+                 font=dict(size=10, color="#2c3e50")),
+            dict(x=15, y=electricity["tariff_rate_sgd_per_kwh"].max() + 0.01,
+                 text="☀️ Peak (8am–10pm)", showarrow=False,
+                 font=dict(size=10, color="#e74c3c")),
+        ],
+    )
+    st.plotly_chart(fig, width="stretch")
+    avg_rate = electricity["tariff_rate_sgd_per_kwh"].mean()
+    st.caption(f"Average: **${avg_rate:.2f}/kWh** · Off-peak **$0.18** · Peak **$0.28**")
 
 
 def _render_kpi_strip(plan):
@@ -416,7 +476,7 @@ def _render_rl_control():
 # Scenario Testing
 # ---------------------------------------------------------------------------
 def _render_scenario_testing(
-    forecast, crops, electricity, staff, headcount, tariff_rate, current_plan
+    forecast, crops, electricity, staff, headcount, current_plan
 ):
     st.subheader("Scenario Testing")
 
@@ -429,7 +489,6 @@ def _render_scenario_testing(
             electricity_df=electricity,
             staff_df=staff,
             available_headcount=headcount,
-            tariff_rate=tariff_rate,
         )
 
         typhoon_kwargs = apply_typhoon(base_kwargs)
