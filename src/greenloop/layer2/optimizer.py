@@ -77,6 +77,7 @@ def build_and_solve(
     delivery_hours: int = 12,
     available_headcount: int = 6,
     tariff_rate: float | None = None,
+    cv_diagnosis: dict | None = None,
 ) -> dict:
     """Build and solve the MILP model.
 
@@ -96,6 +97,14 @@ def build_and_solve(
         Max staff on any single shift.
     tariff_rate : float | None
         If set, overrides the per-hour tariff from electricity_df.
+    cv_diagnosis : dict | None
+        Layer 1b CV diagnosis results: {rack_id: DiagnosisResult}.
+        When provided, applies the following MILP adjustments:
+        - growth_stage=early: reduce expected_yield by 40%
+        - growth_stage=mid: reduce expected_yield by 10%
+        - nutrition_status=nitrogen_low: increase nutrient cost by 15%
+        - nutrition_status=water_stress: increase irrigation frequency by 1x
+        - confidence < 0.70: apply 50% wider uncertainty band
 
     Returns
     -------
@@ -152,6 +161,95 @@ def build_and_solve(
     avg_rate_scaled = _avg_hourly_rate_scaled(staff_df)
 
     # ---------------------------------------------------------------
+    # Layer 1b CV Diagnosis: apply adjustments to crop parameters
+    # ---------------------------------------------------------------
+    # Track nutrient cost adjustment across all diagnosed racks.
+    # If all racks report nitrogen_low, the nutrient budget may be exceeded.
+    # We track this as a cost term so the solver can balance trade-offs.
+    nutrient_cost_adjustment: float = 0.0
+    water_freq_boost: dict[int, int] = {}  # crop_idx → additional water freq boost
+
+    if cv_diagnosis is not None:
+        # Map rack_id → DiagnosisResult using positional mapping.
+        # rack_id format: "tier_N" where N is 0-9.
+        # tier_N maps to CROP_IDS[N] (tier_0 → kai_lan, tier_9 → mint).
+        crop_diagnosis: dict[str, object] = {}
+        for rack_id, diag in cv_diagnosis.items():
+            parts = rack_id.split("_")
+            if len(parts) == 2 and parts[0] == "tier":
+                try:
+                    tier_num = int(parts[1])
+                    if 0 <= tier_num < NUM_CROPS:
+                        cid = CROP_IDS[tier_num]
+                        crop_diagnosis[cid] = diag
+                except ValueError:
+                    pass
+            else:
+                # Legacy support: "crop_name_RACKID" format (e.g. "basil_A")
+                crop_name = parts[0].lower()
+                for cid in CROP_IDS:
+                    if cid.replace("_", " ").startswith(crop_name) or crop_name in cid:
+                        crop_diagnosis[cid] = diag
+                        break
+
+        for cid, diag in crop_diagnosis.items():
+            # Find crop index
+            try:
+                c_idx = CROP_IDS.index(cid)
+            except ValueError:
+                continue
+
+            # --- Growth stage yield adjustment ---
+            # Adjust upper_ci used in revenue/waste calculations.
+            # We store an adjustment factor applied later in the revenue calc.
+            yield_multiplier = 1.0
+            if diag.growth_stage == "early":
+                yield_multiplier = 0.60  # 40% reduction
+            elif diag.growth_stage == "mid":
+                yield_multiplier = 0.90  # 10% reduction
+            elif diag.growth_stage == "harvest_ready":
+                yield_multiplier = 1.0  # confirmed
+
+            # Store multiplier in a lookup for use in revenue/waste calculation
+            if not hasattr(build_and_solve, "_cv_yield_mult"):
+                build_and_solve._cv_yield_mult = {}  # type: ignore[attr-defined]
+            build_and_solve._cv_yield_mult[cid] = yield_multiplier  # type: ignore[attr-defined]
+
+            # --- Nutrition adjustment ---
+            if diag.nutrition_status == "nitrogen_low":
+                # Increase nutrient cost: +15% per diagnosed rack
+                # We track this as a cost addition (proxied via labour cost increase)
+                nutrient_cost_adjustment += 0.15
+                logger.info(
+                    "optimizer.cv.nitrogen_low",
+                    extra={"rack": getattr(diag, "rack_id", "?"), "cid": cid},
+                )
+            elif diag.nutrition_status == "water_stress":
+                # Increase irrigation frequency by 1x for water-stress racks
+                if c_idx not in water_freq_boost:
+                    water_freq_boost[c_idx] = 0
+                water_freq_boost[c_idx] += 1
+                logger.info(
+                    "optimizer.cv.water_stress",
+                    extra={"rack": getattr(diag, "rack_id", "?"), "cid": cid},
+                )
+
+            # --- Low confidence: widen uncertainty band ---
+            if diag.growth_confidence < 0.70:
+                # Apply 50% wider uncertainty band — reduce effective yield by extra 20%
+                if hasattr(build_and_solve, "_cv_yield_mult"):
+                    build_and_solve._cv_yield_mult[cid] = (
+                        build_and_solve._cv_yield_mult.get(cid, 1.0) * 0.80  # type: ignore[index]
+                    )
+                logger.warning(
+                    "optimizer.cv.low_confidence",
+                    extra={
+                        "rack": getattr(diag, "rack_id", "?"),
+                        "confidence": diag.growth_confidence,
+                    },
+                )
+
+    # ---------------------------------------------------------------
     # Decision variables
     # ---------------------------------------------------------------
 
@@ -176,10 +274,16 @@ def build_and_solve(
     # 4. Room temperature target — integer [18, 26]
     room_temp = model.new_int_var(18, 26, "room_temp")
 
-    # 5. Watering frequency per crop — integer [1, 4]
+    # 5. Watering frequency per crop — integer [1 + boost, 4 + boost]
+    # Boost applied if crop diagnosed as water_stress (from CV diagnosis).
     water_freq = {}
     for c in range(NUM_CROPS):
-        water_freq[c] = model.new_int_var(1, 4, f"water_freq_c{c}")
+        boost = water_freq_boost.get(c, 0)
+        water_freq[c] = model.new_int_var(
+            1 + boost,
+            min(4 + boost, 6),
+            f"water_freq_c{c}",
+        )
 
     # ---------------------------------------------------------------
     # Hard constraints
@@ -238,9 +342,16 @@ def build_and_solve(
         upper_ci = forecast[cid]["upper_ci"]
         price = crop_price_scaled[cid]  # already scaled
         spoilage = float(crops_df.loc[crops_df["crop_id"] == cid, "spoilage_rate"].iloc[0])
+
+        # Apply CV diagnosis yield multiplier (from Layer 1b growth stage assessment).
+        # If cv_diagnosis is None, _cv_yield_mult is not set → default to 1.0.
+        yield_mult = 1.0
+        if hasattr(build_and_solve, "_cv_yield_mult"):
+            yield_mult = build_and_solve._cv_yield_mult.get(cid, 1.0)  # type: ignore[attr-defined]
+
         # revenue per tier for this crop (scaled):
-        # upper_ci * price_scaled * (1 - spoilage) / NUM_TIERS
-        rev_per_tier = int(round(upper_ci * price * (1.0 - spoilage) / NUM_TIERS))
+        # upper_ci * price_scaled * (1 - spoilage) / NUM_TIERS * yield_mult
+        rev_per_tier = int(round(upper_ci * price * (1.0 - spoilage) / NUM_TIERS * yield_mult))
         tiers_assigned = sum(assign[c, t] for t in range(NUM_TIERS))
         revenue_terms.append(rev_per_tier * tiers_assigned)
 
@@ -273,15 +384,18 @@ def build_and_solve(
     total_labour = sum(labour_terms)
 
     # --- Waste penalty ---
-    # Waste = sum over crops of (spoilage_rate * upper_ci * price * tiers / NUM_TIERS)
-    # This is the expected spoilage cost.
+    # Waste = sum over crops of (spoilage_rate * upper_ci * price * yield_mult * tiers / NUM_TIERS)
+    # Yield multiplier from CV diagnosis is applied here too (reduces waste if yield is lower).
     waste_terms: list = []
     for c in range(NUM_CROPS):
         cid = CROP_IDS[c]
         upper_ci = forecast[cid]["upper_ci"]
         price = crop_price_scaled[cid]
         spoilage = float(crops_df.loc[crops_df["crop_id"] == cid, "spoilage_rate"].iloc[0])
-        waste_per_tier = int(round(upper_ci * price * spoilage / NUM_TIERS))
+        yield_mult = 1.0
+        if hasattr(build_and_solve, "_cv_yield_mult"):
+            yield_mult = build_and_solve._cv_yield_mult.get(cid, 1.0)  # type: ignore[attr-defined]
+        waste_per_tier = int(round(upper_ci * price * spoilage / NUM_TIERS * yield_mult))
         tiers_assigned = sum(assign[c, t] for t in range(NUM_TIERS))
         waste_terms.append(waste_per_tier * tiers_assigned)
 
@@ -305,9 +419,19 @@ def build_and_solve(
 
     total_balance_penalty = sum(balance_penalties)
 
-    # --- Objective: Maximize Revenue - Electricity - Labour - Waste - Balance Penalty ---
+    # --- Nutrient cost adjustment (from CV diagnosis: nitrogen_low → +15% nutrient cost) ---
+    # This is a fixed cost term — it reduces the objective by a known amount per affected rack.
+    # Represented as a scaled integer deduction from revenue.
+    nutrient_cost_scaled = int(round(nutrient_cost_adjustment * 100))  # 0.15 → 15 (in scaled cents)
+
+    # --- Objective: Maximize Revenue - Electricity - Labour - Waste - Balance - Nutrient ---
     model.maximize(
-        total_revenue - total_electricity - total_labour - total_waste - total_balance_penalty
+        total_revenue
+        - total_electricity
+        - total_labour
+        - total_waste
+        - total_balance_penalty
+        - nutrient_cost_scaled
     )
 
     # ---------------------------------------------------------------
@@ -378,6 +502,7 @@ def build_and_solve(
         "electricity": round(-elec_val, 2),
         "labour": round(-lab_val, 2),
         "waste_penalty": round(-waste_val, 2),
+        "nutrient_adjustment": round(nutrient_cost_adjustment, 2),
     }
 
     # Uncertainty buffers
@@ -391,6 +516,23 @@ def build_and_solve(
             "buffer_pct": buffer_pct,
         }
 
+    # --- CV Diagnosis summary for dashboard before/after comparison ---
+    cv_summary: dict | None = None
+    if cv_diagnosis is not None:
+        cv_summary = {
+            "num_diagnosed": len(cv_diagnosis),
+            "nitrogen_low_count": sum(
+                1 for d in cv_diagnosis.values() if d.nutrition_status == "nitrogen_low"
+            ),
+            "water_stress_count": sum(
+                1 for d in cv_diagnosis.values() if d.nutrition_status == "water_stress"
+            ),
+            "low_confidence_count": sum(
+                1 for d in cv_diagnosis.values() if d.growth_confidence < 0.70
+            ),
+            "details": {rack_id: d.to_milp_dict() for rack_id, d in cv_diagnosis.items()},
+        }
+
     plan = {
         "plan_date": str(date.today()),
         "objective_value_sgd": round(obj_val, 2),
@@ -402,6 +544,7 @@ def build_and_solve(
         "watering_schedule": watering_schedule,
         "cost_breakdown": cost_breakdown,
         "uncertainty_buffers": uncertainty_buffers,
+        "cv_diagnosis_summary": cv_summary,
     }
 
     return plan

@@ -15,7 +15,18 @@ from pathlib import Path
 
 import streamlit as st
 
-_DECISION_LOG = Path(__file__).resolve().parent.parent.parent.parent / "specs" / "decision-log.md"
+
+def _find_project_root() -> Path:
+    """Locate the project root by walking up until we find a ``src/`` directory."""
+    candidate = Path(__file__).resolve().parent
+    while candidate != candidate.parent:
+        if (candidate / "src").is_dir():
+            return candidate
+        candidate = candidate.parent
+    return Path(__file__).resolve().parent.parent.parent.parent
+
+
+_DECISION_LOG = _find_project_root() / "specs" / "decision-log.md"
 
 
 def _load_decisions() -> list[tuple[str, str]]:

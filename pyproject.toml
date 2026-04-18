@@ -41,6 +41,11 @@ dependencies = [
     # Anthropic SDK talks to MiniMax via its Anthropic-compatible endpoint.
     "openai>=1.50",
     "anthropic>=0.40",
+    "torch>=2.10.0",
+    "torchvision>=0.25.0",
+    "timm>=1.0.26",
+    "pillow>=12.2.0",
+    "opencv-python-headless>=4.13.0.92",
 ]
 
 [project.scripts]
@@ -71,3 +76,10 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501"]
+
+[dependency-groups]
+dev = [
+    "py>=1.11.0",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.1.0",
+]

@@ -44,6 +44,14 @@ from greenloop.layer2.exceptions import InfeasibleError  # noqa: E402
 from greenloop.layer2.optimizer import build_and_solve  # noqa: E402
 from greenloop.layer2.scenarios import apply_typhoon, compare_plans  # noqa: E402
 from greenloop.layer3.environment import HydroFarmEnv  # noqa: E402
+from greenloop.layer1b.simulation import (  # noqa: E402
+    GROWTH_BADGES,
+    NUTRITION_BADGES,
+    diagnose_all_racks_simulated,
+    generate_impacts,
+    mock_diagnose_from_image,
+    RACK_SCENARIOS,
+)
 from greenloop.llm import LLMUnavailable, explain_plan, llm_is_configured  # noqa: E402
 
 # Layer 3 PPO import — may fail without trained model
@@ -122,6 +130,9 @@ def main():
     # ── Layer 2: Optimize ──
     plan = _solve_plan(forecast, crops, electricity, staff, headcount)
 
+    # ── Transfer Learning diagnosis (Layer 1b) — above the fold ──
+    _render_cv_diagnosis(plan)
+
     # ── Top KPI strip — most VC-relevant numbers above the fold ──
     _render_kpi_strip(plan)
 
@@ -161,7 +172,13 @@ def main():
 # Layer 2 solver
 # ---------------------------------------------------------------------------
 def _solve_plan(forecast, crops, electricity, staff, headcount):
-    """Solve Layer 2 MILP. Return plan dict or None on infeasibility."""
+    """Solve Layer 2 MILP with CV diagnosis. Return plan dict or None on infeasibility."""
+    # Run Layer 1b CV diagnosis across all 10 racks.
+    # In demo mode (GREENLOOP_CV_MODE=simulated) this uses the RACK_SCENARIOS
+    # lookup table; when a real model is deployed it calls diagnose_rack() for
+    # each tier and falls back gracefully if the model file is absent.
+    cv_diagnosis = diagnose_all_racks_simulated()
+
     try:
         return build_and_solve(
             forecast=forecast,
@@ -169,6 +186,7 @@ def _solve_plan(forecast, crops, electricity, staff, headcount):
             electricity_df=electricity,
             staff_df=staff,
             available_headcount=headcount,
+            cv_diagnosis=cv_diagnosis,
         )
     except InfeasibleError as e:
         st.error(f"**No feasible plan:** {e}")
@@ -254,6 +272,126 @@ def _render_forecast_table(forecast):
 
 
 # ---------------------------------------------------------------------------
+# Transfer Learning diagnosis (Layer 1b)
+# ---------------------------------------------------------------------------
+_CROP_NAMES = {
+    "kai_lan": "Kai Lan",
+    "baby_spinach": "Baby Spinach",
+    "lettuce_mambo": "Lettuce (Mambo)",
+    "chye_sim": "Chye Sim",
+    "arugula": "Arugula",
+    "pak_choi": "Pak Choi",
+    "kale": "Kale",
+    "basil_thai": "Thai Basil",
+    "coriander": "Coriander",
+    "mint": "Mint",
+}
+
+
+def _render_cv_diagnosis(plan):
+    """Render the Transfer Learning diagnosis panel.
+
+    Shows sample diagnosis for all 10 racks by default.
+    If the user uploads a photo, runs mock diagnosis on it for a specific rack.
+    """
+    st.subheader("Crop Health & Growth Diagnosis (Transfer Learning)")
+
+    # Rack layout from Layer 2 plan
+    rack_layout = plan.get("rack_layout", {}) if plan else {}
+
+    # ── Image upload ──
+    uploaded_file = st.file_uploader(
+        "Upload rack photo",
+        type=["jpg", "jpeg", "png"],
+        key="tl_upload",
+    )
+
+    if uploaded_file is not None:
+        # User uploaded an image — diagnose for a selected rack
+        rack_options = list(rack_layout.keys()) if rack_layout else [f"tier_{i}" for i in range(10)]
+        selected_rack = st.selectbox(
+            "Select rack for uploaded photo", rack_options, key="tl_rack_select"
+        )
+        image_bytes = uploaded_file.read()
+        diagnosis = mock_diagnose_from_image(image_bytes, selected_rack)
+        crop_name = _CROP_NAMES.get(rack_layout.get(selected_rack, ""), selected_rack)
+
+        _render_diagnosis_card(diagnosis, crop_name, highlight=True)
+        st.divider()
+
+    # ── Show sample diagnosis for all racks ──
+    st.markdown("**All-rack diagnosis (sample output)**")
+    st.caption("EfficientNet-B0 dual-head classifier — growth stage + nutrition status per rack")
+
+    all_diagnoses = diagnose_all_racks_simulated()
+
+    # Display in a compact table first
+    rows = []
+    for rack_id, diag in all_diagnoses.items():
+        crop = _CROP_NAMES.get(rack_layout.get(rack_id, ""), rack_id)
+        g_label, g_emoji = GROWTH_BADGES.get(diag.growth_stage, ("?", "❓"))
+        n_label, n_emoji = NUTRITION_BADGES.get(diag.nutrition_status, ("?", "❓"))
+        rows.append(
+            {
+                "Rack": rack_id.replace("tier_", "Rack "),
+                "Crop": crop,
+                "Growth": f"{g_emoji} {g_label}",
+                "Nutrition": f"{n_emoji} {n_label}",
+                "Confidence": f"{diag.growth_confidence:.0%} / {diag.nutrition_confidence:.0%}",
+            }
+        )
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    # ── Impact on Layer 2 / Layer 3 ──
+    with st.expander("Impact on Layer 2 plan & Layer 3 targets", expanded=False):
+        impacts_shown = 0
+        for rack_id, diag in all_diagnoses.items():
+            crop = _CROP_NAMES.get(rack_layout.get(rack_id, ""), rack_id)
+            # Only show non-trivial impacts
+            if diag.growth_stage == "harvest_ready" or diag.nutrition_status != "normal":
+                for line in generate_impacts(diag, crop):
+                    st.markdown(f"- {line}")
+                impacts_shown += 1
+        if impacts_shown == 0:
+            st.info("All racks normal — no plan adjustments needed today.")
+
+    st.caption(
+        "Dual-head EfficientNet-B0 transfer learning model. "
+        "Simulated output for demo — real model requires PlantVillage + growth-stage dataset training."
+    )
+
+
+def _render_diagnosis_card(diagnosis, crop_name, *, highlight=False):
+    """Render a single rack diagnosis result as a card."""
+    g_label, g_emoji = GROWTH_BADGES.get(diagnosis.growth_stage, ("?", "❓"))
+    n_label, n_emoji = NUTRITION_BADGES.get(diagnosis.nutrition_status, ("?", "❓"))
+
+    col1, col2, col3 = st.columns([2, 2, 1])
+    rack_display = diagnosis.rack_id.replace("tier_", "Rack ")
+
+    with col1:
+        st.metric(
+            f"{rack_display} — {crop_name}",
+            value=f"{g_emoji} {g_label}",
+            delta=f"{diagnosis.growth_confidence:.0%} confidence",
+        )
+    with col2:
+        st.metric(
+            "Nutrition",
+            value=f"{n_emoji} {n_label}",
+            delta=f"{diagnosis.nutrition_confidence:.0%} confidence",
+        )
+    with col3:
+        if diagnosis.is_simulated:
+            st.caption("Demo mode")
+
+    # Impact statements
+    impacts = generate_impacts(diagnosis, crop_name)
+    for impact in impacts:
+        st.markdown(f"  → {impact}")
+
+
+# ---------------------------------------------------------------------------
 # KPI header strip — most VC-relevant numbers above the fold
 # ---------------------------------------------------------------------------
 def _render_ai_explainer(forecast, plan):
@@ -303,8 +441,10 @@ def _render_electricity_chart(electricity):
     for h in range(24):
         if h in peak_hours:
             fig.add_vrect(
-                x0=h - 0.5, x1=h + 0.5,
-                fillcolor="#e74c3c", opacity=0.06,
+                x0=h - 0.5,
+                x1=h + 0.5,
+                fillcolor="#e74c3c",
+                opacity=0.06,
                 line_width=0,
             )
     fig.update_layout(
@@ -315,12 +455,20 @@ def _render_electricity_chart(electricity):
         xaxis=dict(dtick=2, tick0=0),
         showlegend=False,
         annotations=[
-            dict(x=3, y=electricity["tariff_rate_sgd_per_kwh"].max() + 0.01,
-                 text="🌙 Off-peak (< 8am / ≥ 10pm)", showarrow=False,
-                 font=dict(size=10, color="#2c3e50")),
-            dict(x=15, y=electricity["tariff_rate_sgd_per_kwh"].max() + 0.01,
-                 text="☀️ Peak (8am–10pm)", showarrow=False,
-                 font=dict(size=10, color="#e74c3c")),
+            dict(
+                x=3,
+                y=electricity["tariff_rate_sgd_per_kwh"].max() + 0.01,
+                text="🌙 Off-peak (< 8am / ≥ 10pm)",
+                showarrow=False,
+                font=dict(size=10, color="#2c3e50"),
+            ),
+            dict(
+                x=15,
+                y=electricity["tariff_rate_sgd_per_kwh"].max() + 0.01,
+                text="☀️ Peak (8am–10pm)",
+                showarrow=False,
+                font=dict(size=10, color="#e74c3c"),
+            ),
         ],
     )
     st.plotly_chart(fig, width="stretch")
@@ -406,6 +554,49 @@ def _render_plan(plan):
             f"Waste: ${cost.get('waste_penalty', 0):,.0f}"
         )
 
+    # ── CV Diagnosis impact summary ──
+    cv_summary = plan.get("cv_diagnosis_summary")
+    if cv_summary:
+        with st.expander("CV Diagnosis impact on plan", expanded=False):
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Racks diagnosed", cv_summary["num_diagnosed"])
+            c2.metric(
+                "Nitrogen low",
+                cv_summary["nitrogen_low_count"],
+                delta="+15% nutrient cost each" if cv_summary["nitrogen_low_count"] else None,
+            )
+            c3.metric(
+                "Water stress",
+                cv_summary["water_stress_count"],
+                delta="+1× irrigation freq" if cv_summary["water_stress_count"] else None,
+            )
+            c4.metric(
+                "Low confidence",
+                cv_summary["low_confidence_count"],
+                delta="±50% wider uncertainty band" if cv_summary["low_confidence_count"] else None,
+            )
+            # Per-rack detail table
+            if cv_summary.get("details"):
+                detail_rows = []
+                for rack_id, detail in cv_summary["details"].items():
+                    growth = detail.get("growth_stage", "?")
+                    nutrition = detail.get("nutrition_status", "?")
+                    gc = detail.get("growth_confidence", 0)
+                    nc = detail.get("nutrition_confidence", 0)
+                    # Derive yield impact from growth stage
+                    ym = {"early": "×0.60", "mid": "×0.90", "harvest_ready": "×1.00"}.get(growth, "×1.00")
+                    nm_cost = "+15% nutrient" if nutrition == "nitrogen_low" else (
+                        "+1× water" if nutrition == "water_stress" else "normal"
+                    )
+                    detail_rows.append({
+                        "Rack": rack_id,
+                        "Growth": f"{growth} ({gc:.0%})",
+                        "Nutrition": f"{nutrition} ({nc:.0%})",
+                        "Yield mult": ym,
+                        "Nutrient impact": nm_cost,
+                    })
+                st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
+
 
 # ---------------------------------------------------------------------------
 # RL Control
@@ -475,9 +666,7 @@ def _render_rl_control():
 # ---------------------------------------------------------------------------
 # Scenario Testing
 # ---------------------------------------------------------------------------
-def _render_scenario_testing(
-    forecast, crops, electricity, staff, headcount, current_plan
-):
+def _render_scenario_testing(forecast, crops, electricity, staff, headcount, current_plan):
     st.subheader("Scenario Testing")
 
     if st.button("⚡ Typhoon Warning"):

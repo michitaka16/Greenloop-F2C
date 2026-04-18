@@ -7,7 +7,25 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+
+def _find_project_root() -> Path:
+    """Locate the project root by walking up until we find a ``src/`` directory.
+
+    This handles both regular installs (where ``__file__`` is in
+    ``site-packages/greenloop/``) and editable installs (where a ``.pth``
+    file points to the ``src/`` checkout).  In both cases the ``src/`` marker
+    is the reliable anchor for the actual repository root.
+    """
+    candidate = Path(__file__).resolve().parent
+    while candidate != candidate.parent:
+        if (candidate / "src").is_dir():
+            return candidate
+        candidate = candidate.parent
+    # Fallback: original 4-parent heuristic
+    return Path(__file__).resolve().parent.parent.parent.parent
+
+
+PROJECT_ROOT = _find_project_root()
 DATA_DIR = Path(os.environ.get("DATA_DIR", PROJECT_ROOT / "data"))
 MODELS_DIR = Path(os.environ.get("MODELS_DIR", PROJECT_ROOT / "models"))
 
