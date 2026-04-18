@@ -35,6 +35,8 @@ dependencies = [
     # Data
     "pandas>=2.2",
     "numpy>=1.26",
+    # Layer 4: UMAP for dimensionality reduction
+    "umap-learn>=0.5",
     # Utilities
     "python-dotenv>=1.0.0",
     # LLM clients — OpenAI SDK talks to OpenAI + Z.ai (OpenAI-compatible);

@@ -74,3 +74,29 @@ def load_sensors(data_dir: Path | None = None) -> pd.DataFrame:
         "sensors_sim.csv",
     )
     return df
+
+
+def load_customers(data_dir: Path | None = None) -> pd.DataFrame:
+    """Load customers.csv with schema validation."""
+    path = (data_dir or DATA_DIR) / "customers.csv"
+    df = pd.read_csv(path, parse_dates=["first_order_date"])
+    _validate_columns(
+        df,
+        ["customer_id", "name", "customer_type", "first_order_date",
+         "organic_certified", "primary_channel"],
+        "customers.csv",
+    )
+    return df
+
+
+def load_orders(data_dir: Path | None = None) -> pd.DataFrame:
+    """Load orders.csv with schema validation and date parsing."""
+    path = (data_dir or DATA_DIR) / "orders.csv"
+    df = pd.read_csv(path, parse_dates=["date"])
+    _validate_columns(
+        df,
+        ["order_id", "customer_id", "date", "crop_id", "kg",
+         "sgd_total", "channel", "is_live_commerce"],
+        "orders.csv",
+    )
+    return df

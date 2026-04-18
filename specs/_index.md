@@ -9,3 +9,4 @@
 | dashboard.md | UI | Streamlit single-screen layout, Typhoon button scenario, live RL log |
 | decision-log.md | Evidence | 7 Dimension A design decisions with rationale |
 | layer1b_cv_diagnosis.md | ML/Layer 1b | EfficientNet-B0 dual-head CV diagnosis, growth stage + nutrition status, simulation strategy |
+| layer4_retail_segmentation.md | ML/Layer 4 | K-Means consumer behavioural segmentation, UMAP visualisation, segment naming + recommendations |
