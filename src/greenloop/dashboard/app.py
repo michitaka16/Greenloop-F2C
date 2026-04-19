@@ -56,7 +56,7 @@ from greenloop.llm import LLMUnavailable, explain_plan, llm_is_configured  # noq
 
 # Layer 3 PPO import — may fail without trained model
 try:
-    from greenloop.layer3.inference import load_agent, run_inference_step  # noqa: E402
+    from greenloop.layer3.agent import HydroFarmAgent  # noqa: E402
 
     LAYER3_AGENT_AVAILABLE = True
 except Exception:
@@ -604,63 +604,91 @@ def _render_plan(plan):
 def _render_rl_control():
     st.subheader("RL Control (Layer 3)")
 
-    # Initialize env in session state
+    # Persistent env and agent across reruns
     if "rl_env" not in st.session_state:
         st.session_state.rl_env = HydroFarmEnv()
-        st.session_state.rl_obs, _ = st.session_state.rl_env.reset()
-        st.session_state.rl_step = 0
-        st.session_state.rl_rewards = []
+        st.session_state.rl_env.reset()
+        st.session_state.rl_history: list[dict] = []
+        st.session_state.rl_agent = HydroFarmAgent() if LAYER3_AGENT_AVAILABLE else None
 
     env = st.session_state.rl_env
-    obs = st.session_state.rl_obs
+    agent = st.session_state.rl_agent
+    history = st.session_state.rl_history
 
-    # Try to load trained agent; fall back to random actions
-    agent = None
-    try:
-        if LAYER3_AGENT_AVAILABLE:
-            agent = load_agent()
-    except FileNotFoundError:
-        pass
-
-    # Run a few steps on button press
+    # Run 10 steps on button press
     if st.button("▶ Run 10 steps"):
-        for _ in range(10):
-            if agent:
-                action, obs, reward, info = run_inference_step(agent, env, obs)
-            else:
+        steps = agent.run_episode(env, n_steps=10) if agent else None
+        if steps:
+            st.session_state.rl_history.extend(steps)
+        else:
+            # Random fallback
+            for _ in range(10):
                 action = env.action_space.sample()
                 obs, reward, terminated, truncated, info = env.step(action)
+                cumulative = sum(h["reward"] for h in st.session_state.rl_history) + reward
+                st.session_state.rl_history.append({
+                    "step": len(st.session_state.rl_history),
+                    "obs": obs.copy(),
+                    "action": action.copy() if hasattr(action, "copy") else action,
+                    "reward": float(reward),
+                    "cumulative_reward": cumulative,
+                    "info": info,
+                })
                 if terminated or truncated:
-                    obs, _ = env.reset()
-                    st.session_state.rl_step = 0
-                    st.session_state.rl_rewards = []
                     break
 
-            st.session_state.rl_obs = obs
-            st.session_state.rl_step += 1
-            st.session_state.rl_rewards.append(reward)
+    # Safety alert
+    if history and history[-1]["info"].get("constraint_violation"):
+        st.error("⚠ Constraint violation — Farm Manager alert")
 
-    # Display current state
+    # Current state from latest step
+    latest = history[-1] if history else None
+    if latest:
+        obs = latest["obs"]
+        step_num = latest["step"]
+        cumulative = latest["cumulative_reward"]
+        action = latest["action"]
+        reward = latest["reward"]
+    else:
+        obs, _ = env.reset()
+        step_num = 0
+        cumulative = 0.0
+        action = None
+        reward = 0.0
+
+    # Display current observation
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("Temperature", f"{obs[0]:.1f}°C", delta=f"{obs[6]:.1f}°C from target")
-        st.metric("CO₂", f"{obs[2]:.0f} ppm")
+        st.metric("Temperature", f"{obs[0]:.1f}°C", delta=f"{obs[6]:+.1f}°C")
+        st.metric("CO₂", f"{obs[2]:.0f} ppm", delta=f"{obs[8]:+.0f}")
     with col2:
-        st.metric("Humidity", f"{obs[1]:.1f}%", delta=f"{obs[7]:.1f}% from target")
-        st.metric("Moisture", f"{obs[3]:.2f}")
+        st.metric("Humidity", f"{obs[1]:.1f}%", delta=f"{obs[7]:+.1f}%")
+        st.metric("Moisture", f"{obs[3]:.2f}", delta=f"{obs[9]:+.2f}")
+
+    # Action taken and reward
+    if action is not None:
+        heater_labels = {-2: "Cool -2kW", -1: "Cool -1kW", 0: "Off", 1: "Heat +1kW", 2: "Heat +2kW"}
+        pump_labels = {0: "OFF", 1: "30s", 2: "60s", 3: "120s"}
+        vent_labels = {0: "LOW", 1: "MED", 2: "HIGH"}
+        led_labels = {-1: "-10%", 0: "0%", 1: "+10%"}
+        action_labels = [
+            heater_labels.get(int(action[0]) - 2, f"Htr {int(action[0])-2}"),
+            pump_labels.get(int(action[1]), f"Pump {action[1]}"),
+            vent_labels.get(int(action[2]), f"Vent {action[2]}"),
+            led_labels.get(int(action[3]) - 1, f"LED {action[3]}"),
+        ]
+        st.write("**Action:** " + " | ".join(action_labels))
+        st.write(f"**Reward this step:** {reward:+.1f} | **Cumulative:** {cumulative:+.1f}")
 
     st.caption(
-        f"Step: {st.session_state.rl_step}/1440 | "
-        f"Agent: {'PPO' if agent else 'Random'} | "
-        f"Total reward: {sum(st.session_state.rl_rewards):.1f}"
+        f"Step: {step_num}/1440 | "
+        f"Agent: {'PPO' if (agent and agent.is_real) else 'Random'}"
     )
 
     # Reward chart
-    if st.session_state.rl_rewards:
-        st.line_chart(st.session_state.rl_rewards, height=150)
-
-    if (info := st.session_state.get("rl_info")) and info.get("constraint_violation"):
-        st.warning("Safety constraint triggered — action blocked")
+    if len(history) > 1:
+        rewards = [s["reward"] for s in history]
+        st.line_chart(rewards, height=120)
 
 
 # ---------------------------------------------------------------------------

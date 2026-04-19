@@ -60,6 +60,14 @@ class HydroFarmEnv(gym.Env):
     # Singapore ambient temperature for drift calculation
     _AMBIENT_TEMP = 28.0
 
+    # Energy model (approximate kWh per step for each actuator)
+    _HEATER_KWH = {0: 0.0, 1: 0.2, 2: 0.4, 3: 0.6, 4: 0.8}  # map heater index → kW
+    _BASE_KWH_PER_STEP = 0.05  # baseline farm energy per minute step
+    _PUMP_KWH_PER_DURATION = {0: 0.0, 1: 0.05, 2: 0.1, 3: 0.2}  # pump duration → kWh
+
+    # Wastewater threshold (max pump-on steps before triggering violation)
+    _WASTEWATER_THRESHOLD_STEPS = 30  # 30 consecutive pump-on steps = violation
+
     def __init__(self, targets: dict | None = None, render_mode: str | None = None):
         super().__init__()
 
@@ -99,6 +107,11 @@ class HydroFarmEnv(gym.Env):
         self._constraint_violated: bool = False
         self._rng: np.random.Generator = np.random.default_rng()
 
+        # Energy and wastewater tracking for reward
+        self._cumulative_kwh: float = 0.0
+        self._consecutive_pump_steps: int = 0
+        self._wastewater_exceeded: bool = False
+
     def reset(
         self,
         *,
@@ -129,6 +142,9 @@ class HydroFarmEnv(gym.Env):
         self._step_count = 0
         self._constraint_violated = False
         self.led_on = False
+        self._cumulative_kwh = 0.0
+        self._consecutive_pump_steps = 0
+        self._wastewater_exceeded = False
 
         return self._get_obs(), self._get_info()
 
@@ -144,10 +160,13 @@ class HydroFarmEnv(gym.Env):
             (observation, reward, terminated, truncated, info).
         """
         # Decode actions
-        heater_kw = int(action[0]) - 2  # {-2, -1, 0, +1, +2}
-        pump_dur = self._PUMP_DURATIONS[int(action[1])]
+        heater_idx = int(action[0])
+        pump_idx = int(action[1])
         vent_level = int(action[2])  # 0=LOW, 1=MED, 2=HIGH
         led_adj = self._LED_ADJUSTMENTS[int(action[3])]  # noqa: F841 — reserved for future LED dimming
+
+        heater_kw = heater_idx - 2  # {-2, -1, 0, +1, +2}
+        pump_dur = self._PUMP_DURATIONS[pump_idx]
 
         # Safety check BEFORE applying heater
         self._constraint_violated = False
@@ -185,6 +204,19 @@ class HydroFarmEnv(gym.Env):
         # LED state from schedule (on during hours 6-22)
         hour = (self._step_count % 1440) / 60.0
         self.led_on = 6.0 <= hour < 22.0
+
+        # --- Energy tracking ---
+        heater_kwh = self._HEATER_KWH.get(heater_idx, 0.0)
+        pump_kwh = self._PUMP_KWH_PER_DURATION.get(pump_idx, 0.0)
+        step_kwh = self._BASE_KWH_PER_STEP + heater_kwh + pump_kwh
+        self._cumulative_kwh += step_kwh
+
+        # --- Wastewater tracking ---
+        if pump_dur > 0:
+            self._consecutive_pump_steps += 1
+        else:
+            self._consecutive_pump_steps = 0
+        self._wastewater_exceeded = self._consecutive_pump_steps >= self._WASTEWATER_THRESHOLD_STEPS
 
         self._step_count += 1
         truncated = self._step_count >= self._max_steps
@@ -240,14 +272,20 @@ class HydroFarmEnv(gym.Env):
         return obs
 
     def _compute_reward(self) -> float:
-        """Compute reward based on deviation from targets and safety."""
+        """Compute reward per the Layer 3 spec.
+
+        reward = (
+            + 1.0 * yield_progress_per_step
+            - 5.0 * kwh_over_target
+            - 10.0 * abs(temp_deviation)
+            - 50.0 * wastewater_exceeded
+            - 1000.0 * safety_violation_flag
+        )
+        """
         temp_dev = abs(self.temp - self.target_temp)
-        humidity_dev = abs(self.humidity - self.target_humidity)
-        co2_dev = abs(self.co2 - self.target_co2)
-        moisture_dev = abs(self.moisture - self.target_moisture)
 
         # Safety violation check
-        safety_flag = (
+        safety_violation = (
             self.temp < TEMP_SAFETY_MIN
             or self.temp > TEMP_SAFETY_MAX
             or self.humidity < HUMIDITY_SAFETY_MIN
@@ -256,13 +294,19 @@ class HydroFarmEnv(gym.Env):
             or self.co2 > CO2_SAFETY_MAX
         )
 
+        # Cumulative energy target: baseline kWh per step * step count
+        kwh_target = self._BASE_KWH_PER_STEP * self._step_count
+        kwh_over_target = max(0.0, self._cumulative_kwh - kwh_target)
+
+        # Yield progress: constant small positive reward per step
+        yield_progress = 1.0
+
         reward = (
-            +1.0  # yield progress per step (constant small positive)
-            - 0.5 * temp_dev
-            - 0.1 * humidity_dev
-            - 0.01 * co2_dev
-            - 5.0 * moisture_dev
-            - 100.0 * float(safety_flag)
+            +1.0 * yield_progress
+            - 5.0 * kwh_over_target
+            - 10.0 * temp_dev
+            - 50.0 * float(self._wastewater_exceeded)
+            - 1000.0 * float(safety_violation)
         )
 
         return float(reward)
@@ -284,4 +328,6 @@ class HydroFarmEnv(gym.Env):
             "humidity": self.humidity,
             "co2": self.co2,
             "moisture": self.moisture,
+            "cumulative_kwh": self._cumulative_kwh,
+            "wastewater_exceeded": self._wastewater_exceeded,
         }

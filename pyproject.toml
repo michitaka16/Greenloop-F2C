@@ -69,6 +69,7 @@ exclude = ["tests*", ".*", "__pycache__*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit", "tests/integration"]
+pythonpath = ["src"]
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
