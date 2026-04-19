@@ -95,3 +95,19 @@ def train_agent(
 
     env.close()
     return str(final_path.with_suffix(".zip"))
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Train PPO agent on HydroFarmEnv")
+    parser.add_argument("--steps", type=int, default=500_000,
+                        help="Total training timesteps (default: 500000)")
+    parser.add_argument("--checkpoint-freq", type=int, default=100_000,
+                        help="Checkpoint frequency in steps (default: 100000)")
+    args = parser.parse_args()
+
+    print(f"Training PPO agent for {args.steps:,} steps...")
+    path = train_agent(total_timesteps=args.steps, checkpoint_freq=args.checkpoint_freq)
+    print(f"Training complete. Final model: {path}")
+
