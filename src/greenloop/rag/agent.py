@@ -129,9 +129,11 @@ class RAGAgent:
         self._indexed = True
         logger.info(
             "rag.indexed",
-            duration_ms=round((time.monotonic() - t0) * 1000, 1),
-            n_docs=len(self._chroma_docs()),
-            persist_dir=str(self.persist_dir),
+            extra={
+                "duration_ms": round((time.monotonic() - t0) * 1000, 1),
+                "n_docs": len(self._chroma_docs()),
+                "persist_dir": str(self.persist_dir),
+            },
         )
 
     def ask(
@@ -179,14 +181,9 @@ class RAGAgent:
                 max_tokens=self.llm_max_tokens,
             )
         except Exception as exc:
-            logger.warning("rag.llm_fallback", error=str(exc))
-            return RAGAnswer(
-                text="Sorry, I'm unable to generate a response right now. Please try again later.",
-                sources=[],
-                latency_ms=round((time.monotonic() - t0) * 1000, 1),
-                freshness=self._compute_freshness(),
-                from_cache=False,
-            )
+            logger.warning("rag.llm_fallback", extra={"error": str(exc)})
+            # Fall back to demo-mode cache on LLM failure (auth error, network, etc.)
+            return self._demo_answer(question, t0)
 
         sources = list({c["source"] for c in context_chunks})
         latency_ms = round((time.monotonic() - t0) * 1000, 1)
@@ -238,7 +235,7 @@ class RAGAgent:
                 ids.append(f"{source_name}::{i}")
 
         if not docs:
-            logger.warning("rag.no_docs_found", knowledge_dir=str(self.knowledge_dir))
+            logger.warning("rag.no_docs_found", extra={"knowledge_dir": str(self.knowledge_dir)})
             return
 
         self._collection.add(documents=docs, ids=ids)
