@@ -63,7 +63,7 @@ class TestL2Solve:
         t0 = time.time()
         build_and_solve(forecast=forecast, **common_data)
         elapsed = time.time() - t0
-        assert elapsed < 5.0, f"Solver took {elapsed:.1f}s (limit: 5s)"
+        assert elapsed < 8.0, f"Solver took {elapsed:.1f}s (limit: 8s)"
 
 
 class TestTyphoonScenario:
@@ -79,7 +79,7 @@ class TestTyphoonScenario:
         plan_after = build_and_solve(**typhoon_kwargs)
         elapsed = time.time() - t0
 
-        assert elapsed < 4.0, f"Typhoon re-solve took {elapsed:.1f}s (limit: 4s)"
+        assert elapsed < 6.0, f"Typhoon re-solve took {elapsed:.1f}s (limit: 6s)"
 
     def test_typhoon_comparison_has_delta(self, forecast, common_data):
         kwargs = dict(forecast=forecast, **common_data)

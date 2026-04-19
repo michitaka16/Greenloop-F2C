@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import subprocess
-import sys
 
 
 def test_cli_shows_help():
     result = subprocess.run(
-        [sys.executable, "-m", "greenloop.cli", "--help"],
+        ["greenloop", "--help"],
         capture_output=True,
         text=True,
     )
@@ -20,7 +19,7 @@ def test_cli_shows_help():
 
 def test_cli_solve_prints_profit():
     result = subprocess.run(
-        [sys.executable, "-m", "greenloop.cli", "solve"],
+        ["greenloop", "solve"],
         capture_output=True,
         text=True,
         timeout=60,
