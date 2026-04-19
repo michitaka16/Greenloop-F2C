@@ -1,13 +1,15 @@
-"""K-Means customer segmentation with silhouette-guided K selection."""
+"""K-Means customer segmentation with segment naming per spec."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
+
+from greenloop.layer4.features import get_scaled_cols
 
 
 @dataclass
@@ -19,12 +21,12 @@ class SegmentProfile:
     size_pct: float
     avg_frequency: float
     avg_basket_sgd: float
-    avg_kg: float
-    bulk_buyer_pct: float
-    live_commerce_share: float
-    crop_diversity: float
-    dominant_crop: str
     organic_pct: float
+    bulk_pct: float
+    live_pct: float
+    dominant_crop: str
+    segment_name: str
+    recommended_action: str
 
 
 @dataclass
@@ -38,174 +40,154 @@ class ClusteringResult:
     profiles: list[SegmentProfile]
 
 
-_FEATURE_COLS = [
-    "purchase_frequency",
-    "avg_basket_sgd",
-    "bulk_buyer",
-    "live_commerce_share",
-    "crop_diversity",
+# Spec segment naming rules
+_SEGMENT_RULES = [
+    # (name, emoji, action, condition_fn)
+    # condition_fn returns True if this segment's centroid matches the rule
+    (
+        "Organic Subscribers",
+        "\U0001f33f",
+        "Push subscription box with monthly organic bundle",
+        lambda p: p.organic_pct > 60 and p.avg_frequency >= 6,
+    ),
+    (
+        "Bulk Buyers",
+        "\U0001f4e6",
+        "Offer quarterly volume contract with 10% discount",
+        lambda p: p.bulk_pct > 40 and p.avg_basket_sgd > 60,
+    ),
+    (
+        "Live Commerce Fans",
+        "\U0001f4f1",
+        "Pre-notify before live streams; offer exclusive crop drops",
+        lambda p: p.live_pct > 45,
+    ),
+    (
+        "Casual Shoppers",
+        "\U0001f6d2",
+        "Retargeting campaigns; 'You're almost out of spinach' nudge",
+        lambda p: p.avg_frequency < 5 and p.avg_basket_sgd < 35,
+    ),
 ]
-_SCALED_SUFFIX = "_scaled"
-_SCALED_COLS = [f"{c}{_SCALED_SUFFIX}" for c in _FEATURE_COLS]
+
+
+def _name_cluster(profile: SegmentProfile) -> tuple[str, str, str]:
+    """Apply spec naming rules to a SegmentProfile."""
+    for name, emoji, action, condition in _SEGMENT_RULES:
+        if condition(profile):
+            return name, emoji, action
+    # Fallback: name by highest metric
+    vals = {
+        "organic": profile.organic_pct,
+        "bulk": profile.bulk_pct,
+        "live": profile.live_pct,
+    }
+    fallback_name = max(vals, key=vals.get)
+    return (
+        f"{fallback_name.title()} Buyers",
+        "\U0001f6d2",
+        "Seasonal crop previews and loyalty rewards",
+    )
 
 
 def cluster_customers(
     df: pd.DataFrame,
+    k: int | None = None,
     k_range: range | None = None,
     random_state: int = 42,
 ) -> ClusteringResult:
-    """Cluster customers using K-Means with silhouette-guided K selection.
+    """Cluster customers using K-Means.
 
     Parameters
     ----------
     df : pd.DataFrame
-        Output of build_features() — must contain scaled feature columns.
+        Output of load_features() — must contain scaled feature columns.
+    k : int, optional
+        Fixed number of clusters. If None, use silhouette-guided selection
+        from k_range.
     k_range : range, optional
-        Range of K values to evaluate (default range(3, 6)).
+        Candidates for silhouette-guided selection. Default range(3, 7).
     random_state : int
-        Random seed for K-Means (default 42).
 
     Returns
     -------
     ClusteringResult
-        Contains cluster labels, selected K, silhouette score, inertia,
-        and per-cluster SegmentProfile objects.
-
-    Raises
-    ------
-    ValueError
-        If df has insufficient data or no scaled columns.
+        labels, selected k, silhouette score, inertia, per-cluster profiles.
     """
     if k_range is None:
-        k_range = range(3, 6)
+        k_range = range(3, 7)
+    if k is not None:
+        k_range = range(k, k + 1)
 
-    # Check for scaled columns
-    scaled_cols = [c for c in df.columns if c.endswith(_SCALED_SUFFIX)]
-    if not scaled_cols:
+    scaled_cols = get_scaled_cols()
+    if not all(c in df.columns for c in scaled_cols):
         raise ValueError(
-            "DataFrame has no scaled feature columns. "
-            "Run build_features() first."
+            f"DataFrame missing scaled feature columns. "
+            f"Expected {scaled_cols}, got {list(df.columns)}"
         )
 
     X = df[scaled_cols].values
-    n_samples = len(X)
+    n = len(X)
 
-    if n_samples < k_range.start * 2:
-        raise ValueError(
-            f"Only {n_samples} customers but k_range starts at {k_range.start}. "
-            "Need at least 2×k samples."
-        )
+    if n < 3:
+        raise ValueError(f"Need at least 3 customers, got {n}")
 
     # Silhouette-guided K selection
     silhouettes = {}
     inertias = {}
     models = {}
 
-    for k in k_range:
-        km = KMeans(n_clusters=k, random_state=random_state, n_init=10)
+    for _k in k_range:
+        km = KMeans(n_clusters=_k, random_state=random_state, n_init=10)
         labels = km.fit_predict(X)
-        silhouettes[k] = silhouette_score(X, labels)
-        inertias[k] = km.inertia_
-        models[k] = km
+        silhouettes[_k] = silhouette_score(X, labels)
+        inertias[_k] = km.inertia_
+        models[_k] = km
 
-    # Pick k with highest silhouette; tie-break toward larger k
-    best_k = max(k_range, key=lambda k: (silhouettes[k], k))
-    best_silhouette = silhouettes[best_k]
-    best_inertia = inertias[best_k]
+    best_k = max(k_range, key=lambda _k: silhouettes[_k])
+    best_sil = silhouettes[best_k]
     best_labels = models[best_k].labels_
 
     # Profile each cluster
-    df_labeled = df.copy()
-    df_labeled["_cluster"] = best_labels
+    df_lab = df.copy()
+    df_lab["_cluster"] = best_labels
 
     profiles = []
-    total = len(df_labeled)
-    all_crops = df["crop_id"].unique().tolist() if "crop_id" in df.columns else ["N/A"]
+    total = len(df_lab)
 
-    for cluster_id in range(best_k):
-        sub = df_labeled[df_labeled["_cluster"] == cluster_id]
+    for cid in range(best_k):
+        sub = df_lab[df_lab["_cluster"] == cid]
         size = len(sub)
         size_pct = size / total * 100
-
-        avg_frequency = sub["purchase_frequency"].mean()
-        avg_basket = sub["avg_basket_sgd"].mean()
-        avg_kg = sub["avg_kg"].mean() if "avg_kg" in sub.columns else 0.0
+        avg_freq = sub["purchase_frequency"].mean()
+        avg_basket = sub["avg_order_sgd"].mean()
+        organic_pct = sub["organic_preference"].mean() * 100
         bulk_pct = sub["bulk_buyer"].mean() * 100
-        live_share = sub["live_commerce_share"].mean()
-        crop_div = sub["crop_diversity"].mean()
-        organic_pct = sub["organic_certified"].mean() * 100 if "organic_certified" in sub.columns else 0.0
+        live_pct = sub["live_commerce_active"].mean() * 100
+        dominant_crop = sub["top_crop"].mode().iloc[0] if len(sub) > 0 else "N/A"
 
-        # Dominant crop from orders — aggregate per cluster
-        if "crop_id" in sub.columns:
-            dominant_crop = sub["crop_id"].mode().iloc[0] if len(sub) > 0 else "N/A"
-        else:
-            dominant_crop = "N/A"
-
-        profiles.append(
-            SegmentProfile(
-                cluster_id=cluster_id,
-                size=size,
-                size_pct=size_pct,
-                avg_frequency=avg_frequency,
-                avg_basket_sgd=avg_basket,
-                avg_kg=avg_kg,
-                bulk_buyer_pct=bulk_pct,
-                live_commerce_share=live_share,
-                crop_diversity=crop_div,
-                dominant_crop=dominant_crop,
-                organic_pct=organic_pct,
-            )
+        profile = SegmentProfile(
+            cluster_id=cid,
+            size=size,
+            size_pct=size_pct,
+            avg_frequency=avg_freq,
+            avg_basket_sgd=avg_basket,
+            organic_pct=organic_pct,
+            bulk_pct=bulk_pct,
+            live_pct=live_pct,
+            dominant_crop=dominant_crop,
+            segment_name="",  # filled below
+            recommended_action="",
         )
+        name, emoji, action = _name_cluster(profile)
+        profile.segment_name = name
+        profile.recommended_action = action
+        profiles.append(profile)
 
     return ClusteringResult(
         labels=best_labels,
         k=best_k,
-        silhouette=best_silhouette,
-        inertia=best_inertia,
+        silhouette=best_sil,
+        inertia=inertias[best_k],
         profiles=profiles,
     )
-
-
-def name_segment(profile: SegmentProfile) -> tuple[str, str, str]:
-    """Assign a behavioural name and recommended action to a segment profile.
-
-    Parameters
-    ----------
-    profile : SegmentProfile
-
-    Returns
-    -------
-    tuple[str, str, str]
-        (segment_name, emoji, recommended_action)
-    """
-    # Decision tree based on dominant behavioural signals
-    if profile.organic_pct > 60 and profile.avg_frequency >= 6:
-        return (
-            "Organic Subscribers",
-            "\U0001f33f",
-            "Push subscription box with monthly organic bundle",
-        )
-    elif profile.bulk_buyer_pct > 40 and profile.avg_kg > 4:
-        return (
-            "Bulk Contract Buyers",
-            "\U0001f4e6",
-            "Offer quarterly volume contract with 10% discount",
-        )
-    elif profile.live_commerce_share > 0.45:
-        return (
-            "Live Commerce Hunters",
-            "\U0001f4f1",
-            "Pre-notify before live streams; offer exclusive drops",
-        )
-    elif profile.avg_frequency < 4 and profile.avg_basket_sgd < 35:
-        return (
-            "Casual Top-up",
-            "\U0001f6d2",
-            "Retargeting campaigns; 'You're almost out of kale' nudge",
-        )
-    else:
-        return (
-            "Regular Buyers",
-            "\U0001f6d2",
-            "Loyalty rewards; seasonal crop previews",
-        )
