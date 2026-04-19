@@ -78,6 +78,7 @@ chroma/
 
 # Model artifacts
 models/*.pt
+models/*.zip
 
 # Env backup
 .env.backup
