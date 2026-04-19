@@ -71,3 +71,13 @@ workspaces/
 **/scripts/data/
 **/scripts/outputs/
 **/scripts/*.log
+
+# ChromaDB persistent vector store
+.chroma_db/
+chroma/
+
+# Model artifacts
+models/*.pt
+
+# Env backup
+.env.backup
