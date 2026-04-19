@@ -30,7 +30,7 @@ st.set_page_config(
 # Imports
 # ---------------------------------------------------------------------------
 from greenloop.data.loader import load_customers, load_orders
-from greenloop.layer4.features import build_features
+from greenloop.layer4.features import load_features
 from greenloop.layer4.segmentation import cluster_customers, name_segment
 from greenloop.layer4.visualization import reduce_pca, reduce_umap
 
@@ -41,9 +41,9 @@ def load_and_build():
     """Load data, build features, cluster, profile."""
     customers = load_customers()
     orders = load_orders()
-    df = build_features(customers, orders)
-    result = cluster_customers(df)
-    return customers, orders, df, result
+    df_features = load_features()
+    result = cluster_customers(df_features)
+    return customers, orders, df_features, result
 
 
 def render_segment_cards(profiles, result_labels):
