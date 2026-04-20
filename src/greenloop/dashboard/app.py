@@ -835,6 +835,7 @@ def _render_scenario_testing(forecast, crops, electricity, staff, headcount, cur
     st.subheader("Scenario Testing")
 
     if st.button("⚡ Typhoon Warning"):
+        st.session_state.typhoon_active = True
         t0 = time.time()
 
         base_kwargs = dict(
