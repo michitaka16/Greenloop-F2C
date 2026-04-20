@@ -107,7 +107,7 @@ def get_weekly_sustainability(crops, electricity_df, staff):
     from greenloop.layer1.features import build_features as build_feats
     from greenloop.layer1.model import load_models, train_models
     from greenloop.layer1.predict import predict_demand as _predict
-    from greenloop.layer2.scenarios import diagnose_all_racks_simulated
+    from greenloop.layer1b.simulation import diagnose_all_racks_simulated
 
     all_dates = sorted(electricity_df["date"].unique())
     recent = all_dates[-7:]
