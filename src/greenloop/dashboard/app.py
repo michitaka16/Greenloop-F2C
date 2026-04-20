@@ -104,6 +104,8 @@ def get_weekly_sustainability(crops, electricity_df, staff):
     Runs the optimizer once per day — cached for 1 hour to avoid recalculation
     on every dashboard interaction.
     """
+    import pandas as pd
+
     from greenloop.layer1.features import build_features as build_feats
     from greenloop.layer1.model import load_models, train_models
     from greenloop.layer1.predict import predict_demand as _predict
@@ -151,7 +153,6 @@ def get_weekly_sustainability(crops, electricity_df, staff):
             # Skip days where the optimizer fails (e.g. missing data)
             continue
 
-    import pandas as pd
     return pd.DataFrame(rows) if rows else pd.DataFrame(
         columns=["date", "water_saved_l", "co2_avoided_kg", "off_peak_pct"]
     )
