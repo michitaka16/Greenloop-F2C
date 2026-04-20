@@ -43,6 +43,10 @@ from greenloop.layer1.predict import predict_demand  # noqa: E402
 from greenloop.layer2.exceptions import InfeasibleError  # noqa: E402
 from greenloop.layer2.optimizer import build_and_solve  # noqa: E402
 from greenloop.layer2.scenarios import apply_typhoon, compare_plans  # noqa: E402
+from greenloop.layer2.sustainability import (  # noqa: E402
+    compute_sustainability_kpis,
+    compute_weekly_sustainability,
+)
 from greenloop.layer3.environment import HydroFarmEnv  # noqa: E402
 from greenloop.layer1b.simulation import (  # noqa: E402
     GROWTH_BADGES,
@@ -91,6 +95,66 @@ def get_forecast(_shipments):
     except FileNotFoundError:
         models = train_models(features, models_dir)
     return predict_demand(models, features)
+
+
+@st.cache_data(ttl=3600)
+def get_weekly_sustainability(crops, electricity_df, staff):
+    """Pre-compute sustainability KPIs for the last 7 available electricity days.
+
+    Runs the optimizer once per day — cached for 1 hour to avoid recalculation
+    on every dashboard interaction.
+    """
+    from greenloop.layer1.features import build_features as build_feats
+    from greenloop.layer1.model import load_models, train_models
+    from greenloop.layer1.predict import predict_demand as _predict
+    from greenloop.layer2.scenarios import diagnose_all_racks_simulated
+
+    all_dates = sorted(electricity_df["date"].unique())
+    recent = all_dates[-7:]
+
+    rows = []
+    for day in recent:
+        day_str = str(day)[:10]
+        elec_day = electricity_df[electricity_df["date"] == day].copy()
+        # Build forecast from shipments up to this day
+        cutoff = pd.Timestamp(day) - pd.Timedelta(days=1)
+        relevant = staff  # unused but kept for signature compatibility
+        shipments_subset = load_shipments()
+        shipments_subset = shipments_subset[pd.to_datetime(shipments_subset["date"]) <= cutoff]
+        if len(shipments_subset) < 10:
+            continue
+        try:
+            features = build_feats(shipments_subset)
+            models_dir = Path(__file__).resolve().parent.parent.parent.parent / "models"
+            try:
+                models = load_models(models_dir)
+            except FileNotFoundError:
+                models = train_models(features, models_dir)
+            forecast = _predict(models, features)
+            cv_diag = diagnose_all_racks_simulated()
+            plan = build_and_solve(
+                forecast=forecast,
+                crops_df=crops,
+                electricity_df=elec_day,
+                staff_df=staff,
+                available_headcount=6,
+                cv_diagnosis=cv_diag,
+            )
+            kpis = compute_sustainability_kpis(plan, forecast, crops)
+            rows.append({
+                "date": day_str,
+                "water_saved_l": kpis["water_saved_l"],
+                "co2_avoided_kg": kpis["co2_avoided_kg"],
+                "off_peak_pct": kpis["off_peak_energy_ratio_pct"],
+            })
+        except Exception:
+            # Skip days where the optimizer fails (e.g. missing data)
+            continue
+
+    import pandas as pd
+    return pd.DataFrame(rows) if rows else pd.DataFrame(
+        columns=["date", "water_saved_l", "co2_avoided_kg", "off_peak_pct"]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +221,9 @@ def main():
             st.warning("No feasible plan. Try increasing staff or relaxing constraints.")
 
     st.divider()
+
+    # ── Sustainability KPIs ─────────────────────────────────────────────
+    _render_sustainability_section(plan, forecast, crops, electricity_df, staff)
 
     # ── Bottom: RL Control + Scenario Testing ──
     bot_left, bot_right = st.columns(2)
@@ -596,6 +663,76 @@ def _render_plan(plan):
                         "Nutrient impact": nm_cost,
                     })
                 st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
+
+
+# ---------------------------------------------------------------------------
+# Sustainability KPIs
+# ---------------------------------------------------------------------------
+def _render_sustainability_section(plan, forecast, crops, electricity_df, staff):
+    """Render the Sustainability KPI section with metric cards and weekly chart."""
+    st.subheader("🌱 Sustainability KPIs")
+
+    if plan is None:
+        st.warning("No plan available — sustainability KPIs cannot be computed.")
+        return
+
+    # Compute today's KPIs
+    kpis = compute_sustainability_kpis(plan, forecast, crops)
+
+    # 4 metric cards
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric(
+        "Water Saved Today",
+        f"{kpis['water_saved_l']:,.0f} L",
+        delta="95% vs conventional",
+    )
+    c2.metric(
+        "CO₂ Avoided",
+        f"{kpis['co2_avoided_kg']:,.1f} kg-CO₂",
+        delta="87% reduction",
+    )
+    c3.metric(
+        "Energy Efficiency",
+        f"{kpis['energy_efficiency_kwh_per_kg']:.2f} kWh/kg",
+        delta="target <2.5",
+    )
+    c4.metric(
+        "Off-Peak Energy",
+        f"{kpis['off_peak_energy_ratio_pct']:.1f}%",
+        delta="target >70%",
+    )
+
+    # Weekly cumulative chart
+    weekly_df = get_weekly_sustainability(crops, electricity_df, staff)
+    if not weekly_df.empty:
+        fig = go.Figure()
+        fig.add_trace(
+            go.Bar(
+                x=list(weekly_df["date"]),
+                y=list(weekly_df["water_saved_l"]),
+                name="Water Saved (L)",
+                marker_color="#27ae60",
+            ),
+        )
+        fig.add_trace(
+            go.Bar(
+                x=list(weekly_df["date"]),
+                y=list(weekly_df["co2_avoided_kg"]),
+                name="CO₂ Avoided (kg)",
+                marker_color="#2ecc71",
+            ),
+        )
+        fig.update_layout(
+            title="Weekly Sustainability — Water Saved & CO₂ Avoided",
+            xaxis_title="Date",
+            yaxis_title="Impact",
+            barmode="group",
+            height=260,
+            margin=dict(l=20, r=20, t=40, b=20),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Weekly sustainability data is not yet available.")
 
 
 # ---------------------------------------------------------------------------
