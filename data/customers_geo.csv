@@ -1,0 +1,31 @@
+customer_id,name,address,lat,lng,weekly_kg,time_window_start,time_window_end
+C001,FairPrice Jurong West,Jurong West St 15,1.3491,103.7093,25,06:00,10:00
+C002,Cold Storage Clementi,Clementi Ave 3,1.3162,103.7649,25,06:00,10:00
+C003,Giant Express Boon Lay,Boon Lay Ave,1.3528,103.6975,20,10:00,14:00
+C004,Sheng Siong Bukit Merah,Bukit Merah Central,1.2819,103.8239,25,06:00,10:00
+C005,FairPrice Hub,Jurong East Ave 1,1.332,103.747,25,10:00,14:00
+C006,Cold Storage AMK,Ang Mo Kio Ave 6,1.3691,103.8454,25,06:00,10:00
+C007,Giant Tampines,Tampines Ave 7,1.3496,103.9568,20,10:00,14:00
+C008,FairPrice Pasir Ris,Pasir Ris Drive 3,1.3721,103.9474,25,06:00,10:00
+C009,Sheng Siong Yishun,Yishun Ave 2,1.4304,103.8354,20,10:00,14:00
+C010,Cold Storage Holland,Holland Village,1.2947,103.7858,25,06:00,10:00
+C011,Giant Sengkang,Sengkang Square,1.3866,103.8918,20,10:00,14:00
+C012,FairPrice Woodlands,Woodlands Ave 3,1.438,103.7887,25,06:00,10:00
+C013,Cold Storage Bedok,Bedok North,1.3236,103.9271,25,10:00,14:00
+C014,Giant Punggol,Punggol Drive,1.4042,103.9025,20,06:00,10:00
+C015,FairPrice Toa Payoh,Toa Payoh Lor 1,1.3343,103.8563,25,10:00,14:00
+C016,PUTIENRestaurant,Jurong East St 21,1.334,103.744,10,10:00,14:00
+C017,Tim Ho Wan SG,Whampoa Drive,1.32,103.846,10,10:00,14:00
+C018,Crystal Jade Jurong,Jurong Point,1.339,103.711,15,10:00,14:00
+C019,White Rose Restaurant,Clementi Ave 2,1.317,103.765,10,10:00,14:00
+C020,NUS Flavours Canteen,NUS Kent Ridge,1.2967,103.7764,15,10:00,14:00
+C021,Sushi Express Causeway,Causeway Point,1.4289,103.7889,10,10:00,14:00
+C022,Koufu Foodcourt,Punggol Field,1.405,103.903,10,10:00,14:00
+C023,Hawker @ AMK,Ang Mo Kio Ave 8,1.364,103.849,15,10:00,14:00
+C024,Food Republic Wisma,Orchard Road,1.3047,103.8334,15,10:00,14:00
+C025,Sky on 57 Restaurant,Marina Bay Sands,1.2837,103.8607,10,10:00,14:00
+C026,M Hotel Singapore,Anduon Road,1.28,103.841,25,08:00,11:00
+C027,Marina Bay Sands,Bayfront Avenue,1.2837,103.8607,30,08:00,11:00
+C028,JW Marriott SG,Marina Bay,1.281,103.863,25,08:00,11:00
+C029,Raffles Hotel,Beach Road,1.295,103.852,25,08:00,11:00
+C030,Park Regis Singapore,Raffles Quay,1.289,103.857,20,08:00,11:00

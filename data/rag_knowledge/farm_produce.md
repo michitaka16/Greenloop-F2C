@@ -44,6 +44,13 @@ GreenLoop operates a 3-layer hydroponic vertical farm in Singapore, producing pr
 
 All crops are available year-round due to controlled environment agriculture (CEA). No seasonal gaps — GreenLoop guarantees 52-week supply continuity.
 
+## Farm Location
+
+**GreenLoop Jurong Innovation District Farm**
+- Address: Jurong Innovation District, Singapore
+- Coordinates: 1.3328°N, 103.7436°E
+- This is the depot for all VRP delivery routing — all routes start and end here.
+
 ## Why Hydroponic?
 
 - No soil-borne diseases — zero pesticide residue
