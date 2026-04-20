@@ -71,7 +71,7 @@ _SEGMENT_RULES = [
 ]
 
 
-def _name_cluster(profile: SegmentProfile) -> tuple[str, str, str]:
+def name_segment(profile: SegmentProfile) -> tuple[str, str, str]:
     """Apply spec naming rules to a SegmentProfile."""
     for name, emoji, action, condition in _SEGMENT_RULES:
         if condition(profile):
@@ -179,7 +179,7 @@ def cluster_customers(
             segment_name="",  # filled below
             recommended_action="",
         )
-        name, emoji, action = _name_cluster(profile)
+        name, emoji, action = name_segment(profile)
         profile.segment_name = name
         profile.recommended_action = action
         profiles.append(profile)

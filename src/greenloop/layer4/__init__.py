@@ -5,6 +5,7 @@ from greenloop.layer4.segmentation import (
     ClusteringResult,
     SegmentProfile,
     cluster_customers,
+    name_segment,
 )
 from greenloop.layer4.visualization import reduce_pca, reduce_umap
 
