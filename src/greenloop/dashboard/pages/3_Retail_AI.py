@@ -56,8 +56,8 @@ def render_segment_cards(profiles, result_labels):
             f"**{profile.size} customers ({profile.size_pct:.1f}%)**\n\n"
             f"Avg basket: **${profile.avg_basket_sgd:.2f}** / order  \n"
             f"Frequency: **{profile.avg_frequency:.1f}** orders/mo  \n"
-            f"Bulk buyer: **{profile.bulk_buyer_pct:.0f}%**  \n"
-            f"Live commerce: **{profile.live_commerce_share*100:.0f}%**  \n"
+            f"Bulk buyer: **{profile.bulk_pct * 100:.0f}%**  \n"
+            f"Live commerce: **{profile.live_pct * 100:.0f}%**  \n"
             f"Top crop: **{profile.dominant_crop}**\n\n"
             f"**{action}**"
         )
@@ -159,8 +159,8 @@ for profile in result.profiles:
         "Size": profile.size,
         "Size %": f"{profile.size_pct:.1f}%",
         "Avg basket (SGD)": f"${profile.avg_basket_sgd:.2f}",
-        "Bulk buyer %": f"{profile.bulk_buyer_pct:.0f}%",
-        "Live commerce %": f"{profile.live_commerce_share*100:.0f}%",
+        "Bulk buyer %": f"{profile.bulk_pct * 100:.0f}%",
+        "Live commerce %": f"{profile.live_pct * 100:.0f}%",
         "Top crop": profile.dominant_crop,
         "Recommended action": action,
     })
