@@ -133,7 +133,7 @@ fig = px.scatter(
         "pca_2": False,
         "segment": True,
         "customer_id": True,
-        "avg_basket_sgd": ":.2f",
+        "avg_order_sgd": ":.2f",
         "purchase_frequency": ":.1f",
     },
     title=f"K={result.k} clusters · Silhouette={silhouette:.3f}",
