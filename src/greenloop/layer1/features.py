@@ -2,10 +2,20 @@
 
 Transforms raw shipments data into ML-ready features with lags, rolling
 statistics, cyclical time encodings, and holiday flags for Singapore.
+
+New features added:
+- school_holiday_flag: Singapore school vacation indicator (June, Dec)
+- rainy_day_flag / rainy_day_lag_1d: simulated monsoon rain signal
+- avg_tariff / peak_tariff: daily electricity tariff aggregates
+- indoor_temp_mean_7d / indoor_humidity_mean_7d / co2_deviation_from_optimal_mean_7d:
+  7-day rolling mean of indoor climate sensor readings
+- market_order_density_prev_week: market-wide order volume from prior week
 """
 
 import numpy as np
 import pandas as pd
+
+from greenloop.data.loader import load_electricity, load_sensors
 
 # Singapore public holidays (approximate fixed dates and known ranges).
 # For holidays that move year-to-year (CNY, Hari Raya, Deepavali),
@@ -34,15 +44,104 @@ _SG_HOLIDAYS = {
 }
 _SG_HOLIDAY_SET = {pd.Timestamp(d) for d in _SG_HOLIDAYS}
 
+# Singapore school holidays (vacation periods).
+_SG_SCHOOL_HOLIDAYS = {
+    pd.Timestamp("2026-06-01"): pd.Timestamp("2026-06-30"),  # June vacation
+    pd.Timestamp("2026-12-01"): pd.Timestamp("2026-12-31"),  # Christmas vacation
+}
+
+
+def _simulate_rainy_day(date: pd.Timestamp, rng: np.random.Generator) -> int:
+    """Simulate rainy day based on Singapore monsoon patterns.
+
+    Northeast monsoon: Oct-Dec (40% rain chance)
+    Rest of year: May-Sep (15% rain chance)
+    Other months: Jan-Apr, Mar (25% rain chance)
+    """
+    month = date.month
+    if month in (10, 11, 12):
+        prob = 0.40
+    elif month in (5, 6, 7, 8, 9):
+        prob = 0.15
+    else:
+        prob = 0.25  # Jan-Apr
+    return 1 if rng.random() < prob else 0
+
+
+def _load_daily_tariff(electricity_df: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate hourly electricity tariff data to daily averages and peaks."""
+    daily = electricity_df.copy()
+    daily["date"] = pd.to_datetime(daily["date"])
+    agg = daily.groupby("date").agg(
+        avg_tariff=("tariff_rate_sgd_per_kwh", "mean"),
+        peak_tariff=("tariff_rate_sgd_per_kwh", "max"),
+    ).reset_index()
+    return agg
+
+
+def _load_daily_indoor_climate(sensors_df: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate minute-level sensor readings to daily and compute 7-day rolling means."""
+    sensors_df = sensors_df.copy()
+    sensors_df["timestamp"] = pd.to_datetime(sensors_df["timestamp"])
+    daily = sensors_df.resample("D", on="timestamp").agg(
+        temp_c=("temp_c", "mean"),
+        humidity_pct=("humidity_pct", "mean"),
+        co2_ppm=("co2_ppm", "mean"),
+    ).reset_index()
+    daily["co2_deviation_from_optimal"] = abs(daily["co2_ppm"] - 800)
+    # 7-day rolling mean (shift by 1 to avoid lookahead)
+    for col in ["temp_c", "humidity_pct", "co2_deviation_from_optimal"]:
+        daily[f"{col}_mean_7d"] = daily[col].shift(1).rolling(7, min_periods=1).mean()
+    # Rename to final output names
+    daily = daily.rename(columns={
+        "temp_c_mean_7d": "indoor_temp_mean_7d",
+        "humidity_pct_mean_7d": "indoor_humidity_mean_7d",
+    })
+    return daily[["timestamp", "indoor_temp_mean_7d", "indoor_humidity_mean_7d", "co2_deviation_from_optimal_mean_7d"]]
+
 
 def build_features(shipments: pd.DataFrame) -> pd.DataFrame:
     """Transform shipments data into ML-ready features.
+
+    Adds the following feature groups:
+
+    Lag features:
+        lag_7d, lag_14d, lag_28d: shipment volume N days prior (same crop).
+        rolling_mean_28d, rolling_std_28d: 28-day rolling stats per crop.
+
+    Cyclical / temporal:
+        week_sin, week_cos: sine/cosine encoding of week-of-year.
+        day_of_week: integer day-of-week (0=Monday).
+
+    Calendar:
+        is_holiday: 1 if date is a Singapore public holiday, else 0.
+        school_holiday_flag: 1 if date falls in a school vacation period
+            (June or December), else 0.
+
+    Weather (simulated):
+        rainy_day_flag: 1 if rainy day simulated via monsoon probability
+            (Oct-Dec 40%, May-Sep 15%, rest 25%).
+        rainy_day_lag_1d: rainy_day_flag shifted by 1 day.
+
+    Electricity tariff:
+        avg_tariff: mean hourly tariff (SGD/kWh) for the date.
+        peak_tariff: max hourly tariff (SGD/kWh) for the date.
+
+    Indoor climate (7-day rolling means of sensor aggregates):
+        indoor_temp_mean_7d: rolling mean of daily average temperature (°C).
+        indoor_humidity_mean_7d: rolling mean of daily average humidity (%).
+        co2_deviation_from_optimal_mean_7d: absolute deviation of daily average CO2
+            from 800 ppm optimal.
+
+    Market signal:
+        market_order_density_prev_week: total market-wide kg_shipped
+            from 7 days prior.
 
     Args:
         shipments: DataFrame with columns [date, crop_id, kg_shipped, price_sgd_per_kg].
 
     Returns:
-        DataFrame with feature columns plus target 'kg_shipped'.
+        DataFrame with all feature columns plus target 'kg_shipped'.
         Rows without sufficient lag history are dropped (no NaN in output).
 
     Raises:
@@ -93,6 +192,56 @@ def build_features(shipments: pd.DataFrame) -> pd.DataFrame:
     # Public holiday flag
     result["is_holiday"] = result["date"].apply(
         lambda d: 1 if d.normalize() in _SG_HOLIDAY_SET else 0
+    )
+
+    # SG school holiday flag
+    def _in_school_holiday(date: pd.Timestamp) -> int:
+        for start, end in _SG_SCHOOL_HOLIDAYS.items():
+            if start <= date.normalize() <= end:
+                return 1
+        return 0
+
+    result["school_holiday_flag"] = result["date"].apply(_in_school_holiday)
+
+    # Rainy day signal (simulated, seeded for reproducibility)
+    rng = np.random.default_rng(42)
+    result["rainy_day_flag"] = result["date"].apply(lambda d: _simulate_rainy_day(d, rng))
+    # Lag 1 day
+    result["rainy_day_lag_1d"] = result["rainy_day_flag"].shift(1)
+
+    # Electricity tariff features
+    electricity_df = load_electricity()
+    daily_tariff = _load_daily_tariff(electricity_df)
+    result = result.merge(daily_tariff, on="date", how="left")
+
+    # Indoor climate features
+    sensors_df = load_sensors()
+    daily_climate = _load_daily_indoor_climate(sensors_df)
+    daily_climate = daily_climate.rename(columns={"timestamp": "date"})
+    result = result.merge(daily_climate, on="date", how="left")
+
+    # Cross-crop demand signal: market-wide order volume from prior week
+    market_prev_week = (
+        shipments.copy()
+    )
+    market_prev_week["date"] = pd.to_datetime(market_prev_week["date"])
+    market_prev_week = market_prev_week.groupby("date")["kg_shipped"].sum().shift(7)
+    result["market_order_density_prev_week"] = result["date"].map(market_prev_week)
+
+    # Fill NaN for new columns that may have missing values:
+    # - rainy_day_lag_1d: first row per crop has no prior day
+    # - tariff/climate: may not cover all shipment dates (left merge)
+    # - market_order_density_prev_week: first 7 days have no prior-week data
+    result["rainy_day_lag_1d"] = result["rainy_day_lag_1d"].fillna(0)
+    result["avg_tariff"] = result["avg_tariff"].fillna(0)
+    result["peak_tariff"] = result["peak_tariff"].fillna(0)
+    result["indoor_temp_mean_7d"] = result["indoor_temp_mean_7d"].fillna(0)
+    result["indoor_humidity_mean_7d"] = result["indoor_humidity_mean_7d"].fillna(0)
+    result["co2_deviation_from_optimal_mean_7d"] = (
+        result["co2_deviation_from_optimal_mean_7d"].fillna(0)
+    )
+    result["market_order_density_prev_week"] = (
+        result["market_order_density_prev_week"].fillna(0)
     )
 
     # Drop rows where lag/rolling features are NaN (warmup period)
