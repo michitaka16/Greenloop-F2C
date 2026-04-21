@@ -58,10 +58,8 @@ from greenloop.layer3.autonomy_gate import AutonomyGate, AutonomyMode  # noqa: E
 from greenloop.layer1b.simulation import (  # noqa: E402
     GROWTH_BADGES,
     NUTRITION_BADGES,
-    diagnose_all_racks_simulated,
     diagnose_batch,
     filename_to_rack_id,
-    generate_impacts,
     mock_diagnose_from_image,
     RACK_SCENARIOS,
 )
@@ -654,8 +652,6 @@ def _render_cv_diagnosis(plan):
             st.rerun()
 
     with col_diagnose:
-        diagnosed_count = len(st.session_state.rack_diagnoses)
-        total_with_images = len(st.session_state.rack_images)
         undiagnosed = [n for n in st.session_state.rack_images if n not in st.session_state.rack_diagnoses]
         if undiagnosed:
             label = f"▶ Diagnose {len(undiagnosed)} racks"
@@ -685,15 +681,7 @@ def _render_cv_diagnosis(plan):
         )
 
     # ── Rack grid (3 cols × 4 rows) ─────────────────────────────────────────
-    st.markdown("**Today's Rack Assignment (decided by AI)**")
-    st.caption(
-        "Crops are assigned dynamically by Layer 2 MILP based on today's "
-        "demand forecast. Tomorrow's assignment may differ."
-    )
-
-    # Build sorted rack list (0-9)
     rack_nums = list(range(10))
-
     rows_of_3 = [rack_nums[i : i + 3] for i in range(0, 10, 3)]
     for row_racks in rows_of_3:
         cols = st.columns(3)
@@ -712,40 +700,6 @@ def _render_cv_diagnosis(plan):
         f"✅ {healthy} healthy · "
         f"⚠️ {attention} need attention"
     )
-
-    # ── All-rack diagnosis table ────────────────────────────────────────────
-    with st.expander("Full diagnosis details", expanded=False):
-        all_diagnoses = diagnose_all_racks_simulated()
-        rows = []
-        for rack_num in range(10):
-            rack_id = f"tier_{rack_num}"
-            crop_id = rack_layout.get(rack_id, "unknown")
-            crop_name = _CROP_NAMES.get(crop_id, crop_id)
-            diag = all_diagnoses.get(rack_id)
-            g_label, g_emoji = GROWTH_BADGES.get(diag.growth_stage, ("?", "❓")) if diag else ("?", "❓")
-            n_label, n_emoji = NUTRITION_BADGES.get(diag.nutrition_status, ("?", "❓")) if diag else ("?", "❓")
-            rows.append(
-                {
-                    "Rack": f"Rack {rack_num}",
-                    "Crop": crop_name,
-                    "Growth": f"{g_emoji} {g_label}",
-                    "Nutrition": f"{n_emoji} {n_label}",
-                    "Confidence": f"{diag.growth_confidence:.0%} / {diag.nutrition_confidence:.0%}" if diag else "—",
-                }
-            )
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-
-        # ── Impact on Layer 2 ──────────────────────────────────────────────
-        st.markdown("**Impact on Layer 2 plan & Layer 3 targets**")
-        impacts_shown = 0
-        for rack_id, diag in all_diagnoses.items():
-            crop = _CROP_NAMES.get(rack_layout.get(rack_id, ""), rack_id)
-            if diag.growth_stage == "harvest_ready" or diag.nutrition_status != "normal":
-                for line in generate_impacts(diag, crop):
-                    st.markdown(f"- {line}")
-                impacts_shown += 1
-        if impacts_shown == 0:
-            st.info("All racks normal — no plan adjustments needed today.")
 
     st.caption(
         "Dual-head EfficientNet-B0 transfer learning model. "
@@ -834,36 +788,6 @@ def _load_demo_images(rack_layout: dict[str, str]) -> None:
 
     st.session_state.rack_images = images
     st.session_state.rack_diagnoses = diagnoses
-
-
-def _render_diagnosis_card(diagnosis, crop_name, *, highlight=False):
-    """Render a single rack diagnosis result as a card."""
-    g_label, g_emoji = GROWTH_BADGES.get(diagnosis.growth_stage, ("?", "❓"))
-    n_label, n_emoji = NUTRITION_BADGES.get(diagnosis.nutrition_status, ("?", "❓"))
-
-    col1, col2, col3 = st.columns([2, 2, 1])
-    rack_display = diagnosis.rack_id.replace("tier_", "Rack ")
-
-    with col1:
-        st.metric(
-            f"{rack_display} — {crop_name}",
-            value=f"{g_emoji} {g_label}",
-            delta=f"{diagnosis.growth_confidence:.0%} confidence",
-        )
-    with col2:
-        st.metric(
-            "Nutrition",
-            value=f"{n_emoji} {n_label}",
-            delta=f"{diagnosis.nutrition_confidence:.0%} confidence",
-        )
-    with col3:
-        if diagnosis.is_simulated:
-            st.caption("Demo mode")
-
-    # Impact statements
-    impacts = generate_impacts(diagnosis, crop_name)
-    for impact in impacts:
-        st.markdown(f"  → {impact}")
 
 
 # ---------------------------------------------------------------------------
