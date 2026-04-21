@@ -428,6 +428,18 @@ def build_and_solve(
                 )
 
     # ---------------------------------------------------------------
+    # C7: Diversity — no single crop occupies more than 30% of racks.
+    # Real Singapore vertical farms (e.g. Greenphyto) run 8+ varieties
+    # simultaneously to satisfy restaurant/premium-buyer contracts.
+    # ---------------------------------------------------------------
+    MAX_RACKS_PER_CROP = int(NUM_TIERS * 0.3)  # = 3 for 10 tiers
+
+    for c in range(NUM_CROPS):
+        model.add(
+            sum(assign[c, t] for t in range(NUM_TIERS)) <= MAX_RACKS_PER_CROP
+        )
+
+    # ---------------------------------------------------------------
     # Objective components (all in scaled-integer cents)
     # ---------------------------------------------------------------
 
