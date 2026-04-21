@@ -64,6 +64,18 @@ from greenloop.layer1b.simulation import (  # noqa: E402
     RACK_SCENARIOS,
 )
 from greenloop.llm import LLMUnavailable, explain_plan, llm_is_configured  # noqa: E402
+from greenloop.rag.agent import RAGAgent  # noqa: E402
+from greenloop.rag.hitl import (  # noqa: E402
+    Tone,
+    TONE_LABELS,
+    FeedbackRecord,
+    QueryRecord,
+    log_feedback,
+    log_query,
+    get_top_questions,
+    get_feedback_summary,
+    get_system_prompt,
+)
 
 # Layer 3 PPO import — may fail without trained model
 try:
@@ -294,6 +306,187 @@ def main():
 
     with bot_right:
         _render_scenario_testing(forecast, crops, electricity, staff, headcount, plan, mode_key, excluded_racks, unavailable_shifts)
+
+    st.divider()
+
+    # ── Media AI Chatbot (Layer 5 RAG) ──────────────────────────────────
+    _render_media_ai_chat()
+
+
+# ---------------------------------------------------------------------------
+# Media AI Chatbot
+# ---------------------------------------------------------------------------
+_ADMIN_PASSWORD = "greenloop-admin"
+
+
+def _render_media_ai_chat():
+    """Media AI chatbot panel with HITL controls."""
+    st.subheader("Media AI Chatbot (Layer 5)")
+
+    # Persistent RAG agent and session state
+    if "rag_agent" not in st.session_state:
+        st.session_state.rag_agent = RAGAgent()
+        st.session_state.rag_history: list[dict] = []
+        st.session_state.rag_session_id = datetime.now().strftime("%Y%m%d%H%M%S")
+        st.session_state.rag_tone = Tone.NEUTRAL
+        st.session_state.rag_last_answer = ""
+
+    agent = st.session_state.rag_agent
+    history = st.session_state.rag_history
+
+    # Tone selector
+    tone_keys = list(Tone)
+    tone_labels = [TONE_LABELS[k] for k in tone_keys]
+    current_idx = tone_keys.index(st.session_state.rag_tone)
+    selected_tone_label = st.radio(
+        "Response tone",
+        options=tone_labels,
+        index=current_idx,
+        horizontal=True,
+        help="Sales: enthusiastic, ROI-focused. Technical: precise metrics. Neutral: balanced.",
+    )
+    new_tone = Tone([k for k, v in TONE_LABELS.items() if v == selected_tone_label][0])
+    if new_tone != st.session_state.rag_tone:
+        st.session_state.rag_tone = new_tone
+
+    # Chat history
+    chat_container = st.container()
+    with chat_container:
+        for msg in history:
+            if msg["role"] == "user":
+                st.chat_message("user").write(msg["content"])
+            else:
+                with st.chat_message("assistant"):
+                    st.write(msg["content"])
+                    # Feedback buttons
+                    if msg.get("show_feedback", False):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.button("👍 Good", key=f"good_{msg['_id']}")
+                        with col2:
+                            st.button("💬 Needs refinement", key=f"refine_{msg['_id']}")
+
+    # Admin mode toggle
+    with st.expander("🔒 Admin settings"):
+        admin_password = st.text_input(
+            "Admin password",
+            type="password",
+            help="Enter to unlock feedback analytics",
+        )
+        is_admin = admin_password == _ADMIN_PASSWORD
+
+        if is_admin:
+            st.success("Admin mode active")
+            # Feedback summary
+            summary = get_feedback_summary()
+            c1, c2 = st.columns(2)
+            with c1:
+                st.metric("👍 Good", summary.get("good", 0))
+            with c2:
+                st.metric("💬 Needs refinement", summary.get("needs_refinement", 0))
+
+            # Top-10 questions
+            top_qs = get_top_questions(10)
+            if top_qs:
+                st.write("**Top 10 questions**")
+                for i, (q, cnt) in enumerate(top_qs, 1):
+                    st.write(f"{i}. ({cnt}) {q[:80]}")
+            else:
+                st.info("No queries logged yet.")
+        else:
+            if admin_password:
+                st.warning("Incorrect password.")
+
+    # Chat input
+    if question := st.chat_input("Ask about GreenLoop Farm..."):
+        # Add to history
+        st.session_state.rag_history.append({"role": "user", "content": question})
+        st.session_state["_last_question"] = question
+        st.chat_message("user").write(question)
+
+        # Get answer
+        try:
+            # Apply tone modifier
+            base_system = (
+                "You are a helpful assistant for GreenLoop Farm — a hydroponic vertical farm in Singapore. "
+                "Answer questions using ONLY the provided context. "
+                "If the answer is not in the context, say you don't know. "
+                "Be concise, factual, and mention specific numbers when available."
+            )
+            tone = st.session_state.rag_tone
+            system_prompt = get_system_prompt(tone, base_system)
+
+            # Call RAG agent (uses demo-mode answers if no LLM API key)
+            answer_obj = agent.ask(question)
+            answer_text = answer_obj.text
+            sources = ", ".join(answer_obj.sources) if answer_obj.sources else "none"
+
+            # Log query
+            log_query(QueryRecord(
+                timestamp=datetime.now().isoformat(),
+                question=question,
+                answer=answer_text,
+                tone=tone.value,
+                sources=sources,
+                latency_ms=answer_obj.latency_ms,
+                from_cache=answer_obj.from_cache,
+                session_id=st.session_state.rag_session_id,
+            ))
+
+        except Exception as exc:
+            logger.exception("rag.ask_failed")
+            answer_text = (
+                "Sorry, I encountered an error generating a response. "
+                "Please try again or rephrase your question."
+            )
+
+        msg_id = len(st.session_state.rag_history)
+        st.session_state.rag_history.append({
+            "role": "assistant",
+            "content": answer_text,
+            "show_feedback": True,
+            "_id": msg_id,
+        })
+        st.session_state.rag_last_answer = answer_text
+        st.rerun()
+
+    # Handle feedback buttons (triggered by rerun after button click)
+    # We check all button keys in session_state
+    for key, val in st.session_state.items():
+        if key.startswith("good_") and val:
+            idx = int(key.split("_")[1])
+            st.session_state[key] = False  # reset
+            _log_feedback_for_message(idx, "good")
+            st.rerun()
+        elif key.startswith("refine_") and val:
+            idx = int(key.split("_")[1])
+            st.session_state[key] = False  # reset
+            _log_feedback_for_message(idx, "needs_refinement")
+            st.rerun()
+
+
+def _log_feedback_for_message(msg_id: int, rating: str) -> None:
+    """Log feedback for a specific message in rag_history."""
+    history = st.session_state.get("rag_history", [])
+    # Find the message
+    target = None
+    for msg in history:
+        if msg.get("_id") == msg_id:
+            target = msg
+            break
+    if target is None:
+        return
+
+    log_feedback(FeedbackRecord(
+        timestamp=datetime.now().isoformat(),
+        question=st.session_state.get("_last_question", ""),
+        answer=target["content"],
+        tone=st.session_state.get("rag_tone", Tone.NEUTRAL).value,
+        rating=rating,
+        session_id=st.session_state.get("rag_session_id", ""),
+    ))
+    # Show confirmation
+    st.toast(f"Feedback recorded: {rating}")
 
 
 # ---------------------------------------------------------------------------
