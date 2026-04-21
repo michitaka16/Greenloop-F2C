@@ -80,5 +80,8 @@ chroma/
 models/*.pt
 models/*.zip
 
+# Intermediate PPO checkpoints (keep final trained model)
+models/layer3/ppo_hydrofarm_*_steps.zip
+
 # Env backup
 .env.backup
