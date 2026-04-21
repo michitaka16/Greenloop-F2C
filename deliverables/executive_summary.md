@@ -12,13 +12,13 @@ Singapore imports over 90% of its food. The COVID-19 pandemic and 2022 egg short
 
 ## 2. The Product
 
-GreenLoop F2C is a 5-layer AI platform managing a vertical-hydroponic farm from seed to delivery. Layer 1 (XGBoost quantile regression) predicts demand with confidence intervals. Layer 2 (OR-Tools MILP) generates the profit-maximising daily operating plan in **< 50 ms** — enabling real-time re-planning when conditions change. Layer 3 (PPO RL via Gymnasium) autonomously controls climate. Layer 4 (K-Means k=4 + UMAP) segments customers. Layer 5 (RAG with ChromaDB + Claude) answers investor questions live.
+GreenLoop F2C is a 5-layer AI platform managing a vertical-hydroponic farm from seed to delivery. Layer 1 (XGBoost quantile regression) predicts demand with confidence intervals using 9 indoor-farm-appropriate features: lag shipments (7/14/28d), rolling 28d mean/std, cyclical week encoding, day-of-week, Singapore holiday flags, consumer rainy-day signal (simulated by monsoon month), indoor climate readings (temperature, humidity, CO2 deviation from 800 ppm optimal), electricity tariff tiers, and cross-crop market density. Layer 2 (OR-Tools MILP) generates the profit-maximising daily operating plan in **< 50 ms** — enabling real-time re-planning when conditions change. Layer 3 (PPO RL via Gymnasium) autonomously controls climate. Layer 4 (K-Means k=4 + UMAP) segments customers. Layer 5 (RAG with ChromaDB + Claude) answers investor questions live.
 
 **Key differentiators:**
 
 - **30/30 customers served** by OR-Tools CVRPTW in 6-hour compressed window (nearest-neighbor fails 20-40% of time windows)
 - **Silhouette 0.765** at k=4 — beats k=3 (0.698) and k=5 (0.742) for customer segmentation
-- **Typhoon scenario**: live dashboard button cuts delivery window 12 h to 6 h; MILP re-solves and shows profit delta in milliseconds
+- **Typhoon scenario (v2)**: live dashboard button cuts delivery window 12 h to 6 h; 30% probability of power outage triggers 4-hour UPS countdown with emergency harvest protocol; demand surge +20% from panic buying; MILP re-solves and shows profit delta in milliseconds
 
 ![Kailan — Healthy](data/demo_images/demo_kailan_healthy.jpg){width=180}
 ![Lettuce — Wilted](data/demo_images/demo_lettuce_wilt.jpg){width=180}
@@ -41,7 +41,7 @@ GreenLoop F2C is a 5-layer AI platform managing a vertical-hydroponic farm from 
 
 **Daily flow:** 05:00 Layer 1 demand forecast (q=0.95 upper CI) to 06:00 Layer 2 MILP plan (< 50 ms) plus Layer 2b VRP routes (30 customers) to 06:00-22:00 Layer 3 PPO RL controls climate to 08:00-18:00 deliveries to daily Layer 4 re-segmentation to on-demand Layer 5 RAG.
 
-**Typhoon proof:** The Typhoon button tightens the delivery window to 6 hours; MILP + VRP re-solve automatically and the dashboard displays before/after profit delta — proving the farm re-plans itself without human intervention.
+**Typhoon proof:** The Typhoon button triggers a cascade: 6-hour delivery window, 30% power-outage probability (LEDs fail), 4-hour UPS countdown with visible countdown timer, emergency harvest protocol, cold storage switch, +20% demand surge from panic buying. MILP re-solves with yield_multiplier=0 for affected racks — proving the farm re-plans itself autonomously under multi-variable stress.
 
 ## 4. Business Model
 
