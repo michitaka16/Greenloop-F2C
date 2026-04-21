@@ -42,7 +42,11 @@ from greenloop.layer1.model import load_models, train_models  # noqa: E402
 from greenloop.layer1.predict import predict_demand  # noqa: E402
 from greenloop.layer2.exceptions import InfeasibleError  # noqa: E402
 from greenloop.layer2.optimizer import build_and_solve  # noqa: E402
-from greenloop.layer2.scenarios import apply_typhoon, compare_plans  # noqa: E402
+from greenloop.layer2.scenarios import (  # noqa: E402
+    TyphoonScenarioInput,
+    apply_typhoon,
+    compare_plans,
+)
 from greenloop.layer2.sustainability import (  # noqa: E402
     compute_sustainability_kpis,
     compute_weekly_sustainability,
@@ -833,9 +837,54 @@ def _render_rl_control():
 def _render_scenario_testing(forecast, crops, electricity, staff, headcount, current_plan):
     st.subheader("Scenario Testing")
 
-    if st.button("⚡ Typhoon Warning"):
+    # Red alert banner when typhoon is active
+    if st.session_state.get("typhoon_active"):
+        st.error(
+            "⚠️ TYPHOON ACTIVE — 6h delivery window | "
+            "Power outage: YES | UPS: 4h countdown active | "
+            "Demand surge: +20% | Emergency harvest: triggered"
+        )
+
+        # Live countdown display (4 hours = 240 minutes)
+        ups_hours = 4
+        st.markdown(
+            f"""
+            <div style="
+                background-color: #cc0000;
+                color: white;
+                padding: 16px 24px;
+                border-radius: 8px;
+                font-size: 18px;
+                font-weight: bold;
+                text-align: center;
+                margin: 12px 0;
+                font-family: monospace;
+            ">
+            🔴 UPS COUNTDOWN: {ups_hours}h 00m REMAINING — EMERGENCY HARVEST ACTIVE
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        if st.button("Clear Typhoon Scenario"):
+            st.session_state.typhoon_active = False
+            st.rerun()
+        st.divider()
+
+    if st.button("⚡ Typhoon Warning", type="primary"):
         st.session_state.typhoon_active = True
         t0 = time.time()
+
+        # Build scenario with full typhoon parameters
+        scenario = TyphoonScenarioInput(
+            delivery_hours=6,
+            power_outage_probability=0.3,
+            ups_countdown_hours=4,
+            emergency_harvest=True,
+            demand_multiplier=1.2,
+            cold_storage_switch=True,
+            staff_reduced_pct=30,
+        )
 
         base_kwargs = dict(
             forecast=forecast,
@@ -845,7 +894,7 @@ def _render_scenario_testing(forecast, crops, electricity, staff, headcount, cur
             available_headcount=headcount,
         )
 
-        typhoon_kwargs = apply_typhoon(base_kwargs)
+        typhoon_kwargs = apply_typhoon(base_kwargs, scenario)
 
         try:
             typhoon_plan = build_and_solve(**typhoon_kwargs)
@@ -857,19 +906,30 @@ def _render_scenario_testing(forecast, crops, electricity, staff, headcount, cur
                 comparison = compare_plans(current_plan, typhoon_plan)
                 delta = comparison.get("delta", {})
 
-                c1, c2, c3 = st.columns(3)
-                c1.metric(
-                    "Profit Change",
+                # Expanded metrics row
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric(
+                    "Profit",
                     f"${typhoon_plan.get('objective_value_sgd', 0):,.0f}",
                     delta=f"{delta.get('objective_value_sgd', 0):,.0f}",
                 )
-                c2.metric(
+                m2.metric(
                     "Delivery Window",
                     "6 hours",
-                    delta="-6h from normal",
+                    delta="-6h",
                     delta_color="inverse",
                 )
-                c3.metric("Solve Time", f"{elapsed:.0f}ms")
+                m3.metric(
+                    "Power Outage",
+                    "ACTIVE",
+                    delta="-yield 100%",
+                    delta_color="inverse",
+                )
+                m4.metric(
+                    "Demand Surge",
+                    "+20%",
+                    delta="panic buying",
+                )
 
                 # Update Layer 3 targets
                 if "rl_env" in st.session_state:
@@ -878,7 +938,10 @@ def _render_scenario_testing(forecast, crops, electricity, staff, headcount, cur
                             "temp": typhoon_plan.get("room_temp_target_c", 22),
                         }
                     )
-                    st.info("Layer 3 targets updated for Typhoon scenario")
+                    # Trigger power outage in RL env if available
+                    if hasattr(st.session_state.rl_env, "trigger_power_outage"):
+                        st.session_state.rl_env.trigger_power_outage()
+                    st.info("Layer 3 targets updated — power outage triggered in RL environment")
             else:
                 st.write(f"Typhoon plan profit: ${typhoon_plan.get('objective_value_sgd', 0):,.0f}")
 
@@ -889,8 +952,8 @@ def _render_scenario_testing(forecast, crops, electricity, staff, headcount, cur
                 st.info(f"Try: {e.binding_constraint}")
 
     st.caption(
-        "Typhoon Warning cuts delivery window from 12h → 6h.\n"
-        "Layer 2 re-optimizes the entire farm plan in real time."
+        "Typhoon Warning: 6h delivery | 30% power outage probability | "
+        "4h UPS countdown | +20% demand surge | Emergency harvest + cold storage"
     )
 
 
