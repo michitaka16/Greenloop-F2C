@@ -628,35 +628,99 @@ def _render_cv_diagnosis(plan):
     st.subheader("Crop Health & Growth Diagnosis (Transfer Learning)")
 
     # Rack layout from Layer 2 plan
-    rack_layout = plan.get("rack_layout", {}) if plan else {}
+    rack_layout: dict[str, str] = plan.get("rack_layout", {}) if plan else {}
+    all_diagnoses = diagnose_all_racks_simulated()
 
-    # ── Image upload ──
+    # ── Today's Rack Assignment (decided by AI) ──────────────────────────────
+    st.markdown("**Today's Rack Assignment (decided by AI)**")
+    st.caption(
+        "Crops are assigned dynamically by Layer 2 MILP based on today's "
+        "demand forecast and constraints. Tomorrow's assignment may differ. "
+        "ℹ️ Each tier shows growth stage and nutrition from the AI vision scan."
+    )
+
+    # Build per-rack display cards (2 rows of 5)
+    rack_ids = sorted(rack_layout.keys(), key=lambda x: int(x.split("_")[1]))
+    cols = st.columns(5)
+    for idx, rack_id in enumerate(rack_ids):
+        crop_id = rack_layout.get(rack_id, "unknown")
+        crop_name = _CROP_NAMES.get(crop_id, crop_id)
+        diag = all_diagnoses.get(rack_id)
+        g_label, g_emoji = GROWTH_BADGES.get(diag.growth_stage, ("?", "❓")) if diag else ("?", "❓")
+        n_label, n_emoji = NUTRITION_BADGES.get(diag.nutrition_status, ("?", "❓")) if diag else ("?", "❓")
+
+        with cols[idx % 5]:
+            st.markdown(f"**Rack {rack_id.replace('tier_', '')}**")
+            st.caption(crop_name)
+            st.markdown(f"{g_emoji} {g_label}")
+            st.markdown(f"{n_emoji} {n_label}")
+
+    st.divider()
+
+    # ── Image upload ──────────────────────────────────────────────────────────
     uploaded_file = st.file_uploader(
-        "Upload rack photo",
+        "Upload rack photo for diagnosis",
         type=["jpg", "jpeg", "png"],
         key="tl_upload",
     )
 
+    # Filename → crop_id mapping for auto-suggestion
+    _FILENAME_CROP_MAP = {
+        "spinach": "baby_spinach",
+        "nitrogen": "baby_spinach",
+        "kailan": "kai_lan",
+        "healthy": None,  # generic — don't auto-select
+        "wilt": "lettuce_mambo",
+        "water_stress": None,
+    }
+
+    def _crop_from_filename(filename: str) -> str | None:
+        """Return crop_id if a demo image filename can be mapped, else None."""
+        lower = filename.lower()
+        for keyword, crop_id in _FILENAME_CROP_MAP.items():
+            if keyword in lower:
+                return crop_id
+        return None
+
     if uploaded_file is not None:
-        # User uploaded an image — diagnose for a selected rack
+        # Determine rack options — prefer today's layout, fall back to tier_0..9
         rack_options = list(rack_layout.keys()) if rack_layout else [f"tier_{i}" for i in range(10)]
+
+        # Auto-suggest rack based on uploaded filename
+        suggested_crop = _crop_from_filename(uploaded_file.name)
+        default_idx = 0
+        if suggested_crop:
+            # Find first tier assigned to this crop today
+            for idx, rack_id in enumerate(rack_options):
+                if rack_layout.get(rack_id) == suggested_crop:
+                    default_idx = idx
+                    break
+
         selected_rack = st.selectbox(
-            "Select rack for uploaded photo", rack_options, key="tl_rack_select"
+            "Select rack to diagnose (today's assignment)",
+            rack_options,
+            index=default_idx,
+            help="Crops are assigned dynamically by Layer 2 MILP. Today's assignment is shown in the grid above.",
+            key="tl_rack_select",
         )
         image_bytes = uploaded_file.read()
         diagnosis = mock_diagnose_from_image(image_bytes, selected_rack)
         crop_name = _CROP_NAMES.get(rack_layout.get(selected_rack, ""), selected_rack)
 
+        # Show notice if uploaded image crop doesn't match today's assignment
+        if suggested_crop and rack_layout.get(selected_rack) != suggested_crop:
+            st.info(
+                f"No rack assigned to **{suggested_crop.replace('_', ' ').title()}** today. "
+                "Showing simulated diagnosis for the selected rack."
+            )
+
         _render_diagnosis_card(diagnosis, crop_name, highlight=True)
         st.divider()
 
-    # ── Show sample diagnosis for all racks ──
+    # ── All-rack diagnosis table ──────────────────────────────────────────────
     st.markdown("**All-rack diagnosis (sample output)**")
     st.caption("EfficientNet-B0 dual-head classifier — growth stage + nutrition status per rack")
 
-    all_diagnoses = diagnose_all_racks_simulated()
-
-    # Display in a compact table first
     rows = []
     for rack_id, diag in all_diagnoses.items():
         crop = _CROP_NAMES.get(rack_layout.get(rack_id, ""), rack_id)
@@ -678,7 +742,6 @@ def _render_cv_diagnosis(plan):
         impacts_shown = 0
         for rack_id, diag in all_diagnoses.items():
             crop = _CROP_NAMES.get(rack_layout.get(rack_id, ""), rack_id)
-            # Only show non-trivial impacts
             if diag.growth_stage == "harvest_ready" or diag.nutrition_status != "normal":
                 for line in generate_impacts(diag, crop):
                     st.markdown(f"- {line}")
