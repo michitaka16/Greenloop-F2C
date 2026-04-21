@@ -181,6 +181,8 @@ def get_weekly_sustainability(crops, electricity_df, staff):
 def main():
     crops, shipments, electricity_df, staff = get_data()
     available_days = get_electricity_days(electricity_df)
+    # ── Layer 1: Demand Forecast (needed by sidebar HITL overrides) ──
+    forecast = get_forecast(shipments)
 
     # ── Header ──
     col_title, col_date = st.columns([3, 1])
@@ -251,9 +253,6 @@ def main():
 
     # ── Sidebar: Design decisions (Dimension A evidence for VC pitch) ──
     render_design_decisions_panel()
-
-    # ── Layer 1: Demand Forecast ──
-    forecast = get_forecast(shipments)
 
     # ── Layer 2: Optimize ──
     plan = _solve_plan(
