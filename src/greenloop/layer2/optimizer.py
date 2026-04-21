@@ -10,6 +10,7 @@ $18.42 is represented as 1842.
 
 import logging
 import time
+from collections import defaultdict
 from datetime import date
 
 import pandas as pd
@@ -54,6 +55,20 @@ def _shift_hours(shift_name: str) -> int:
     return MAX_SHIFT_HOURS
 
 
+def _get_new_planting_crops(crops_df: pd.DataFrame) -> list[str]:
+    """Return crop_ids that are in early growth stage (new plantings).
+
+    For demo: uses crops with growth_days > 25 as "new planting".
+    In production this would be driven by CV diagnosis.
+    """
+    new_planting = []
+    for _, row in crops_df.iterrows():
+        growth_days_val = row.get("growth_days", 0)
+        if growth_days_val > 25:
+            new_planting.append(row["crop_id"])
+    return new_planting
+
+
 def _available_for_shift(staff_df: pd.DataFrame, shift_name: str) -> int:
     """Count how many staff members list *shift_name* in their availability."""
     count = 0
@@ -78,6 +93,9 @@ def build_and_solve(
     available_headcount: int = 6,
     tariff_rate: float | None = None,
     cv_diagnosis: dict | None = None,
+    seed_supply_delayed: bool = False,
+    seed_stock_kg: dict | None = None,
+    growth_days: dict | None = None,
 ) -> dict:
     """Build and solve the MILP model.
 
@@ -105,6 +123,16 @@ def build_and_solve(
         - nutrition_status=nitrogen_low: increase nutrient cost by 15%
         - nutrition_status=water_stress: increase irrigation frequency by 1x
         - confidence < 0.70: apply 50% wider uncertainty band
+    seed_supply_delayed : bool
+        If True, applies a constraint limiting new tier assignments per crop
+        based on available seed stock and growth cycle (seed_stock_kg / growth_days).
+        Logs a warning when active.
+    seed_stock_kg : dict | None
+        Per-crop seed stock in kg. Required when seed_supply_delayed=True.
+        Format: {crop_id: seed_stock_kg}
+    growth_days : dict | None
+        Per-crop growth days. Required when seed_supply_delayed=True.
+        Format: {crop_id: growth_days}
 
     Returns
     -------
@@ -322,6 +350,36 @@ def build_and_solve(
             cid = CROP_IDS[c]
             min_hours = max(1, crop_led_hours[cid] * 4 // 5)  # 80%
             model.add(total_led_t >= min_hours).only_enforce_if(assign[c, t])
+
+    # ---------------------------------------------------------------
+    # C6: Seed supply delay constraint — limit new tier assignments
+    #      based on seed stock availability and growth cycle.
+    # ---------------------------------------------------------------
+    if seed_supply_delayed:
+        logger.warning(
+            "optimizer.seed_supply_delayed.active",
+            extra={"cid": "all"},
+        )
+        # Default seed_stock_kg and growth_days to 1.0 if not provided
+        # (avoids division by zero; effectively no constraint if stock is ample)
+        seed_stock = defaultdict(lambda: 1.0, seed_stock_kg or {})
+        growth = defaultdict(lambda: 1.0, growth_days or {})
+
+        new_planting_cids = _get_new_planting_crops(crops_df)
+
+        for c in range(NUM_CROPS):
+            cid = CROP_IDS[c]
+            # Only apply constraint to crops flagged as new planting
+            if cid not in new_planting_cids:
+                continue
+            max_new_tiers = seed_stock[cid] / growth[cid]
+            if max_new_tiers < 1:
+                # Cannot assign any new tiers if seed stock is insufficient
+                model.add(sum(assign[c, t] for t in range(NUM_TIERS)) <= 0)
+            else:
+                model.add(
+                    sum(assign[c, t] for t in range(NUM_TIERS)) <= int(max_new_tiers)
+                )
 
     # ---------------------------------------------------------------
     # Objective components (all in scaled-integer cents)
@@ -545,6 +603,7 @@ def build_and_solve(
         "cost_breakdown": cost_breakdown,
         "uncertainty_buffers": uncertainty_buffers,
         "cv_diagnosis_summary": cv_summary,
+        "seed_supply_delayed": seed_supply_delayed,
     }
 
     return plan
