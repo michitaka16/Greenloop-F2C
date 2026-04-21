@@ -41,7 +41,7 @@ GreenLoop F2C is a 5-layer AI platform managing a vertical-hydroponic farm from 
 
 **Daily flow:** 05:00 Layer 1 demand forecast (q=0.95 upper CI) to 06:00 Layer 2 MILP plan (< 50 ms) plus Layer 2b VRP routes (30 customers) to 06:00-22:00 Layer 3 PPO RL controls climate to 08:00-18:00 deliveries to daily Layer 4 re-segmentation to on-demand Layer 5 RAG.
 
-**Typhoon proof:** The Typhoon button triggers a cascade: 6-hour delivery window, 30% power-outage probability (LEDs fail), 4-hour UPS countdown with visible countdown timer, emergency harvest protocol, cold storage switch, +20% demand surge from panic buying. MILP re-solves with yield_multiplier=0 for affected racks — proving the farm re-plans itself autonomously under multi-variable stress.
+**Typhoon proof:** The Typhoon button triggers a full resilience cascade — not a delivery delay simulator. A 6-hour delivery window compression triggers 30% probability of power outage. If the grid fails, a 4-hour UPS countdown begins with a live red-banner timer in the dashboard. The PPO RL agent forces LEDs off and takes a −500 reward penalty per step on battery. Layer 2 MILP simultaneously re-solves in emergency harvest mode: 12 crops harvested early to prevent total loss if power does not return, cold storage switches activated for unsold produce. Meanwhile, rainy weather keeps consumers indoors — Layer 1 applies a +20% demand surge to tomorrow's plan. Every layer responds autonomously. MILP re-solves in under 50 ms — proving the farm re-plans itself under multi-variable stress without human intervention.
 
 ## 4. Business Model
 
