@@ -7,6 +7,8 @@ to maintain crop-optimal conditions while respecting safety constraints.
 
 from __future__ import annotations
 
+import logging
+
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
@@ -19,6 +21,8 @@ from greenloop.utils.config import (
     TEMP_SAFETY_MAX,
     TEMP_SAFETY_MIN,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class HydroFarmEnv(gym.Env):
@@ -68,6 +72,9 @@ class HydroFarmEnv(gym.Env):
     # Wastewater threshold (max pump-on steps before triggering violation)
     _WASTEWATER_THRESHOLD_STEPS = 30  # 30 consecutive pump-on steps = violation
 
+    # Power outage reward penalty
+    _POWER_OUTAGE_PENALTY = -500.0
+
     def __init__(self, targets: dict | None = None, render_mode: str | None = None):
         super().__init__()
 
@@ -112,6 +119,11 @@ class HydroFarmEnv(gym.Env):
         self._consecutive_pump_steps: int = 0
         self._wastewater_exceeded: bool = False
 
+        # Power outage state
+        self._power_outage: bool = False
+        self._ups_countdown_hours: int = 4
+        self._ups_countdown_steps: int = 0  # remaining steps on UPS battery
+
     def reset(
         self,
         *,
@@ -146,7 +158,27 @@ class HydroFarmEnv(gym.Env):
         self._consecutive_pump_steps = 0
         self._wastewater_exceeded = False
 
+        # Reset power outage state
+        self._power_outage = False
+        self._ups_countdown_steps = self._ups_countdown_hours * 60
+
         return self._get_obs(), self._get_info()
+
+    def trigger_power_outage(self) -> None:
+        """Trigger a power outage event (called by external scenario manager).
+
+        Sets _power_outage=True and starts the UPS countdown.
+        LEDs will fail immediately, temperature will drift toward ambient.
+        """
+        self._power_outage = True
+        self._ups_countdown_steps = self._ups_countdown_hours * 60
+        logger.warning(
+            "hydrofarm.power_outage.triggered",
+            extra={
+                "ups_countdown_hours": self._ups_countdown_hours,
+                "ups_countdown_steps": self._ups_countdown_steps,
+            },
+        )
 
     def step(
         self, action: np.ndarray
@@ -174,11 +206,35 @@ class HydroFarmEnv(gym.Env):
             heater_kw = 0  # Block unsafe action
             self._constraint_violated = True
 
-        # --- Physics Model (simplified linear) ---
+        # --- Power Outage Handling ---
+        power_outage_active = False
+        if self._power_outage:
+            power_outage_active = True
+            self._ups_countdown_steps -= 1
+            if self._ups_countdown_steps <= 0:
+                logger.warning(
+                    "hydrofarm.ups_exhausted",
+                    extra={"step": self._step_count},
+                )
+                self._ups_countdown_steps = 0
+
+        # LED off during power outage (regardless of schedule)
+        if power_outage_active:
+            self.led_on = False
+        else:
+            # Normal LED schedule: on during hours 6-22
+            hour = (self._step_count % 1440) / 60.0
+            self.led_on = 6.0 <= hour < 22.0
 
         # Temperature: heater effect + ambient drift + noise
-        heater_effect = heater_kw * 0.5
-        ambient_drift = (self._AMBIENT_TEMP - self.temp) * 0.01
+        # During power outage: no heater, temperature drifts toward ambient
+        if power_outage_active:
+            heater_effect = 0.0  # No power for heater
+            ambient_drift = (self._AMBIENT_TEMP - self.temp) * 0.02  # Faster drift without climate control
+        else:
+            heater_effect = heater_kw * 0.5
+            ambient_drift = (self._AMBIENT_TEMP - self.temp) * 0.01
+
         self.temp += heater_effect + ambient_drift + self._rng.normal(0, 0.1)
         self.temp = float(np.clip(self.temp, 5.0, 45.0))
 
@@ -200,10 +256,6 @@ class HydroFarmEnv(gym.Env):
         self.moisture = float(
             np.clip(self.moisture + pump_moisture + evaporation, 0.0, 1.0)
         )
-
-        # LED state from schedule (on during hours 6-22)
-        hour = (self._step_count % 1440) / 60.0
-        self.led_on = 6.0 <= hour < 22.0
 
         # --- Energy tracking ---
         heater_kwh = self._HEATER_KWH.get(heater_idx, 0.0)
@@ -280,6 +332,7 @@ class HydroFarmEnv(gym.Env):
             - 10.0 * abs(temp_deviation)
             - 50.0 * wastewater_exceeded
             - 1000.0 * safety_violation_flag
+            - 500.0 * power_outage_active_flag
         )
         """
         temp_dev = abs(self.temp - self.target_temp)
@@ -301,12 +354,25 @@ class HydroFarmEnv(gym.Env):
         # Yield progress: constant small positive reward per step
         yield_progress = 1.0
 
+        # Power outage penalty — large negative penalty when on UPS battery
+        power_outage_penalty = 0.0
+        if self._power_outage:
+            power_outage_penalty = self._POWER_OUTAGE_PENALTY
+            logger.warning(
+                "hydrofarm.power_outage.penalty",
+                extra={
+                    "ups_remaining_steps": self._ups_countdown_steps,
+                    "penalty": power_outage_penalty,
+                },
+            )
+
         reward = (
             +1.0 * yield_progress
             - 5.0 * kwh_over_target
             - 10.0 * temp_dev
             - 50.0 * float(self._wastewater_exceeded)
             - 1000.0 * float(safety_violation)
+            + power_outage_penalty
         )
 
         return float(reward)
@@ -330,4 +396,7 @@ class HydroFarmEnv(gym.Env):
             "moisture": self.moisture,
             "cumulative_kwh": self._cumulative_kwh,
             "wastewater_exceeded": self._wastewater_exceeded,
+            "power_outage": self._power_outage,
+            "ups_countdown_steps": self._ups_countdown_steps,
+            "led_on": self.led_on,
         }

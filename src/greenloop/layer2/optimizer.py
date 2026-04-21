@@ -96,6 +96,7 @@ def build_and_solve(
     seed_supply_delayed: bool = False,
     seed_stock_kg: dict | None = None,
     growth_days: dict | None = None,
+    power_outage: bool = False,
 ) -> dict:
     """Build and solve the MILP model.
 
@@ -133,6 +134,9 @@ def build_and_solve(
     growth_days : dict | None
         Per-crop growth days. Required when seed_supply_delayed=True.
         Format: {crop_id: growth_days}
+    power_outage : bool
+        If True, LEDs fail, yield_multiplier=0.0 for all crops (growth stopped),
+        emergency harvest mode activated. Logs a warning when active.
 
     Returns
     -------
@@ -144,12 +148,23 @@ def build_and_solve(
     InfeasibleError
         When no feasible solution exists (e.g. available_headcount=0).
     """
+    # --- Power outage handling ---
+    if power_outage:
+        logger.warning("optimizer.power_outage.active")
+        # Emergency harvest mode: set yield_multiplier=0.0 for all crops
+        # by pre-populating _cv_yield_mult with zeros
+        if not hasattr(build_and_solve, "_power_outage_yield_mult"):
+            build_and_solve._power_outage_yield_mult = {}  # type: ignore[attr-defined]
+        for cid in CROP_IDS:
+            build_and_solve._power_outage_yield_mult[cid] = 0.0  # type: ignore[attr-defined]
+
     logger.info(
         "optimizer.build_and_solve.start",
         extra={
             "delivery_hours": delivery_hours,
             "available_headcount": available_headcount,
             "tariff_override": tariff_rate is not None,
+            "power_outage": power_outage,
         },
     )
     t0 = time.monotonic()
@@ -403,8 +418,11 @@ def build_and_solve(
 
         # Apply CV diagnosis yield multiplier (from Layer 1b growth stage assessment).
         # If cv_diagnosis is None, _cv_yield_mult is not set → default to 1.0.
+        # Power outage overrides to 0.0 (emergency harvest mode).
         yield_mult = 1.0
-        if hasattr(build_and_solve, "_cv_yield_mult"):
+        if hasattr(build_and_solve, "_power_outage_yield_mult"):
+            yield_mult = build_and_solve._power_outage_yield_mult.get(cid, 1.0)  # type: ignore[attr-defined]
+        elif hasattr(build_and_solve, "_cv_yield_mult"):
             yield_mult = build_and_solve._cv_yield_mult.get(cid, 1.0)  # type: ignore[attr-defined]
 
         # revenue per tier for this crop (scaled):
@@ -444,6 +462,7 @@ def build_and_solve(
     # --- Waste penalty ---
     # Waste = sum over crops of (spoilage_rate * upper_ci * price * yield_mult * tiers / NUM_TIERS)
     # Yield multiplier from CV diagnosis is applied here too (reduces waste if yield is lower).
+    # Power outage sets yield_mult=0.0, so waste is also zero (nothing growing to spoil).
     waste_terms: list = []
     for c in range(NUM_CROPS):
         cid = CROP_IDS[c]
@@ -451,7 +470,9 @@ def build_and_solve(
         price = crop_price_scaled[cid]
         spoilage = float(crops_df.loc[crops_df["crop_id"] == cid, "spoilage_rate"].iloc[0])
         yield_mult = 1.0
-        if hasattr(build_and_solve, "_cv_yield_mult"):
+        if hasattr(build_and_solve, "_power_outage_yield_mult"):
+            yield_mult = build_and_solve._power_outage_yield_mult.get(cid, 1.0)  # type: ignore[attr-defined]
+        elif hasattr(build_and_solve, "_cv_yield_mult"):
             yield_mult = build_and_solve._cv_yield_mult.get(cid, 1.0)  # type: ignore[attr-defined]
         waste_per_tier = int(round(upper_ci * price * spoilage / NUM_TIERS * yield_mult))
         tiers_assigned = sum(assign[c, t] for t in range(NUM_TIERS))
@@ -603,7 +624,7 @@ def build_and_solve(
         "cost_breakdown": cost_breakdown,
         "uncertainty_buffers": uncertainty_buffers,
         "cv_diagnosis_summary": cv_summary,
-        "seed_supply_delayed": seed_supply_delayed,
+        "power_outage": power_outage,
     }
 
     return plan

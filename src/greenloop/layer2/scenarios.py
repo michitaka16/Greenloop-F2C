@@ -1,26 +1,55 @@
 """Layer 2 scenario modifiers — Typhoon and plan comparison utilities."""
 
 import copy
+from dataclasses import dataclass
 
 
-def apply_typhoon(base_plan_kwargs: dict) -> dict:
+@dataclass
+class TyphoonScenarioInput:
+    """Input for Typhoon scenario simulation."""
+    delivery_hours: int = 6
+    power_outage_probability: float = 0.3  # 30% chance LEDs fail
+    ups_countdown_hours: int = 4            # UPS battery window
+    emergency_harvest: bool = False         # triggered when power fails
+    demand_multiplier: float = 1.2          # 20% demand surge (panic buying)
+    cold_storage_switch: bool = False       # preserve harvested inventory
+    staff_reduced_pct: int = 30             # workers on leave
+
+
+def apply_typhoon(base_plan_kwargs: dict, scenario: TyphoonScenarioInput | None = None) -> dict:
     """Modify kwargs for Typhoon scenario: delivery_hours=6, re-solve.
 
-    Returns a new dict with delivery_hours set to 6. Does NOT mutate
-    the original base_plan_kwargs.
+    Applies TyphoonScenarioInput parameters to base_plan_kwargs for re-solving.
+    Returns a new dict. Does NOT mutate the original base_plan_kwargs.
 
     Parameters
     ----------
     base_plan_kwargs : dict
         Keyword arguments suitable for ``build_and_solve(**kwargs)``.
+    scenario : TyphoonScenarioInput | None
+        Typhoon scenario parameters. Defaults to TyphoonScenarioInput() if None.
 
     Returns
     -------
     dict
-        Modified kwargs with ``delivery_hours=6``.
+        Modified kwargs with Typhoon scenario applied.
     """
+    if scenario is None:
+        scenario = TyphoonScenarioInput()
+
     modified = copy.deepcopy(base_plan_kwargs)
-    modified["delivery_hours"] = 6
+    modified["delivery_hours"] = scenario.delivery_hours
+
+    # Apply demand_multiplier to upper_ci in forecast dict
+    if "forecast" in modified:
+        forecast = modified["forecast"]
+        for crop_id, values in forecast.items():
+            if "upper_ci" in values:
+                values["upper_ci"] = round(values["upper_ci"] * scenario.demand_multiplier, 2)
+
+    # Pass power_outage info to optimizer
+    modified["power_outage"] = True
+
     return modified
 
 
