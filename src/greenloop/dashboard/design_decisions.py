@@ -38,8 +38,8 @@ def _load_decisions() -> list[tuple[str, str]]:
     if not _DECISION_LOG.exists():
         return []
     text = _DECISION_LOG.read_text()
-    # Split on '### Decision N:' headings; keep the heading as part of the body.
-    pattern = re.compile(r"^### (Decision \d+:[^\n]+)\n", re.MULTILINE)
+    # Split on '## Decision N:' or '### Decision N:' headings
+    pattern = re.compile(r"^#{2,} (Decision \d+:[^\n]+)\n", re.MULTILINE)
     matches = list(pattern.finditer(text))
     decisions: list[tuple[str, str]] = []
     for i, m in enumerate(matches):
