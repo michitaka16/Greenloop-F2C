@@ -104,8 +104,6 @@ def get_weekly_sustainability(crops, electricity_df, staff):
     Runs the optimizer once per day — cached for 1 hour to avoid recalculation
     on every dashboard interaction.
     """
-    import pandas as pd
-
     from greenloop.layer1.features import build_features as build_feats
     from greenloop.layer1.model import load_models, train_models
     from greenloop.layer1.predict import predict_demand as _predict
