@@ -173,6 +173,103 @@ def diagnose_all_racks_simulated() -> dict[str, DiagnosisResult]:
 
 
 # ---------------------------------------------------------------------------
+# Batch processing — multiple racks diagnosed at once
+# ---------------------------------------------------------------------------
+
+
+def diagnose_batch(
+    images: dict[str, bytes],
+) -> dict[str, DiagnosisResult]:
+    """Diagnose multiple racks from uploaded images.
+
+    Args:
+        images: Dict mapping rack_id (e.g. 'tier_3') to image bytes.
+
+    Returns:
+        Dict mapping rack_id to DiagnosisResult. Unrecognised rack_ids
+        default to 'tier_0' for the mock.
+    """
+    results: dict[str, DiagnosisResult] = {}
+    for rack_id, image_bytes in images.items():
+        # Default unknown racks to tier_0 for mock (real model would reject)
+        effective_rack = rack_id if rack_id in RACK_SCENARIOS else "tier_0"
+        results[rack_id] = mock_diagnose_from_image(image_bytes, effective_rack)
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Filename → rack_id parser
+# ---------------------------------------------------------------------------
+
+# Keywords that map demo images to crop_ids
+_FILENAME_CROP_KEYWORDS = {
+    "spinach": "baby_spinach",
+    "nitrogen": "baby_spinach",
+    "kailan": "kai_lan",
+    "wilt": "lettuce_mambo",
+    "water_stress": None,  # generic — don't auto-assign
+    "healthy": None,  # generic
+}
+
+
+def parse_filename_to_crop(filename: str) -> str | None:
+    """Return crop_id from a demo image filename, or None if no match."""
+    lower = filename.lower()
+    for keyword, crop_id in _FILENAME_CROP_KEYWORDS.items():
+        if keyword in lower:
+            return crop_id
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Rack-number pattern in filenames: rack_3.jpg, tier_5.png
+_RACK_NUM_PATTERN = __import__("re").compile(r"(?:rack|tier)[_\s]*(\d+)", __import__("re").IGNORECASE)
+
+
+def parse_rack_number(filename: str) -> int | None:
+    """Return rack number (0-9) if filename matches rack_N pattern, else None."""
+    m = _RACK_NUM_PATTERN.search(filename)
+    if m:
+        n = int(m.group(1))
+        if 0 <= n <= 9:
+            return n
+    return None
+
+
+def filename_to_rack_id(
+    filename: str,
+    rack_layout: dict[str, str],
+) -> str | None:
+    """Map an uploaded filename to a rack_id.
+
+    Priority:
+    1. Filename contains 'rack_N' / 'tier_N' → direct mapping to tier_N
+    2. Filename contains crop keyword → find first rack with that crop today
+    3. Otherwise None (manual selection required)
+
+    Args:
+        filename: Uploaded file name, e.g. 'demo_spinach_nitrogen.jpg'
+        rack_layout: Today's MILP rack layout {rack_id: crop_id}
+
+    Returns:
+        rack_id string (e.g. 'tier_3') or None
+    """
+    # Priority 1: rack number in filename
+    rack_num = parse_rack_number(filename)
+    if rack_num is not None:
+        return f"tier_{rack_num}"
+
+    # Priority 2: crop keyword in filename
+    crop_id = parse_filename_to_crop(filename)
+    if crop_id:
+        for rack_id, c in rack_layout.items():
+            if c == crop_id:
+                return rack_id
+
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Impact statements — what Layer 2 / Layer 3 should do with the diagnosis
 # ---------------------------------------------------------------------------
 
