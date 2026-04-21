@@ -54,6 +54,7 @@ from greenloop.layer2.sustainability import (  # noqa: E402
     compute_weekly_sustainability,
 )
 from greenloop.layer3.environment import HydroFarmEnv  # noqa: E402
+from greenloop.layer3.autonomy_gate import AutonomyGate, AutonomyMode  # noqa: E402
 from greenloop.layer1b.simulation import (  # noqa: E402
     GROWTH_BADGES,
     NUTRITION_BADGES,
@@ -812,44 +813,116 @@ def _render_sustainability_section(plan, forecast, crops, electricity_df, staff)
 def _render_rl_control():
     st.subheader("RL Control (Layer 3)")
 
-    # Persistent env and agent across reruns
-    if "rl_env" not in st.session_state:
-        st.session_state.rl_env = HydroFarmEnv()
-        st.session_state.rl_env.reset()
+    # Persistent gate, env, and agent across reruns
+    if "rl_gate" not in st.session_state:
+        env = HydroFarmEnv()
+        obs, _ = env.reset()
+        agent = HydroFarmAgent() if LAYER3_AGENT_AVAILABLE else None
+        st.session_state.rl_gate = AutonomyGate(agent=agent, env=env)
         st.session_state.rl_history: list[dict] = []
-        st.session_state.rl_agent = HydroFarmAgent() if LAYER3_AGENT_AVAILABLE else None
+        st.session_state.rl_episode_step = 0
+        st.session_state.rl_current_obs = obs
 
-    env = st.session_state.rl_env
-    agent = st.session_state.rl_agent
+    gate = st.session_state.rl_gate
     history = st.session_state.rl_history
 
-    # Run 10 steps on button press
-    if st.button("▶ Run 10 steps"):
-        steps = agent.run_episode(env, n_steps=10) if agent else None
-        if steps:
-            st.session_state.rl_history.extend(steps)
-        else:
-            # Random fallback
-            for _ in range(10):
-                action = env.action_space.sample()
-                obs, reward, terminated, truncated, info = env.step(action)
-                cumulative = sum(h["reward"] for h in st.session_state.rl_history) + reward
-                st.session_state.rl_history.append({
-                    "step": len(st.session_state.rl_history),
-                    "obs": obs.copy(),
-                    "action": action.copy() if hasattr(action, "copy") else action,
-                    "reward": float(reward),
-                    "cumulative_reward": cumulative,
-                    "info": info,
-                })
-                if terminated or truncated:
-                    break
+    # Autonomy mode selector
+    mode_labels = {AutonomyMode.MANUAL: "Manual", AutonomyMode.ADVISORY: "Advisory", AutonomyMode.AUTONOMOUS: "Autonomous"}
+    current_mode = gate.get_mode()
+    mode_index = list(mode_labels.keys()).index(current_mode)
+    selected_label = st.radio(
+        "Autonomy",
+        options=list(mode_labels.values()),
+        index=mode_index,
+        format_func=lambda x: x,
+        horizontal=True,
+        help="Manual: you approve every action. Advisory: agent acts, you can override. Autonomous: agent runs freely.",
+    )
+    selected_mode = AutonomyMode([k for k, v in mode_labels.items() if v == selected_label][0])
+    if selected_mode != current_mode:
+        gate.set_mode(selected_mode)
+        st.session_state.rl_history = []
+        st.session_state.rl_episode_step = 0
+        obs, _ = gate._env.reset()
+        st.session_state.rl_current_obs = obs
+        st.rerun()
 
-    # Safety alert
+    # Show pending proposed action in Manual mode
+    if gate.get_mode() == AutonomyMode.MANUAL and gate.has_pending:
+        pending_info = gate.pending_info
+        st.info(f"**Proposed:** {pending_info.get('agent', '?')} agent — awaiting your approval")
+        col_a, col_b = st.columns(2)
+        with col_a:
+            if st.button("✅ Approve", key="approve_action"):
+                gate.approve_pending()
+                obs = gate._env._get_obs()
+                last = gate._state.last_info
+                step_n = gate._state.episode_step
+                reward = last.get("reward", 0.0)
+                st.session_state.rl_episode_step = step_n
+                st.session_state.rl_current_obs = obs
+                st.session_state.rl_history.append({
+                    "step": step_n,
+                    "obs": obs,
+                    "action": gate._state.last_action,
+                    "reward": reward,
+                    "cumulative_reward": _cumulative_reward(history) + reward,
+                    "info": last,
+                })
+                if last.get("constraint_violation"):
+                    st.error("⚠ Constraint violation — Farm Manager alert")
+                st.rerun()
+        with col_b:
+            if st.button("❌ Reject", key="reject_action"):
+                rejected_action = gate.reject_pending()
+                obs = gate._env._get_obs()
+                last = gate._state.last_info
+                step_n = gate._state.episode_step
+                reward = last.get("reward", 0.0)
+                st.session_state.rl_episode_step = step_n
+                st.session_state.rl_current_obs = obs
+                st.session_state.rl_history.append({
+                    "step": step_n,
+                    "obs": obs,
+                    "action": rejected_action,
+                    "reward": reward,
+                    "cumulative_reward": _cumulative_reward(history) + reward,
+                    "info": last,
+                })
+                if last.get("constraint_violation"):
+                    st.error("⚠ Constraint violation — Farm Manager alert")
+                st.rerun()
+
+    st.caption(f"Mode: {gate.mode_label} | Step: {gate._state.episode_step}/1440 | Agent: {'PPO' if (gate._agent and gate._agent.is_real) else 'Random'}")
+
+    # Run 1 step
+    if st.button("▶ Step"):
+        obs = st.session_state.rl_current_obs
+        if gate.get_mode() == AutonomyMode.MANUAL:
+            gate.step(obs)
+        else:
+            action, info, _ = gate.step(obs)
+            obs = gate._env._get_obs()
+            reward = info.get("reward", 0.0)
+            step_n = gate._state.episode_step
+            st.session_state.rl_episode_step = step_n
+            st.session_state.rl_current_obs = obs
+            st.session_state.rl_history.append({
+                "step": step_n,
+                "obs": obs,
+                "action": action,
+                "reward": reward,
+                "cumulative_reward": _cumulative_reward(history) + reward,
+                "info": info,
+            })
+            if info.get("constraint_violation"):
+                st.error("⚠ Constraint violation — Farm Manager alert")
+
+    # Safety alert for last completed step
     if history and history[-1]["info"].get("constraint_violation"):
         st.error("⚠ Constraint violation — Farm Manager alert")
 
-    # Current state from latest step
+    # Current observation
     latest = history[-1] if history else None
     if latest:
         obs = latest["obs"]
@@ -858,13 +931,12 @@ def _render_rl_control():
         action = latest["action"]
         reward = latest["reward"]
     else:
-        obs, _ = env.reset()
+        obs = st.session_state.rl_current_obs
         step_num = 0
         cumulative = 0.0
         action = None
         reward = 0.0
 
-    # Display current observation
     col1, col2 = st.columns(2)
     with col1:
         st.metric("Temperature", f"{obs[0]:.1f}°C", delta=f"{obs[6]:+.1f}°C")
@@ -873,7 +945,6 @@ def _render_rl_control():
         st.metric("Humidity", f"{obs[1]:.1f}%", delta=f"{obs[7]:+.1f}%")
         st.metric("Moisture", f"{obs[3]:.2f}", delta=f"{obs[9]:+.2f}")
 
-    # Action taken and reward
     if action is not None:
         heater_labels = {-2: "Cool -2kW", -1: "Cool -1kW", 0: "Off", 1: "Heat +1kW", 2: "Heat +2kW"}
         pump_labels = {0: "OFF", 1: "30s", 2: "60s", 3: "120s"}
@@ -888,15 +959,17 @@ def _render_rl_control():
         st.write("**Action:** " + " | ".join(action_labels))
         st.write(f"**Reward this step:** {reward:+.1f} | **Cumulative:** {cumulative:+.1f}")
 
-    st.caption(
-        f"Step: {step_num}/1440 | "
-        f"Agent: {'PPO' if (agent and agent.is_real) else 'Random'}"
-    )
-
     # Reward chart
     if len(history) > 1:
         rewards = [s["reward"] for s in history]
         st.line_chart(rewards, height=120)
+
+
+def _cumulative_reward(history: list[dict]) -> float:
+    """Sum of rewards in history (safe for empty list)."""
+    if not history:
+        return 0.0
+    return sum(h["reward"] for h in history)
 
 
 # ---------------------------------------------------------------------------
