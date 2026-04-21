@@ -7,7 +7,7 @@ Single-screen dashboard integrating all 3 layers:
 """
 
 import time
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import pandas as pd
