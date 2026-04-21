@@ -29,7 +29,8 @@ PROJECT_ROOT = _find_project_root()
 DATA_DIR = Path(os.environ.get("DATA_DIR", PROJECT_ROOT / "data"))
 MODELS_DIR = Path(os.environ.get("MODELS_DIR", PROJECT_ROOT / "models"))
 
-# Singapore-specific constants
+# Farm topology
+NUM_TIERS = 10   # number of vertical rack tiers
 SGD_CURRENCY = "SGD"
 SG_TIMEZONE = "Asia/Singapore"
 
@@ -50,6 +51,8 @@ CROP_IDS = [
     "coriander",
     "mint",
 ]
+
+NUM_CROPS = len(CROP_IDS)   # 10
 
 # Shifts
 SHIFTS = {

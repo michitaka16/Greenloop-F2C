@@ -17,6 +17,7 @@ import pandas as pd
 from ortools.sat.python import cp_model
 
 from greenloop.layer2.exceptions import InfeasibleError
+from greenloop.layer2.objective import ObjectiveWeights
 from greenloop.utils.config import (
     CROP_IDS,
     MAX_SHIFT_HOURS,
@@ -97,6 +98,10 @@ def build_and_solve(
     seed_stock_kg: dict | None = None,
     growth_days: dict | None = None,
     power_outage: bool = False,
+    # --- HITL parameters ---
+    excluded_racks: list[int] | None = None,
+    unavailable_shifts: list[str] | None = None,
+    objective_weights: ObjectiveWeights | None = None,
 ) -> dict:
     """Build and solve the MILP model.
 
@@ -137,6 +142,16 @@ def build_and_solve(
     power_outage : bool
         If True, LEDs fail, yield_multiplier=0.0 for all crops (growth stopped),
         emergency harvest mode activated. Logs a warning when active.
+    excluded_racks : list[int] | None
+        Tier numbers (0-indexed) to exclude from today's plan.
+        Adds a hard constraint: no crop can be assigned to these tiers.
+    unavailable_shifts : list[str] | None
+        Shift names (e.g. ["morning"]) with no staff available today.
+        Sets staff_count to 0 for those shifts.
+    objective_weights : ObjectiveWeights | None
+        Explicit weight multipliers for the objective function terms.
+        Supports HITL mode toggle (profit/sustainability/balanced).
+        Defaults to all-1.0 (equivalent to previous implicit weights).
 
     Returns
     -------
@@ -303,10 +318,16 @@ def build_and_solve(
             led[t, h] = model.new_bool_var(f"led_t{t}_h{h}")
 
     # 2. Staff count per shift — integer [0, available_headcount]
+    unavailable_shifts = unavailable_shifts or []
     staff_count = {}
     for s_idx, s_name in enumerate(SHIFT_NAMES):
-        cap = min(available_headcount, _available_for_shift(staff_df, s_name))
-        staff_count[s_idx] = model.new_int_var(0, cap, f"staff_{s_name}")
+        if s_name in unavailable_shifts:
+            # Hard constraint: no staff for this shift today.
+            staff_count[s_idx] = model.new_int_var(0, 0, f"staff_{s_name}")
+            logger.info("optimizer.constraint.shift_unavailable", shift=s_name)
+        else:
+            cap = min(available_headcount, _available_for_shift(staff_df, s_name))
+            staff_count[s_idx] = model.new_int_var(0, cap, f"staff_{s_name}")
 
     # 3. Crop-to-tier assignment — binary (5 x 10)
     assign = {}
@@ -332,14 +353,24 @@ def build_and_solve(
     # Hard constraints
     # ---------------------------------------------------------------
 
-    # C1: Each tier gets exactly 1 crop.
-    for t in range(NUM_TIERS):
-        model.add(sum(assign[c, t] for c in range(NUM_CROPS)) == 1)
+    # C1: Each active tier grows at least 1 crop (LED panel serves multiple crops).
+    #     Excluded tiers are handled by C1c (0 assignment).
+    excluded_racks = excluded_racks or []
+    active_tiers = [t for t in range(NUM_TIERS) if t not in excluded_racks]
+    for t in active_tiers:
+        model.add(sum(assign[c, t] for c in range(NUM_CROPS)) >= 1)
 
     # C1b: Each crop gets at least 1 tier — prevents the optimizer from
     #      putting all tiers on the single most profitable crop.
     for c in range(NUM_CROPS):
         model.add(sum(assign[c, t] for t in range(NUM_TIERS)) >= 1)
+
+    # C1c: HITL — excluded racks cannot be assigned to any crop.
+    if excluded_racks:
+        for t in excluded_racks:
+            for c in range(NUM_CROPS):
+                model.add(assign[c, t] == 0)
+        logger.info("optimizer.constraint.racks_excluded", excluded_racks=excluded_racks)
 
     # C2: MOM — each shift <= MAX_SHIFT_HOURS (structurally guaranteed
     #     because _shift_hours returns 8, and we use that as the hours value).
@@ -504,12 +535,24 @@ def build_and_solve(
     nutrient_cost_scaled = int(round(nutrient_cost_adjustment * 100))  # 0.15 → 15 (in scaled cents)
 
     # --- Objective: Maximize Revenue - Electricity - Labour - Waste - Balance - Nutrient ---
+    # Apply HITL objective weights (default: all 1.0).
+    weights = objective_weights or ObjectiveWeights()
+
+    # Sustainability bonus: additional reward for off-peak LED usage.
+    off_peak_bonus = sum(
+        led[t, h]
+        for t in range(NUM_TIERS)
+        for h in range(NUM_HOURS)
+        if h not in PEAK_HOURS
+    )
+
     model.maximize(
-        total_revenue
-        - total_electricity
-        - total_labour
-        - total_waste
-        - total_balance_penalty
+        int(weights.revenue) * total_revenue
+        - int(weights.electricity) * total_electricity
+        - int(weights.labour) * total_labour
+        - int(weights.waste) * total_waste
+        - int(weights.balance) * total_balance_penalty
+        + int(weights.sustainability) * off_peak_bonus
         - nutrient_cost_scaled
     )
 
@@ -625,9 +668,38 @@ def build_and_solve(
         "uncertainty_buffers": uncertainty_buffers,
         "cv_diagnosis_summary": cv_summary,
         "power_outage": power_outage,
+        "excluded_racks": excluded_racks or [],
+        "unavailable_shifts": unavailable_shifts or [],
+        "objective_mode": (
+            _infer_mode(weights) if objective_weights is None else _weights_to_mode(weights)
+        ),
     }
 
     return plan
+
+
+def _weights_to_mode(weights: ObjectiveWeights) -> str:
+    """Infer which preset mode best matches the given weights (for display)."""
+    PRESETS = {
+        "profit": ObjectiveWeights.from_mode("profit"),
+        "sustainability": ObjectiveWeights.from_mode("sustainability"),
+        "balanced": ObjectiveWeights.from_mode("balanced"),
+    }
+    best_mode = "balanced"
+    best_dist = float("inf")
+    for mode_name, preset in PRESETS.items():
+        dist = abs(weights.revenue - preset.revenue) + abs(
+            weights.electricity - preset.electricity
+        )
+        if dist < best_dist:
+            best_dist = dist
+            best_mode = mode_name
+    return best_mode
+
+
+def _infer_mode(weights: ObjectiveWeights) -> str:
+    """Alias for _weights_to_mode for backward compatibility."""
+    return _weights_to_mode(weights)
 
 
 def _detect_binding_constraint(available_headcount: int) -> str:

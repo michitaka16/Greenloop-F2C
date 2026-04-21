@@ -41,6 +41,8 @@ from greenloop.layer1.features import build_features  # noqa: E402
 from greenloop.layer1.model import load_models, train_models  # noqa: E402
 from greenloop.layer1.predict import predict_demand  # noqa: E402
 from greenloop.layer2.exceptions import InfeasibleError  # noqa: E402
+from greenloop.layer2.feasibility_check import validate_constraints  # noqa: E402
+from greenloop.layer2.objective import MODE_LABELS, ObjectiveWeights  # noqa: E402
 from greenloop.layer2.optimizer import build_and_solve  # noqa: E402
 from greenloop.layer2.scenarios import (  # noqa: E402
     TyphoonScenarioInput,
@@ -188,6 +190,52 @@ def main():
     electricity = electricity_df[electricity_df["date"] == selected_date].copy()
     headcount = st.sidebar.slider("Available staff", 1, 10, 6)
 
+    # ── HITL: Optimization mode ──
+    st.sidebar.divider()
+    st.sidebar.subheader("🎯 Optimization Mode")
+    mode = st.sidebar.radio(
+        "Objective",
+        options=list(MODE_LABELS.values()),
+        index=2,  # Balanced default
+        format_func=lambda x: x,
+        help="Profit: maximise revenue. Sustainability: minimise energy/waste. Balanced: trade-off.",
+    )
+    mode_key = next(k for k, v in MODE_LABELS.items() if v == mode)
+
+    # ── HITL: Manual constraints ──
+    with st.sidebar.expander("🔧 Override", expanded=False):
+        st.markdown("**Exclude racks today:**")
+        excluded_racks: list[int] = []
+        for tier in range(10):
+            crop = None
+            if forecast is not None:
+                # Try to get current crop from last plan if available
+                crop = None
+            if st.checkbox(f"Rack {tier}", value=False, key=f"exclude_rack_{tier}"):
+                excluded_racks.append(tier)
+
+        st.markdown("**Staff unavailable:**")
+        unavailable_shifts: list[str] = []
+        for shift in ["morning", "afternoon", "night"]:
+            if st.checkbox(f"No {shift.capitalize()} shift", value=False, key=f"no_shift_{shift}"):
+                unavailable_shifts.append(shift)
+
+        if st.button("Apply override", use_container_width=True):
+            validation = validate_constraints(excluded_racks, unavailable_shifts, forecast, crops)
+            if not validation:
+                st.success("Constraints validated — re-solving...")
+                st.session_state["_hitl_excluded_racks"] = excluded_racks
+                st.session_state["_hitl_unavailable_shifts"] = unavailable_shifts
+            elif validation.severity == "error":
+                st.error(validation.reason)
+            else:
+                st.warning(validation.reason if validation.reason else "Tight but feasible.")
+                st.session_state["_hitl_excluded_racks"] = excluded_racks
+                st.session_state["_hitl_unavailable_shifts"] = unavailable_shifts
+        else:
+            excluded_racks = st.session_state.get("_hitl_excluded_racks", [])
+            unavailable_shifts = st.session_state.get("_hitl_unavailable_shifts", [])
+
     # ── Sidebar: Design decisions (Dimension A evidence for VC pitch) ──
     render_design_decisions_panel()
 
@@ -195,7 +243,16 @@ def main():
     forecast = get_forecast(shipments)
 
     # ── Layer 2: Optimize ──
-    plan = _solve_plan(forecast, crops, electricity, staff, headcount)
+    plan = _solve_plan(
+        forecast,
+        crops,
+        electricity,
+        staff,
+        headcount,
+        mode_key,
+        excluded_racks,
+        unavailable_shifts,
+    )
 
     # ── Transfer Learning diagnosis (Layer 1b) — above the fold ──
     _render_cv_diagnosis(plan)
@@ -235,19 +292,27 @@ def main():
         _render_rl_control()
 
     with bot_right:
-        _render_scenario_testing(forecast, crops, electricity, staff, headcount, plan)
+        _render_scenario_testing(forecast, crops, electricity, staff, headcount, plan, mode_key, excluded_racks, unavailable_shifts)
 
 
 # ---------------------------------------------------------------------------
 # Layer 2 solver
 # ---------------------------------------------------------------------------
-def _solve_plan(forecast, crops, electricity, staff, headcount):
+def _solve_plan(
+    forecast,
+    crops,
+    electricity,
+    staff,
+    headcount,
+    mode_key="balanced",
+    excluded_racks=None,
+    unavailable_shifts=None,
+):
     """Solve Layer 2 MILP with CV diagnosis. Return plan dict or None on infeasibility."""
     # Run Layer 1b CV diagnosis across all 10 racks.
-    # In demo mode (GREENLOOP_CV_MODE=simulated) this uses the RACK_SCENARIOS
-    # lookup table; when a real model is deployed it calls diagnose_rack() for
-    # each tier and falls back gracefully if the model file is absent.
     cv_diagnosis = diagnose_all_racks_simulated()
+
+    objective_weights = ObjectiveWeights.from_mode(mode_key)
 
     try:
         return build_and_solve(
@@ -257,6 +322,9 @@ def _solve_plan(forecast, crops, electricity, staff, headcount):
             staff_df=staff,
             available_headcount=headcount,
             cv_diagnosis=cv_diagnosis,
+            excluded_racks=excluded_racks,
+            unavailable_shifts=unavailable_shifts,
+            objective_weights=objective_weights,
         )
     except InfeasibleError as e:
         st.error(f"**No feasible plan:** {e}")
@@ -834,7 +902,10 @@ def _render_rl_control():
 # ---------------------------------------------------------------------------
 # Scenario Testing
 # ---------------------------------------------------------------------------
-def _render_scenario_testing(forecast, crops, electricity, staff, headcount, current_plan):
+def _render_scenario_testing(
+    forecast, crops, electricity, staff, headcount, current_plan,
+    mode_key="balanced", excluded_racks=None, unavailable_shifts=None,
+):
     st.subheader("Scenario Testing")
 
     # Red alert banner when typhoon is active
@@ -895,6 +966,10 @@ def _render_scenario_testing(forecast, crops, electricity, staff, headcount, cur
         )
 
         typhoon_kwargs = apply_typhoon(base_kwargs, scenario)
+        # Carry HITL constraints into typhoon scenario
+        typhoon_kwargs["excluded_racks"] = excluded_racks or []
+        typhoon_kwargs["unavailable_shifts"] = unavailable_shifts or []
+        typhoon_kwargs["objective_weights"] = ObjectiveWeights.from_mode(mode_key)
 
         try:
             typhoon_plan = build_and_solve(**typhoon_kwargs)
