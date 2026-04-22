@@ -109,7 +109,7 @@ def get_electricity_days(electricity):
 def get_forecast(_shipments):
     """Run Layer 1 forecast. Returns dict {crop_id: {predicted_kg, lower_ci, upper_ci}}."""
     features = build_features(_shipments)
-    models_dir = Path(__file__).resolve().parent.parent.parent.parent / "models"
+    models_dir = Path(__file__).resolve().parent.parent.parent.parent / "models" / "layer1_v2"
     try:
         models = load_models(models_dir)
     except FileNotFoundError:
@@ -145,7 +145,7 @@ def get_weekly_sustainability(crops, electricity_df, staff):
             continue
         try:
             features = build_feats(shipments_subset)
-            models_dir = Path(__file__).resolve().parent.parent.parent.parent / "models"
+            models_dir = Path(__file__).resolve().parent.parent.parent.parent / "models" / "layer1_v2"
             try:
                 models = load_models(models_dir)
             except FileNotFoundError:
