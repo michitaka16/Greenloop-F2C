@@ -59,6 +59,7 @@ from greenloop.layer3.autonomy_gate import AutonomyGate, AutonomyMode  # noqa: E
 from greenloop.layer1b.simulation import (  # noqa: E402
     GROWTH_BADGES,
     NUTRITION_BADGES,
+    diagnose_all_racks_simulated,
     diagnose_batch,
     filename_to_rack_id,
     mock_diagnose_from_image,
