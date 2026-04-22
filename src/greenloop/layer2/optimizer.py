@@ -209,12 +209,17 @@ def build_and_solve(
     crop_water_per_tray_scaled = {}
     crop_led_hours = {}
 
+    crop_prices: dict[str, float] = {}
+    crop_spoilage: dict[str, float] = {}
     for _, row in crops_df.iterrows():
         cid = row["crop_id"]
         crop_price_scaled[cid] = int(round(float(row["price_sgd_per_kg"]) * COST_SCALE))
         crop_spoilage_scaled[cid] = int(round(float(row["spoilage_rate"]) * COST_SCALE))
         crop_water_per_tray_scaled[cid] = int(round(float(row["water_per_tray"]) * WATER_SCALE))
         crop_led_hours[cid] = int(row["led_hours_per_day"])
+        # Non-scaled versions for dashboard profit-band computation
+        crop_prices[cid] = float(row["price_sgd_per_kg"])
+        crop_spoilage[cid] = float(row["spoilage_rate"])
 
     avg_rate_scaled = _avg_hourly_rate_scaled(staff_df)
 
@@ -644,9 +649,11 @@ def build_and_solve(
     for cid in CROP_IDS:
         predicted = forecast[cid]["predicted_kg"]
         upper = forecast[cid]["upper_ci"]
+        lower = forecast[cid].get("lower_ci", predicted)
         buffer_pct = round((upper - predicted) / predicted * 100, 1) if predicted > 0 else 0.0
         uncertainty_buffers[cid] = {
             "upper_ci": upper,
+            "lower_ci": lower,
             "buffer_pct": buffer_pct,
         }
 
@@ -685,6 +692,9 @@ def build_and_solve(
         "objective_mode": (
             _infer_mode(weights) if objective_weights is None else _weights_to_mode(weights)
         ),
+        # Crop metadata for dashboard profit-band CI computation
+        "crop_prices": crop_prices,
+        "crop_spoilage": crop_spoilage,
     }
 
     return plan

@@ -44,13 +44,13 @@ def test_kpi_strip_with_full_plan():
     labels = [c[0] for c in captured]
     values = [c[1] for c in captured]
     assert labels == [
-        "Profit (SGD)",
-        "Revenue (SGD)",
+        "Forecasted Profit (SGD)",
+        "Forecasted Revenue (SGD)",
         "Energy cost (SGD)",
         "Labour cost (SGD)",
         "Solve time",
     ]
-    # Profit and revenue rendered with $ and thousands separator + 2 dp
+    # Without rack_layout/crop_prices keys, band computation is skipped → fallback
     assert values[0] == "$153.98"
     assert values[1] == "$412.50"
     assert values[4] == "40 ms"

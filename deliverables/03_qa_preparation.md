@@ -55,3 +55,11 @@ A commercial UPS for a 20-rack vertical farm costs roughly 15–25K SGD. One pre
 **Primary:** Architect (Member 1)
 
 When `seed_supply_delayed=True` OR `power_outage=True`, the MILP adds a hard constraint: `max_new_tiers = seed_stock_kg[cid] / growth_days[cid]`. This limits new planting to only what can be supported by available seed stock, preventing the farm from over-committing to growth cycles that can't be completed. In power outage mode, `yield_multiplier=0.0` forces the optimizer to harvest existing crops immediately rather than waiting for a growth cycle that may not complete.
+
+---
+
+### Q: Is that profit number predicted or actual?
+
+**Primary:** QN (Business)
+
+Forecasted — not actual. We use Layer 1 XGBoost quantile regression (q=0.95 upper bound) as our production target in the MILP, which means we're planning for the optimistic case. The confidence interval shown on every plan comes from the lower bound (q=0.05) propagated through the same cost structure. "Profit $401 with 85% confidence between $360 and $440" means: in 85% of scenarios, actual profit will fall in that band — assuming the farm executes the plan and weather behaves as modelled. Actual profit depends on real growing conditions, harvest efficiency, and market prices at time of sale.

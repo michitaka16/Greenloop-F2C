@@ -44,6 +44,7 @@ from greenloop.layer2.exceptions import InfeasibleError  # noqa: E402
 from greenloop.layer2.feasibility_check import validate_constraints  # noqa: E402
 from greenloop.layer2.objective import MODE_LABELS, ObjectiveWeights  # noqa: E402
 from greenloop.layer2.optimizer import build_and_solve  # noqa: E402
+from greenloop.layer2.forecast_band import compute_profit_band  # noqa: E402
 from greenloop.layer2.scenarios import (  # noqa: E402
     TyphoonScenarioInput,
     apply_typhoon,
@@ -879,15 +880,58 @@ def _render_kpi_strip(plan):
     """Render the top-of-page KPI strip. Always visible, even when the plan is None."""
     c1, c2, c3, c4, c5 = st.columns(5)
     if plan is None:
-        c1.metric("Profit (SGD)", "—")
-        c2.metric("Revenue (SGD)", "—")
+        c1.metric("Forecasted Profit (SGD)", "—")
+        c2.metric("Forecasted Revenue (SGD)", "—")
         c3.metric("Energy cost (SGD)", "—")
         c4.metric("Labour cost (SGD)", "—")
         c5.metric("Solve time", "—", help="MILP wall-clock, rounded to ms")
         return
     cost = plan.get("cost_breakdown", {}) or {}
-    c1.metric("Profit (SGD)", f"${plan.get('objective_value_sgd', 0):,.2f}")
-    c2.metric("Revenue (SGD)", f"${cost.get('revenue', 0):,.2f}")
+
+    # Compute profit CI band from Layer 1 upper/lower CI
+    band = None
+    if all(
+        k in plan for k in ("rack_layout", "crop_prices", "crop_spoilage", "uncertainty_buffers")
+    ):
+        try:
+            from greenloop.data.loader import load_crops
+            crops_df = load_crops()
+            crops_df_indexed = crops_df.set_index("crop_id")
+            # Build forecast dict from uncertainty_buffers (now includes lower_ci)
+            forecast = {}
+            for cid, buf in plan.get("uncertainty_buffers", {}).items():
+                upper = buf.get("upper_ci", 0)
+                lower = buf.get("lower_ci", upper * 0.65)  # fallback if lower_ci missing
+                forecast[cid] = {
+                    "predicted_kg": upper,
+                    "lower_ci": lower,
+                    "upper_ci": upper,
+                }
+            band = compute_profit_band(
+                forecast,
+                cost,
+                plan.get("crop_prices", {}),
+                plan.get("crop_spoilage", {}),
+                plan.get("rack_layout", {}),
+            )
+        except Exception:
+            band = None
+
+    profit_val = band.profit_expected if band else plan.get("objective_value_sgd", 0)
+    half_width = round((band.profit_high - band.profit_low) / 2, 2) if band else None
+    delta_str = f"\u00b1 ${half_width:,.0f}" if half_width else None
+
+    c1.metric(
+        "Forecasted Profit (SGD)",
+        f"${profit_val:,.2f}",
+        delta=delta_str,
+        help="MILP profit with Layer 1 XGBoost CI band (upper_ci production target).",
+    )
+    c2.metric(
+        "Forecasted Revenue (SGD)",
+        f"${cost.get('revenue', 0):,.2f}",
+        help="Revenue using upper_ci production target (robust optimization).",
+    )
     c3.metric("Energy cost (SGD)", f"${cost.get('electricity', 0):,.2f}")
     c4.metric("Labour cost (SGD)", f"${cost.get('labour', 0):,.2f}")
     solve_ms = plan.get("solve_time_ms", 0)
@@ -909,8 +953,37 @@ def _render_plan(plan):
     cost = plan.get("cost_breakdown", {})
     revenue = cost.get("revenue", 0)
     total = plan.get("objective_value_sgd", 0)
-    m1.metric("Revenue", f"${revenue:,.0f}")
-    m2.metric("Profit", f"${total:,.0f}")
+
+    # Compute profit CI band
+    band = None
+    if all(k in plan for k in ("rack_layout", "crop_prices", "crop_spoilage", "uncertainty_buffers")):
+        try:
+            from greenloop.data.loader import load_crops
+            crops_df = load_crops().set_index("crop_id")
+            forecast = {}
+            for cid, buf in plan.get("uncertainty_buffers", {}).items():
+                upper = buf.get("upper_ci", 0)
+                lower = buf.get("lower_ci", upper * 0.65)
+                forecast[cid] = {"predicted_kg": upper, "lower_ci": lower, "upper_ci": upper}
+            band = compute_profit_band(
+                forecast,
+                cost,
+                plan.get("crop_prices", {}),
+                plan.get("crop_spoilage", {}),
+                plan.get("rack_layout", {}),
+            )
+        except Exception:
+            band = None
+
+    half_width = round((band.profit_high - band.profit_low) / 2, 2) if band else None
+    delta_str = f"\u00b1 ${half_width:,.0f}" if half_width else None
+
+    m1.metric("Forecasted Revenue", f"${revenue:,.0f}")
+    m2.metric(
+        "Forecasted Profit",
+        f"${(band.profit_expected if band else total):,.0f}",
+        delta=delta_str,
+    )
     m3.metric("Temp Target", f"{plan.get('room_temp_target_c', 22)}°C")
     m4.metric("Solve Time", f"{plan.get('solve_time_ms', 0)}ms")
 
@@ -1317,7 +1390,7 @@ def _render_scenario_testing(
                 # Expanded metrics row
                 m1, m2, m3, m4 = st.columns(4)
                 m1.metric(
-                    "Profit",
+                    "Forecasted Profit",
                     f"${typhoon_plan.get('objective_value_sgd', 0):,.0f}",
                     delta=f"{delta.get('objective_value_sgd', 0):,.0f}",
                 )
@@ -1351,7 +1424,7 @@ def _render_scenario_testing(
                         st.session_state.rl_env.trigger_power_outage()
                     st.info("Layer 3 targets updated — power outage triggered in RL environment")
             else:
-                st.write(f"Typhoon plan profit: ${typhoon_plan.get('objective_value_sgd', 0):,.0f}")
+                st.write(f"Typhoon plan forecast profit: ${typhoon_plan.get('objective_value_sgd', 0):,.0f}")
 
         except InfeasibleError as e:
             elapsed = (time.time() - t0) * 1000

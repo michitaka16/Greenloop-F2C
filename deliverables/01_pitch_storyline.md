@@ -32,6 +32,7 @@
 "MILP. Profit-maximizing plan in under 50 milliseconds."
 → Show: 10-tier LED schedule, tariff optimization.
 "Electricity: peak vs off-peak LED. Every dollar tracked."
+"Revenue and profit are forecasted — not actual. We use XGBoost upper-ci as our production target. The 85% confidence interval for profit is shown on every plan."
 
 **4:30 — Logistics (VRP)**
 "30 customers. Jurong depot. 6-hour window."
