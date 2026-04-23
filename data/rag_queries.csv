@@ -1,0 +1,2 @@
+timestamp,question,answer,tone,sources,latency_ms,from_cache,session_id
+2026-04-23T20:14:26.805809,How to use this?,"I'm running in demo mode. I can answer questions about GreenLoop's crops, water savings, pesticide-free growing, and farm location. Configure your LLM API key in .env to unlock full RAG responses.",neutral,demo_cache,0.9,True,20260423201041

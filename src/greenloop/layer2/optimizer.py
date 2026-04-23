@@ -638,7 +638,7 @@ def build_and_solve(
 
     cost_breakdown = {
         "revenue": round(rev_val, 2),
-        "electricity": round(-elec_val, 2),
+        "electricity": round(elec_val, 2),
         "labour": round(-lab_val, 2),
         "waste_penalty": round(-waste_val, 2),
         "nutrient_adjustment": round(nutrient_cost_adjustment, 2),
