@@ -807,18 +807,34 @@ def _render_ai_explainer(forecast, plan):
             st.info(
                 "Set `LLM_PROVIDER` + the matching `{PROVIDER}_API_KEY` / "
                 "`{PROVIDER}_MODEL` in `.env` to enable AI commentary. "
-                "Supported: `openai`, `zai`, `minimax`."
+                "Supported: `openai`, `zai`, `minimax`, `anthropic`."
             )
             return
-        if st.button("Generate brief", key="ai_explainer_btn"):
-            with st.spinner("Asking the model…"):
-                try:
-                    narrative = explain_plan(forecast, plan)
-                    st.markdown(narrative)
-                except LLMUnavailable as e:
-                    st.error(f"LLM unavailable: {e.reason}")
-                except Exception as e:  # noqa: BLE001 — surface provider errors verbatim
-                    st.error(f"LLM request failed: {type(e).__name__}: {e}")
+
+        # Simple cache keyed on plan hash — 5-minute TTL so the same plan
+        # doesn't re-call the LLM on every widget interaction.
+        @st.cache_data(ttl=300, show_spinner=False)
+        def _cached_brief(plan_json: str) -> str:
+            return explain_plan(forecast, plan)
+
+        try:
+            brief = _cached_brief(str(sorted(plan.items())))
+        except LLMUnavailable as e:
+            st.error(f"Brief unavailable — {e.reason}")
+            return
+        except Exception as e:  # noqa: BLE001
+            st.error(f"Brief unavailable — re-check or refresh.")
+            return
+
+        st.markdown(brief)
+
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("🔄 Regenerate brief", key="ai_explainer_regen_btn"):
+                _cached_brief.clear()
+                st.rerun()
+        with col2:
+            st.caption(f"Refreshes in 5 min")
 
 
 def _render_electricity_chart(electricity):

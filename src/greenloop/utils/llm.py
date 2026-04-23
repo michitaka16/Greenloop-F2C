@@ -1,9 +1,11 @@
 """LLM client — provider-switchable via LLM_PROVIDER env var.
 
 Supported providers:
-  - openai  → api.openai.com            (OpenAI SDK, chat/completions)
-  - zai     → api.z.ai/api/anthropic    (Anthropic SDK, /v1/messages — GLM)
-  - minimax → api.minimax.io/anthropic  (Anthropic SDK, /v1/messages — MiniMax M2.x)
+  - openai    → api.openai.com            (OpenAI SDK, chat/completions)
+  - zai       → api.z.ai/api/anthropic    (Anthropic SDK, /v1/messages — GLM)
+  - minimax   → api.minimax.io/anthropic  (Anthropic SDK, /v1/messages — MiniMax M2.x)
+  - anthropic → api.anthropic.com         (Anthropic SDK, /v1/messages — Claude)
+  - claude    → api.anthropic.com         (alias for `anthropic`)
 
 Why Anthropic-compatible endpoints for ZAI and MiniMax:
   ZAI's "Coding Plan" keys and MiniMax's newer M2.x models are only exposed
@@ -29,16 +31,18 @@ from openai import OpenAI
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-_SUPPORTED = {"openai", "zai", "minimax"}
+_SUPPORTED = {"openai", "zai", "minimax", "anthropic", "claude"}
 
 _DEFAULT_BASE_URLS = {
     "openai": "https://api.openai.com/v1",
     "zai": "https://api.z.ai/api/anthropic",
     "minimax": "https://api.minimax.io/anthropic",
+    "anthropic": "https://api.anthropic.com",
+    "claude": "https://api.anthropic.com",
 }
 
 # Which SDK each provider uses on the wire.
-_SDK = {"openai": "openai", "zai": "anthropic", "minimax": "anthropic"}
+_SDK = {"openai": "openai", "zai": "anthropic", "minimax": "anthropic", "anthropic": "anthropic", "claude": "anthropic"}
 
 
 def _provider_config(provider: str) -> tuple[str, str, str]:
@@ -52,16 +56,22 @@ def _provider_config(provider: str) -> tuple[str, str, str]:
         "openai": "OPENAI_API_KEY",
         "zai": "ZAI_API_KEY",
         "minimax": "MINIMAX_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY",
+        "claude": "ANTHROPIC_API_KEY",
     }[provider]
     base_env = {
         "openai": "OPENAI_BASE_URL",
         "zai": "ZAI_BASE_URL",
         "minimax": "MINIMAX_BASE_URL",
+        "anthropic": "ANTHROPIC_BASE_URL",
+        "claude": "ANTHROPIC_BASE_URL",
     }[provider]
     model_env = {
         "openai": "OPENAI_MODEL",
         "zai": "ZAI_MODEL",
         "minimax": "MINIMAX_MODEL",
+        "anthropic": "ANTHROPIC_MODEL",
+        "claude": "ANTHROPIC_MODEL",
     }[provider]
 
     api_key = os.environ.get(key_env)
