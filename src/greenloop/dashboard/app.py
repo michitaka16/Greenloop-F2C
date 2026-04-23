@@ -26,6 +26,7 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 # Imports (after page config)
 # ---------------------------------------------------------------------------
+from greenloop.dashboard.components.task_list import render_today_actions  # noqa: E402
 from greenloop.dashboard.design_decisions import render_design_decisions_panel  # noqa: E402
 from greenloop.data.loader import (  # noqa: E402
     load_crops,
@@ -267,6 +268,9 @@ def main():
         excluded_racks,
         unavailable_shifts,
     )
+
+    # ── Today's Actions — farm-manager task list ────────────────────────────
+    render_today_actions(plan)
 
     # ── Transfer Learning diagnosis (Layer 1b) — above the fold ──
     _render_cv_diagnosis(plan)
