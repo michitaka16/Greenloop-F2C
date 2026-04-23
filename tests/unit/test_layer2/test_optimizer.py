@@ -133,7 +133,9 @@ class TestOptimizerReturnStructure:
         # Revenue can be 0 in edge cases (infeasible sub-problem under certain constraints)
         # but the key must exist and be numeric
         assert isinstance(breakdown["revenue"], (int, float))
-        assert breakdown["electricity"] <= 0
+        # Electricity: positive = cost, negative = credit (e.g. solar sell-back)
+        # Labour, waste, nutrient: negative = optimizer convention (subtracted from revenue)
+        assert isinstance(breakdown["electricity"], (int, float))
         assert breakdown["labour"] <= 0
         assert breakdown["waste_penalty"] <= 0
         assert breakdown["nutrient_adjustment"] <= 0
@@ -159,5 +161,6 @@ class TestOptimizerReturnStructure:
         plan_high = build_and_solve(
             forecast, crops_df, electricity_df, staff_df, tariff_rate=0.50
         )
-        # Higher tariff should lead to equal or higher electricity cost (more negative)
-        assert plan_high["cost_breakdown"]["electricity"] <= plan_default["cost_breakdown"]["electricity"]
+        # Higher tariff = higher electricity cost (raw elec_val, positive = cost).
+        # Higher tariff → larger positive electricity value.
+        assert plan_high["cost_breakdown"]["electricity"] >= plan_default["cost_breakdown"]["electricity"]

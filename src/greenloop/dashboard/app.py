@@ -68,6 +68,14 @@ from greenloop.layer1b.simulation import (  # noqa: E402
 )
 from greenloop.llm import LLMUnavailable, explain_plan, llm_is_configured  # noqa: E402
 from greenloop.rag.agent import RAGAgent  # noqa: E402
+
+# Governance — Deployment Gate
+from greenloop.governance.deployment_gate import (  # noqa: E402
+    DeploymentDecision,
+    GateResult,
+    GateStatus,
+    evaluate_all_gates,
+)
 from greenloop.rag.hitl import (  # noqa: E402
     Tone,
     TONE_LABELS,
@@ -1457,6 +1465,50 @@ def _render_scenario_testing(
         "Typhoon Warning: 6h delivery | 30% power outage probability | "
         "4h UPS countdown | +20% demand surge | Emergency harvest + cold storage"
     )
+
+    # Deployment Gate — collapsible panel
+    with st.expander("📋 Deployment Gate", expanded=False):
+        _render_deployment_gate_panel()
+
+
+def _render_deployment_gate_panel():
+    """Render deployment gate status as a read-only summary panel."""
+    try:
+        decision = evaluate_all_gates()
+    except Exception as e:
+        st.error(f"Gate evaluation failed: {e}")
+        return
+
+    col_status = st.columns(5)
+    for i, gate_result in enumerate(decision.gate_results):
+        with col_status[i]:
+            if gate_result.status == GateStatus.PASS:
+                st.success(f"Gate {gate_result.number}: PASS")
+            elif gate_result.status == GateStatus.FAIL:
+                st.error(f"Gate {gate_result.number}: FAIL")
+            elif gate_result.status == GateStatus.CONDITIONAL:
+                st.warning(f"Gate {gate_result.number}: CONDITIONAL")
+            else:
+                st.info(f"Gate {gate_result.number}: PENDING")
+            st.caption(gate_result.name)
+
+    st.divider()
+
+    # Ship recommendation
+    if decision.ship_recommended:
+        st.success("Ship recommended — all gates PASS")
+    else:
+        st.error(f"Do NOT ship — {decision.overall_message}")
+
+    if decision.restrictions:
+        st.warning(f"Restriction: {decision.restrictions}")
+
+    if decision.upgrade_conditions:
+        st.write("**Upgrade conditions:**")
+        for cond in decision.upgrade_conditions:
+            st.write(f"  • {cond}")
+
+    st.caption(f"Evaluated: {decision.evaluated_at}")
 
 
 if __name__ == "__main__":

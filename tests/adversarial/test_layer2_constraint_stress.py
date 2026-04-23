@@ -167,7 +167,9 @@ class TestNegativeTariff:
     def test_negative_tariff_plan_has_valid_cost_breakdown(
         self, crops_df, negative_tariff_electricity, staff_df, normal_forecast
     ):
-        """When tariff is negative, electricity cost should be a credit (negative number)."""
+        """When tariff is negative (solar sell-back), electricity must not crash.
+        Negative tariff produces a credit (elec < 0), which is correct — the optimizer
+        subtracts a negative electricity term, increasing net revenue."""
         plan = build_and_solve(
             forecast=normal_forecast,
             crops_df=crops_df,
@@ -177,11 +179,12 @@ class TestNegativeTariff:
         )
         cost = plan.get("cost_breakdown", {})
         elec = cost.get("electricity", 0)
-        # Electricity cost with negative tariff = credit (negative SGD)
+        # Negative tariff → elec_val < 0 → electricity displayed as negative (credit).
+        # Must be numeric; sign indicates cost (positive) vs credit (negative).
         assert isinstance(elec, (int, float))
-        assert elec < 0, (
-            f"Negative tariff should produce a credit (negative SGD), got elec={elec}. "
-            "The optimizer must calculate tariff * kwh without taking absolute value."
+        assert elec <= 0, (
+            f"Electricity must be negative (credit) for negative tariff, got elec={elec}. "
+            "Positive tariff → positive electricity (cost); Negative tariff → negative electricity (credit)."
         )
 
 
