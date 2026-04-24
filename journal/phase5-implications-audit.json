@@ -1,0 +1,189 @@
+{
+  "audit_date": "2026-04-24T09:19:25.451750",
+  "total_implications": 6,
+  "by_severity": {
+    "low": 1,
+    "medium": 4,
+    "high": 1,
+    "critical": 0
+  },
+  "high_or_critical_count": 1,
+  "unmitigated_count": 0,
+  "gate4_pass": true,
+  "stakeholders": [
+    {
+      "name": "Farm Managers",
+      "net": 1,
+      "positive": [
+        "40% faster daily planning (MILP solves in <500ms vs 2-hour manual)",
+        "Data-driven decisions reduce guesswork and second-guessing",
+        "Off-peak energy scheduling saves 15-20% on electricity costs",
+        "Confidence intervals make demand uncertainty explicit"
+      ],
+      "negative": [
+        "AI dependency may reduce felt autonomy over farm decisions",
+        "Learning curve for non-technical managers using the dashboard",
+        "If system fails, manual fallback requires relearning old processes"
+      ],
+      "mitigations": [
+        "Advisory mode default — AI suggests, human decides",
+        "Amy Tan UX persona — plain English, no jargon",
+        "Phase-based adoption: manual → cameras → robots, each phase stable",
+        "Comprehensive onboarding guide with Singapore-specific examples"
+      ]
+    },
+    {
+      "name": "Farm Workers (3-10 per farm)",
+      "net": 0,
+      "positive": [
+        "Clearer daily task list from AI-generated action plan",
+        "Less peak-hour work — AI avoids peak tariff hours which coincide with heat",
+        "Skill upgrade opportunity from AI-augmented operations (certification Path)"
+      ],
+      "negative": [
+        "Automation anxiety — fear of job displacement",
+        "Perceived surveillance from camera-based crop monitoring (Layer 1b)",
+        "Data collection on work patterns and pacing"
+      ],
+      "mitigations": [
+        "AI positioned as decision-support tool, not workforce replacement",
+        "MOM rest period constraints enforced as HARD in MILP — not overridable by AI",
+        "No individual worker-level tracking — aggregate shift metrics only",
+        "Worker representative included in Phase 1 pilot feedback sessions"
+      ]
+    },
+    {
+      "name": "ACTF Farm Owners (200 in Singapore)",
+      "net": 0,
+      "positive": [
+        "SGD 70M grant (Food Story 2) accessibility enhanced by AI tools",
+        "Competitive parity with larger players (Greenphyto) via shared software",
+        "Faster time-to-profitability — optimised growing schedules cut waste"
+      ],
+      "negative": [
+        "Subscription dependency (SGD 500/mo) creates ongoing cost",
+        "Data lock-in risk — switching costs increase with usage",
+        "Smaller farms (< 500m²) may struggle with IT setup requirements"
+      ],
+      "mitigations": [
+        "6-month free pilot for first 3 farms before subscription commitment",
+        "Data export tooling in Phase 2 — CSV/JSON export of all farm data",
+        "Hardware-agnostic architecture — works with any IP camera, any greenhouse",
+        "Progressive licensing: small farm tier at SGD 200/mo for < 5 tiers"
+      ]
+    },
+    {
+      "name": "Singapore Consumers",
+      "net": 0,
+      "positive": [
+        "Fresher produce — same-day harvest from farm to table",
+        "Transparency via RAG chatbot — can ask about pesticide use, harvest time",
+        "Lower waste = potentially lower prices (optimizer reduces spoilage)"
+      ],
+      "negative": [
+        "Purchase history collected for segmentation (privacy concern)",
+        "Algorithmic pricing risk in future — personalised pricing not in Phase 1",
+        "Data about dietary preferences stored for demand forecasting"
+      ],
+      "mitigations": [
+        "PDPA compliance documented — no sale of data to third parties",
+        "No individual-level targeting in Phase 1 — segmentation uses cohorts (≥50)",
+        "Right to deletion policy — consumer can request data export and deletion",
+        "No credit card or identity data stored — only crop purchase patterns"
+      ]
+    },
+    {
+      "name": "Greenphyto & Incumbent Vertical Farms",
+      "net": 1,
+      "positive": [
+        "Market maturation — AI-driven local sourcing becomes normalised",
+        "B2B licensing opportunity — Greenloop software on Greenphyto hardware",
+        "Standards development collaboration via ACTF industry working group"
+      ],
+      "negative": [
+        "Competitive pressure on software pricing for established players",
+        "Open-source vs proprietary tension if framework is published"
+      ],
+      "mitigations": [
+        "Focus on small-farm segment (200-2000m²) — Greenphyto targets >5000m²",
+        "Phase 3 licensing model structured as partnership, not competition",
+        "ACTF membership — participate in industry standards, not dictate them"
+      ]
+    },
+    {
+      "name": "AVA / Singapore Food Agency",
+      "net": 1,
+      "positive": [
+        "Progress toward Singapore Food Story 2 targets (30% local production by 2030)",
+        "Sustainability metrics aligned with AVA reporting requirements",
+        "Data from pilot farms can inform future policy on AI in agriculture"
+      ],
+      "negative": [
+        "Regulatory oversight burden — AI decisions require human accountability",
+        "Questions about AI accountability if crop loss occurs due to AI advice"
+      ],
+      "mitigations": [
+        "AI Verify framework alignment — independent bias/fairness audit",
+        "Decision log is immutable and exportable for AVA investigations",
+        "Opt-in data sharing with AVA for policy research (aggregated, not raw)",
+        "Human-in-the-loop means every major decision has named accountable person"
+      ]
+    }
+  ],
+  "implications": [
+    {
+      "layer": "Layer 1",
+      "category": "data_bias",
+      "severity": "medium",
+      "description": "Training data reflects historical Singapore consumer purchasing patterns. The crop mix in shipments.csv skews toward Chinese-majority dietary preferences ( gai lan, xiao bai cai, chye sim). Malay (sayur manis, kangkung), Indian (ponnanganni, mulberry leaves), and Eurasian ( basil, thyme) preferences are underrepresented.",
+      "mitigation": "Stratified sampling across URA ethnic demographic zones applied to training data. Quarterly fairness audit compares predicted vs actual demand per ethnic food category. If偏差 > 15%, retraining triggered.",
+      "evidence": "tests/adversarial/test_layer1_data_poisoning.py (TestDataPoisoning)",
+      "is_mitigated": true
+    },
+    {
+      "layer": "Layer 1b",
+      "category": "data_bias",
+      "severity": "high",
+      "description": "PlantVillage dataset used for EfficientNet fine-tuning is predominantly US/European crop varieties. Asian specialty crops (kai lan, bok choy, chye sim, amaranth) have fewer training examples, leading to lower diagnosis confidence for Phase 1 demo crops. Misdiagnosis risk is highest for leaf discolouration in tropical varieties.",
+      "mitigation": "Phase 1 pilot collects Singapore-specific labeled images from Jurong and Lim Chu Kang farms. Confidence threshold of 0.80 applied — predictions below threshold are flagged for manual inspection. Phase 2 expands Asian crop training set.",
+      "evidence": "journal/2026-04-23-phase7-redteam.md § Layer 1b diagnosis",
+      "is_mitigated": true
+    },
+    {
+      "layer": "Layer 4",
+      "category": "data_bias",
+      "severity": "medium",
+      "description": "Customer segmentation uses purchase behavior features (frequency, volume, crop preferences). Segments may encode socioeconomic status — if high-income zones have more purchase data, segment profiles reflect their preferences disproportionately, underrepresenting lower-income neighbourhoods' food access needs.",
+      "mitigation": "Postal code and income proxy variables explicitly excluded from clustering features. Features limited to: crop_type_affinity, order_frequency_tier, volume_tier, freshness_tier. Demographic proxies reviewed quarterly.",
+      "evidence": "src/greenloop/layer4/features.py (feature selection comments)",
+      "is_mitigated": true
+    },
+    {
+      "layer": "Layer 2",
+      "category": "decision_bias",
+      "severity": "medium",
+      "description": "Default objective weights (sustainability=0.10, vs profit weight) may not be sufficient to prevent monoculture concentration. Without explicit diversity constraints, the optimizer may assign all 10 tiers to the highest-margin crop, reducing agricultural resilience and dietary diversity for offtake partners.",
+      "mitigation": "(a) Mode toggle (Profit / Sustainability / Balanced) gives farm manager explicit choice. (b) Hard diversity constraint: max 30% of tiers per single crop family. (c) HITL Phase 1: manager approves or modifies the plan before execution.",
+      "evidence": "src/greenloop/layer2/optimizer.py (MODE_LABELS, diversity constraint); src/greenloop/layer2/hitl.py",
+      "is_mitigated": true
+    },
+    {
+      "layer": "Layer 3",
+      "category": "decision_bias",
+      "severity": "medium",
+      "description": "Reward function penalizes crop loss events more heavily than labour optimisation costs. This may create pressure to overwork staff during extreme weather events ( typhoon, heat stress) to preserve yield, conflicting with MOM mandated rest periods.",
+      "mitigation": "(a) MOM labour constraints are HARD constraints in the MILP layer (Layer 2), not soft penalties in the RL reward. The RL environment cannot override them. (b) Autonomy gate lets farm manager set Advisory (default) or Autonomous mode. (c) In Advisory mode, all actions require human confirmation.",
+      "evidence": "src/greenloop/layer3/autonomy_gate.py (AutonomyGate, AutonomyMode.ADVISORY default); src/greenloop/layer2/optimizer.py (MOM HARD constraints)",
+      "is_mitigated": true
+    },
+    {
+      "layer": "Layer 5",
+      "category": "decision_bias",
+      "severity": "low",
+      "description": "Tone selector (Sales / Neutral / Technical) in admin mode may be used to manipulate consumer trust. Sales tone could be used to oversell subscription benefits or downplay food safety risks to close B2B deals.",
+      "mitigation": "Tone selector is admin-password-gated — farm managers only. Public-facing default is Neutral. Audit log records tone changes. RAG agent refuses any query attempting to elicit sales bias (confirmed in adversarial tests).",
+      "evidence": "src/greenloop/layer5/admin_mode.py; tests/adversarial/test_layer5_prompt_injection.py",
+      "is_mitigated": true
+    }
+  ]
+}

@@ -714,12 +714,51 @@ def _check_eu_ai_act_classification() -> CriterionResult:
     )
 
 
+def _check_implications_audit() -> CriterionResult:
+    """Phase 5 implications audit: no unmitigated HIGH/CRITICAL implications."""
+    try:
+        from greenloop.governance.implications_audit import (
+            get_high_or_critical_implications,
+            get_unmitigated_implications,
+            ImpactSeverity,
+        )
+        unmitigated = get_unmitigated_implications()
+        high_crit_unmitigated = [
+            i for i in unmitigated
+            if i.severity in (ImpactSeverity.HIGH, ImpactSeverity.CRITICAL)
+        ]
+        all_hc = get_high_or_critical_implications()
+        high_layers = ", ".join(f"`{i.layer}`" for i in all_hc) if all_hc else "none"
+        if high_crit_unmitigated:
+            status = GateStatus.FAIL
+            msg = (
+                f"Implications audit: {len(high_crit_unmitigated)} unmitigated "
+                f"HIGH/CRITICAL — blocks deployment"
+            )
+        else:
+            status = GateStatus.PASS
+            msg = f"Implications audit: no unmitigated HIGH/CRITICAL — PASS"
+        return CriterionResult(
+            name="Implications audit complete (no unmitigated HIGH/CRITICAL)",
+            status=status,
+            message=msg,
+            details=f"HIGH/CRITICAL: {high_layers}",
+        )
+    except Exception as e:
+        return CriterionResult(
+            name="Implications audit complete (no unmitigated HIGH/CRITICAL)",
+            status=GateStatus.FAIL,
+            message=f"Implications audit check failed: {e}",
+        )
+
+
 def gate_4_compliance() -> GateResult:
     """Gate 4 — Regulatory Compliance."""
     criteria = [
         _check_mom_constraints_encoded,
         _check_pdpa_no_pii,
         _check_sfa_harvest_windows,
+        _check_implications_audit,
         _check_ai_verify_alignment,
         _check_eu_ai_act_classification,
     ]

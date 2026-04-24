@@ -76,6 +76,12 @@ from greenloop.governance.deployment_gate import (  # noqa: E402
     GateStatus,
     evaluate_all_gates,
 )
+from greenloop.governance.implications_audit import (  # noqa: E402
+    ImpactSeverity,
+    ImplicationCategory,
+    get_all_implications,
+    get_stakeholder_impacts,
+)
 from greenloop.rag.hitl import (  # noqa: E402
     Tone,
     TONE_LABELS,
@@ -1470,6 +1476,9 @@ def _render_scenario_testing(
     with st.expander("📋 Deployment Gate", expanded=False):
         _render_deployment_gate_panel()
 
+    with st.expander("🎯 Implications Audit", expanded=False):
+        _render_implications_audit_panel()
+
 
 def _render_deployment_gate_panel():
     """Render deployment gate status as a read-only summary panel."""
@@ -1509,6 +1518,101 @@ def _render_deployment_gate_panel():
             st.write(f"  • {cond}")
 
     st.caption(f"Evaluated: {decision.evaluated_at}")
+
+
+def _render_implications_audit_panel():
+    """Render Phase 5 Implications Audit as a read-only 3-tab summary."""
+    try:
+        implications = get_all_implications()
+        stakeholders = get_stakeholder_impacts()
+    except Exception as e:
+        st.error(f"Failed to load implications: {e}")
+        return
+
+    tab_data, tab_bias, tab_stakeholder = st.tabs([
+        "📊 Overview",
+        "⚖️ Bias by Layer",
+        "👥 Stakeholder Impact",
+    ])
+
+    with tab_data:
+        # Severity summary badges
+        by_sev = {s: 0 for s in ImpactSeverity}
+        for i in implications:
+            by_sev[i.severity] += 1
+        cols = st.columns(4)
+        sev_items = [
+            (ImpactSeverity.CRITICAL, "🔴 CRITICAL", cols[0]),
+            (ImpactSeverity.HIGH, "🟠 HIGH", cols[1]),
+            (ImpactSeverity.MEDIUM, "🟡 MEDIUM", cols[2]),
+            (ImpactSeverity.LOW, "🟢 LOW", cols[3]),
+        ]
+        for sev, label, col in sev_items:
+            with col:
+                count = by_sev[sev]
+                if count == 0:
+                    st.metric(label, "0")
+                elif sev == ImpactSeverity.CRITICAL:
+                    st.error(f"{count} {label}")
+                elif sev == ImpactSeverity.HIGH:
+                    st.warning(f"{count} {label}")
+                else:
+                    st.info(f"{count} {label}")
+
+        st.divider()
+        unmitigated = [i for i in implications if not i.is_mitigated]
+        if unmitigated:
+            st.error(f"⚠️  {len(unmitigated)} implication(s) not yet mitigated")
+        else:
+            st.success("✅ All implications have mitigations documented")
+
+        st.caption(
+            "Full report: journal/phase5-implications-report.md | "
+            "Run: uv run python scripts/run_implications_audit.py"
+        )
+
+    with tab_bias:
+        data_bias = [
+            i for i in implications if i.category == ImplicationCategory.DATA_BIAS
+        ]
+        decision_bias = [
+            i for i in implications if i.category == ImplicationCategory.DECISION_BIAS
+        ]
+        st.write("**Data Bias**")
+        for i in data_bias:
+            sev_emoji = {
+                ImpactSeverity.HIGH: "🟠",
+                ImpactSeverity.MEDIUM: "🟡",
+                ImpactSeverity.LOW: "🟢",
+            }.get(i.severity, "⚪")
+            st.write(f"  {sev_emoji} `{i.layer}`: {i.description[:100]}...")
+            st.caption(f"  Mitigation: {i.mitigation[:120]}...")
+
+        st.divider()
+        st.write("**Decision Bias**")
+        for i in decision_bias:
+            sev_emoji = {
+                ImpactSeverity.HIGH: "🟠",
+                ImpactSeverity.MEDIUM: "🟡",
+                ImpactSeverity.LOW: "🟢",
+            }.get(i.severity, "⚪")
+            st.write(f"  {sev_emoji} `{i.layer}`: {i.description[:100]}...")
+            st.caption(f"  Mitigation: {i.mitigation[:120]}...")
+
+    with tab_stakeholder:
+        for s in stakeholders:
+            net = len(s.positive_effects) - len(s.negative_effects)
+            icon = "✅" if net > 0 else "⚖️" if net == 0 else "⚠️"
+            with st.expander(f"{icon} {s.stakeholder} (net {net:+d})", expanded=False):
+                st.write("**Positive:**")
+                for p in s.positive_effects:
+                    st.write(f"  + {p}")
+                st.write("**Negative:**")
+                for n in s.negative_effects:
+                    st.write(f"  - {n}")
+                st.write("**Mitigations:**")
+                for m in s.mitigation_actions:
+                    st.write(f"  • {m}")
 
 
 if __name__ == "__main__":
