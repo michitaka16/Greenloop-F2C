@@ -43,7 +43,37 @@ GreenLoop F2C is a 5-layer AI platform managing a vertical-hydroponic farm from 
 
 **Typhoon proof:** The Typhoon button triggers a full resilience cascade — not a delivery delay simulator. A 6-hour delivery window compression triggers 30% probability of power outage. If the grid fails, a 4-hour UPS countdown begins with a live red-banner timer in the dashboard. The PPO RL agent forces LEDs off and takes a −500 reward penalty per step on battery. Layer 2 MILP simultaneously re-solves in emergency harvest mode: 12 crops harvested early to prevent total loss if power does not return, cold storage switches activated for unsold produce. Meanwhile, rainy weather keeps consumers indoors — Layer 1 applies a +20% demand surge to tomorrow's plan. Every layer responds autonomously. MILP re-solves in under 50 ms — proving the farm re-plans itself under multi-variable stress without human intervention.
 
-## 4. Business Model
+## 4. Governance & Production Readiness
+
+Our system is not just a working demo — it is evaluated against production-readiness criteria:
+
+**Technical validation** (Phase 7 Red-Team)
+- 38 adversarial tests across all 6 ML layers
+- Covers data poisoning, prompt injection, constraint stress, reward hacking, system-wide cascade
+- 100% passing; honest limitations documented in `journal/phase7-redteam.md`
+
+**Ship decision** (Phase 8 Deployment Gate)
+- 5 gates, 25 criteria, automated evaluation via `run_deployment_gate.py`
+- Technical / Business / Risk / Compliance / Monitoring dimensions
+- Current judgment: **CONDITIONAL SHIP** for Phase 1 Pilot
+- Gate 2 Business Viability CONDITIONAL — pilot data required
+
+**Ethical analysis** (Phase 5 Implications Audit)
+- 6 layers × 3 categories: data bias, decision bias, stakeholder impact
+- 1 HIGH severity identified (PlantVillage dataset bias → Asian crop misclassification)
+- 6 stakeholders mapped: net positive for 5, neutral for 1 (workers)
+- Integrated with Gate 4 Compliance — unmitigated HIGH/CRITICAL blocks deployment
+
+**Operational monitoring** (Phase 13 Drift Monitoring)
+- 14 checks across 6 layers + system-wide
+- Feature drift: KS test on XGBoost inputs (weekly)
+- Performance drift: MILP infeasibility rate (hourly), EfficientNet confidence (daily), PPO reward ratio (weekly)
+- Concept drift: XGBoost prediction bias, PPO action distribution, segment stability, customer segment size, MILP constraint violations
+- YAML-scheduled execution from hourly to weekly
+
+Together, 13 of 14 MGMT 655 phases completed. Retrospective documentation (analyze + redteam per phase in `journal/`) ensures transparency even where the COC workflow was compressed.
+
+## 5. Business Model
 
 | Stream | Model | Year 1 ARR |
 |--------|-------|------------|
@@ -54,7 +84,7 @@ GreenLoop F2C is a 5-layer AI platform managing a vertical-hydroponic farm from 
 
 **Unit economics:** ACV SGD 8,000/rack/year; 20-rack farm; 82% gross margin; CAC/LTV ratio 0.15; payback 11 months. **GTM:** Phase 1 — 1 anchor farm, Jurong Innovation District, 3 paying accounts. Phase 2 — 10 farms (SG + Malaysia), B2C subscription, SGD 500 K ARR. Phase 3 — APAC AI model licensing, SFA national monitoring partnership.
 
-## 5. Evidence & Validation
+## 6. Evidence & Validation
 
 **Live Dashboard Metrics (typical run)**
 
@@ -77,7 +107,7 @@ GreenLoop F2C is a 5-layer AI platform managing a vertical-hydroponic farm from 
 
 **Test suite:** 261 tests — **259 PASS**, 1 skipped (live DB required), 1 pre-existing count-assertion failure unrelated to ML correctness.
 
-## 6. Team
+## 7. Team
 
 | Member | Focus |
 |--------|-------|
