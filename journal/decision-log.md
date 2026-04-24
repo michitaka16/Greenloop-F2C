@@ -759,3 +759,37 @@ The live animated avatar was removed for three reasons: (1) technical complexity
 ---
 
 *This decision log is the authoritative source for Dimension A evidence. Each decision is traceable to a specific code artifact in `src/greenloop/` and a specific course learning objective in MGMT 655.*
+
+---
+
+## Decision 26: Phase 13 Drift Monitoring — Framework with 14 Checks Across 6 Layers
+
+**Date:** 2026-04-24
+**Context:** Phase 13 Drift Monitoring. MGMT655 Dimension A: designed for long-term operation, not just the demo moment. Required before Phase 1 pilot to ensure the system can detect when models degrade in production.
+
+**Options considered:**
+- Option A: **14-check framework across all 6 ML layers + YAML schedule + dashboard panel** — chosen
+- Option B: Basic uptime monitoring (process alive / API reachable)
+- Option C: Alert only on hard failures (InfeasibleError, API errors)
+
+**Chosen:** Option A — Full drift monitoring framework
+
+**Rationale:**
+Uptime monitoring (Option B) tells you the system is running, not whether it is working correctly. A model can be up and returning predictions while silently degrading — the demand forecast RMSE could double without any process failure. Alerting only on hard failures (Option C) means the first signal of model degradation is a bad business decision, not an ops alert. Option A provides early warning across all failure modes: input distribution drift (feature drift), accuracy degradation (performance drift), and changing relationships between inputs and outputs (concept drift). Each check has a documented action (retrain, alert_manager, rollback, recluster, knowledge_base_review) so ops knows what to do when an alert fires. The YAML schedule means checks run automatically on cron without manual intervention.
+
+**Drift checks implemented:**
+| Layer | Checks | Types |
+|-------|--------|-------|
+| Layer 1 XGBoost | 3 | feature, performance, concept |
+| Layer 1b EfficientNet | 2 | performance, feature |
+| Layer 2 MILP | 3 | performance, concept |
+| Layer 3 PPO | 2 | performance, concept |
+| Layer 4 K-means | 2 | concept, feature |
+| Layer 5 RAG | 1 | performance |
+| System-wide | 1 | feature |
+
+**Trade-offs accepted:**
+- Not all checks can run with demo data (no production customer segmentation, no RL episodes yet). These return OK with `requires_production_data` status. This is acceptable — the framework is in place and will activate as Phase 1 data flows in.
+- `efficientnet_diagnosis_rate` alerts when 0 diagnoses in 24h. This is intentional: zero diagnoses in production = camera or automation failure = immediate alert.
+
+**Course connection:** MGMT655 Dimension A — proving we thought about long-term operation, not just demo correctness. Drift monitoring is the operational evidence that the system degrades gracefully and is monitored, not that it works on demo day.

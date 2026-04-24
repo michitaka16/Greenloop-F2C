@@ -1,0 +1,194 @@
+# Phase 13 Drift Monitoring — Production Schedule
+# Each check defines when it runs and what action to take on alert.
+
+checks:
+  # -------------------------------------------------------------------------
+  # Layer 1 — XGBoost Demand Forecast
+  # -------------------------------------------------------------------------
+
+  - name: xgboost_feature_drift
+    layer: Layer 1
+    drift_type: feature_drift
+    schedule: "0 6 * * *"          # Daily at 6am
+    threshold_warning: 0.2         # KS statistic
+    threshold_alert: 0.4
+    action_warning: log
+    action_alert: retrain
+    owner: ml-team
+
+  - name: xgboost_performance_drift
+    layer: Layer 1
+    drift_type: performance_drift
+    schedule: "0 7 * * 1"          # Weekly Monday 7am
+    threshold_warning: "1.2× baseline RMSE"
+    threshold_alert: "1.5× baseline RMSE"
+    action_warning: investigate
+    action_alert: retrain
+    owner: ml-team
+
+  - name: xgboost_prediction_bias
+    layer: Layer 1
+    drift_type: concept_drift
+    schedule: "0 7 * * 1"          # Weekly Monday 7am (same window as perf)
+    threshold_warning: "|t| > 1.5"
+    threshold_alert: "|t| > 2.5"
+    action_warning: investigate
+    action_alert: retrain
+    owner: ml-team
+
+  # -------------------------------------------------------------------------
+  # Layer 1b — EfficientNet CV Diagnosis
+  # -------------------------------------------------------------------------
+
+  - name: efficientnet_confidence_drift
+    layer: Layer 1b
+    drift_type: performance_drift
+    schedule: "0 8 * * *"          # Daily at 8am
+    threshold_warning: "avg_confidence < 0.75"
+    threshold_alert: "avg_confidence < 0.60"
+    action_warning: review_recent_images
+    action_alert: retrain
+    owner: cv-team
+
+  - name: efficientnet_diagnosis_rate
+    layer: Layer 1b
+    drift_type: feature_drift
+    schedule: "0 9 * * *"          # Daily at 9am
+    threshold_warning: "daily vol < 10% of 7-day avg"
+    threshold_alert: "daily vol == 0"
+    action_warning: check_camera
+    action_alert: alert_manager
+    owner: ops-team
+
+  # -------------------------------------------------------------------------
+  # Layer 2 — MILP Optimizer
+  # -------------------------------------------------------------------------
+
+  - name: milp_infeasibility_rate
+    layer: Layer 2
+    drift_type: performance_drift
+    schedule: "0 * * * *"           # Hourly
+    threshold_warning: "> 5% infeasible solves"
+    threshold_alert: "> 15% infeasible solves"
+    action_warning: review_constraints
+    action_alert: alert_manager
+    owner: ops-team
+
+  - name: milp_solve_time_drift
+    layer: Layer 2
+    drift_type: performance_drift
+    schedule: "0 * * * *"           # Hourly
+    threshold_warning: "p95 > 500ms"
+    threshold_alert: "p95 > 2000ms"
+    action_warning: investigate
+    action_alert: alert_manager
+    owner: ops-team
+
+  - name: milp_constraint_violations
+    layer: Layer 2
+    drift_type: concept_drift
+    schedule: "0 0 * * *"           # Daily midnight
+    threshold_warning: "> 1% violations"
+    threshold_alert: "> 5% violations"
+    action_warning: review_constraints
+    action_alert: halt_and_review
+    owner: ml-team
+
+  # -------------------------------------------------------------------------
+  # Layer 3 — PPO RL Agent
+  # -------------------------------------------------------------------------
+
+  - name: ppo_reward_drift
+    layer: Layer 3
+    drift_type: performance_drift
+    schedule: "0 0 * * 0"           # Weekly Sunday midnight
+    threshold_warning: "7d mean < 0.8× baseline"
+    threshold_alert: "7d mean < 0.6× baseline"
+    action_warning: investigate
+    action_alert: retrain
+    owner: rl-team
+
+  - name: ppo_action_distribution_drift
+    layer: Layer 3
+    drift_type: concept_drift
+    schedule: "0 0 * * 0"           # Weekly Sunday midnight
+    threshold_warning: "KL divergence > 0.3"
+    threshold_alert: "KL divergence > 0.5"
+    action_warning: investigate
+    action_alert: retrain
+    owner: rl-team
+
+  # -------------------------------------------------------------------------
+  # Layer 4 — K-means Customer Segmentation
+  # -------------------------------------------------------------------------
+
+  - name: segment_stability
+    layer: Layer 4
+    drift_type: concept_drift
+    schedule: "0 0 * * 0"           # Weekly Sunday midnight
+    threshold_warning: "avg Jaccard < 0.7"
+    threshold_alert: "avg Jaccard < 0.5"
+    action_warning: investigate
+    action_alert: recluster
+    owner: data-team
+
+  - name: customer_segment_size_drift
+    layer: Layer 4
+    drift_type: feature_drift
+    schedule: "0 6 * * *"           # Daily at 6am
+    threshold_warning: "any segment > 30% size change"
+    threshold_alert: "any segment > 50% size change"
+    action_warning: investigate
+    action_alert: recluster
+    owner: data-team
+
+  # -------------------------------------------------------------------------
+  # Layer 5 — RAG Chatbot
+  # -------------------------------------------------------------------------
+
+  - name: rag_relevance_drift
+    layer: Layer 5
+    drift_type: performance_drift
+    schedule: "0 18 * * *"         # Daily at 6pm
+    threshold_warning: "good/total < 0.80"
+    threshold_alert: "good/total < 0.60"
+    action_warning: review_knowledge_base
+    action_alert: knowledge_base_review
+    owner: product-team
+
+  # -------------------------------------------------------------------------
+  # System-wide
+  # -------------------------------------------------------------------------
+
+  - name: data_freshness
+    layer: System-wide
+    drift_type: feature_drift
+    schedule: "*/15 * * * *"       # Every 15 minutes
+    threshold_alert: "any tracked file past threshold"
+    files:
+      - crops.csv:         "24 hours"
+      - shipments.csv:     "24 hours"
+      - electricity.csv:   "6 hours"
+    action_alert: alert_immediately
+    owner: ops-team
+
+# ---------------------------------------------------------------------------
+# Alert routing
+# ---------------------------------------------------------------------------
+
+alert_routing:
+  ml-team:
+    channel: slack_ml
+    escalation_hours: 4
+  ops-team:
+    channel: slack_ops
+    escalation_hours: 1
+  rl-team:
+    channel: slack_rl
+    escalation_hours: 4
+  data-team:
+    channel: slack_data
+    escalation_hours: 8
+  product-team:
+    channel: slack_product
+    escalation_hours: 24

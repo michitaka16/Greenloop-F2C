@@ -82,6 +82,14 @@ from greenloop.governance.implications_audit import (  # noqa: E402
     get_all_implications,
     get_stakeholder_impacts,
 )
+
+# Monitoring — Drift Detection
+from greenloop.monitoring.drift_detector import (  # noqa: E402
+    DriftSeverity,
+    DriftType,
+    get_all_drift_checks,
+    run_all_checks,
+)
 from greenloop.rag.hitl import (  # noqa: E402
     Tone,
     TONE_LABELS,
@@ -1479,6 +1487,9 @@ def _render_scenario_testing(
     with st.expander("🎯 Implications Audit", expanded=False):
         _render_implications_audit_panel()
 
+    with st.expander("📊 Drift Monitoring", expanded=False):
+        _render_drift_monitoring_panel()
+
 
 def _render_deployment_gate_panel():
     """Render deployment gate status as a read-only summary panel."""
@@ -1617,3 +1628,134 @@ def _render_implications_audit_panel():
 
 if __name__ == "__main__":
     main()
+
+
+def _render_drift_monitoring_panel():
+    """Render Phase 13 Drift Monitoring as a read-only 3-tab summary."""
+    try:
+        checks = get_all_drift_checks()
+        results = run_all_checks()
+    except Exception as e:
+        st.error(f"Failed to load drift checks: {e}")
+        return
+
+    # Group results by drift type
+    feature_results = [
+        (c, s, d) for (c, s, d) in results
+        if c.drift_type == DriftType.FEATURE
+    ]
+    perf_results = [
+        (c, s, d) for (c, s, d) in results
+        if c.drift_type == DriftType.PERFORMANCE
+    ]
+    concept_results = [
+        (c, s, d) for (c, s, d) in results
+        if c.drift_type == DriftType.CONCEPT
+    ]
+
+    tab_feature, tab_perf, tab_concept = st.tabs([
+        f"📈 Feature Drift ({len(feature_results)} checks)",
+        f"📉 Performance Drift ({len(perf_results)} checks)",
+        f"🔄 Concept Drift ({len(concept_results)} checks)",
+    ])
+
+    def _render_check_row(check: Any, severity: DriftSeverity, details: dict) -> None:
+        sev_color = {
+            DriftSeverity.OK: "✅",
+            DriftSeverity.WARNING: "⚠️",
+            DriftSeverity.ALERT: "🔔",
+            DriftSeverity.CRITICAL: "🚨",
+        }.get(severity, "⚪")
+        st.write(f"{sev_color} `{check.name}`")
+        st.caption(f"  {check.layer} | Action: {check.action_on_alert}")
+        status = details.get("status", "ok")
+        if status != "ok":
+            msg = details.get("message", details.get("error", status))
+            st.caption(f"  {status}: {str(msg)[:100]}")
+
+    with tab_feature:
+        counts = {s: 0 for s in DriftSeverity}
+        for c, s, d in feature_results:
+            counts[s] += 1
+        cols = st.columns(4)
+        for col, (sev, label) in zip(
+            cols,
+            [
+                (DriftSeverity.OK, "✅ OK"),
+                (DriftSeverity.WARNING, "⚠️ WARNING"),
+                (DriftSeverity.ALERT, "🔔 ALERT"),
+                (DriftSeverity.CRITICAL, "🚨 CRITICAL"),
+            ],
+        ):
+            with col:
+                if counts[sev] == 0:
+                    st.metric(label, "0")
+                else:
+                    st.info(f"{counts[sev]} {label}")
+
+        st.divider()
+        for c, s, d in feature_results:
+            _render_check_row(c, s, d)
+
+        st.caption(
+            "Feature drift: input distribution changes detected by KS test or volume shift. "
+            "Run: uv run python scripts/run_drift_check.py"
+        )
+
+    with tab_perf:
+        counts = {s: 0 for s in DriftSeverity}
+        for c, s, d in perf_results:
+            counts[s] += 1
+        cols = st.columns(4)
+        for col, (sev, label) in zip(
+            cols,
+            [
+                (DriftSeverity.OK, "✅ OK"),
+                (DriftSeverity.WARNING, "⚠️ WARNING"),
+                (DriftSeverity.ALERT, "🔔 ALERT"),
+                (DriftSeverity.CRITICAL, "🚨 CRITICAL"),
+            ],
+        ):
+            with col:
+                if counts[sev] == 0:
+                    st.metric(label, "0")
+                else:
+                    st.info(f"{counts[sev]} {label}")
+
+        st.divider()
+        for c, s, d in perf_results:
+            _render_check_row(c, s, d)
+
+        st.caption(
+            "Performance drift: RMSE ratio, solve time, confidence, feedback ratio. "
+            "Run: uv run python scripts/run_drift_check.py"
+        )
+
+    with tab_concept:
+        counts = {s: 0 for s in DriftSeverity}
+        for c, s, d in concept_results:
+            counts[s] += 1
+        cols = st.columns(4)
+        for col, (sev, label) in zip(
+            cols,
+            [
+                (DriftSeverity.OK, "✅ OK"),
+                (DriftSeverity.WARNING, "⚠️ WARNING"),
+                (DriftSeverity.ALERT, "🔔 ALERT"),
+                (DriftSeverity.CRITICAL, "🚨 CRITICAL"),
+            ],
+        ):
+            with col:
+                if counts[sev] == 0:
+                    st.metric(label, "0")
+                else:
+                    st.info(f"{counts[sev]} {label}")
+
+        st.divider()
+        for c, s, d in concept_results:
+            _render_check_row(c, s, d)
+
+        st.caption(
+            "Concept drift: relationship changes between predictions and outcomes. "
+            "Run: uv run python scripts/run_drift_check.py"
+        )

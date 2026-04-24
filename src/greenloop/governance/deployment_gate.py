@@ -784,20 +784,45 @@ def gate_4_compliance() -> GateResult:
 # ---------------------------------------------------------------------------
 
 def _check_drift_detection() -> CriterionResult:
-    """Drift detection framework present (Phase 13 — PENDING)."""
-    # Check for drift detection implementation in layer1 or a dedicated module
-    drift_files = [
-        SRC_DIR / "layer1" / "drift.py",
-        SRC_DIR / "layer1" / "drift_detection.py",
-        SRC_DIR / "monitoring" / "drift.py",
-    ]
-    found = any(f.exists() for f in drift_files)
-    status = GateStatus.PASS if found else GateStatus.PENDING
+    """Phase 13 drift monitoring: 14 checks across 6 layers + schedule config."""
+    drift_module = SRC_DIR / "monitoring" / "drift_detector.py"
+    drift_schedule = ROOT / "config" / "drift_monitoring_schedule.yaml"
+    found = drift_module.exists()
+    schedule_found = drift_schedule.exists()
+    if found and schedule_found:
+        try:
+            from greenloop.monitoring.drift_detector import get_all_drift_checks
+            checks = get_all_drift_checks()
+            check_count = len(checks)
+            layers = sorted(set(c.layer for c in checks))
+            status = GateStatus.PASS
+            message = (
+                f"Drift framework: {check_count} checks across {len(layers)} layers — PASS"
+            )
+            details = (
+                f"checks={check_count}, layers={layers}, "
+                f"schedule={drift_schedule.name}"
+            )
+        except Exception as e:
+            status = GateStatus.CONDITIONAL
+            message = f"Drift module found but failed to load: {e}"
+            details = str(e)
+            check_count = 0
+    elif found:
+        status = GateStatus.CONDITIONAL
+        message = "Drift module present, schedule config missing — CONDITIONAL"
+        details = f"module={drift_module.name}, schedule=missing"
+        check_count = 0
+    else:
+        status = GateStatus.PENDING
+        message = "Drift monitoring: Phase 13 PENDING"
+        details = f"Checked: {drift_module}"
+        check_count = 0
     return CriterionResult(
-        name="Drift detection framework present",
+        name="Drift monitoring framework (14 checks, 6 layers, YAML schedule)",
         status=status,
-        message="Drift detection: implemented" if found else "Drift detection: Phase 13 PENDING",
-        details=f"Checked: {[str(f) for f in drift_files]}",
+        message=message,
+        details=details,
     )
 
 
