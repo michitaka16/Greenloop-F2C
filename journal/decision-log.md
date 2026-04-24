@@ -2,7 +2,14 @@
 **Project:** GreenLoop Farm-to-Consumer Vertical Hydroponics OS
 **Course:** MGMT 655 — AI & Machine Learning
 **Dimension A:** Technical depth and justification across all AI/ML components
-**Last updated:** 2026-04-20
+**Last updated:** 2026-04-24
+
+## Summary
+- 25 documented design decisions (Decisions 1–26)
+- Retrospective `/analyze` + `/redteam` for 4 compressed phases (7/8/5/13): 8 new journal files
+- COC methodology compression trade-off explicitly quantified (10h actual vs 17h ideal)
+- Phase 1 mandate: full COC workflow to be used going forward
+- Dimension A evidence traceable from code (`src/greenloop/`) → tests (`tests/`) → journal (`journal/`)
 
 ---
 
