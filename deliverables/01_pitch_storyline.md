@@ -39,7 +39,7 @@
 → Show: CVRPTW route map. 30/30 customers served.
 "147 km total. SGD 188.87 logistics cost."
 
-**5:00 — Typhoon Cascade**
+**5:00 — Typhoon Cascade** *(compressed: 5:00–6:00)*
 "Press the Typhoon Warning button.
  Watch — delivery window compresses 12h to 6h.
  Now the real risk: 30% power outage probability during severe typhoon.
@@ -54,30 +54,58 @@
 
 ---
 
-## Act 3 — The Business (5:30–7:00)
+## Act 2.5 — The Governance Moment (6:00–6:30)
 
-**5:30 — Business Model**
+**6:00 — Before we leave the farm side, one more thing.**
+"Every AI startup pitches live demos. Few can answer: what happens when things go wrong AFTER deployment?"
+
+→ Show: Deployment Gate panel in Farm OS
+
+"Phase 8 Deployment Gate. 5 gates, 25 criteria.
+Gate 1 Technical: PASS. Gate 3 Risk: PASS after 38 adversarial tests.
+Gate 4 Compliance: PASS. Gate 5 Monitoring: PASS with 14 drift checks."
+
+→ Show: Implications Audit panel
+
+"Phase 5 Implications. 6 stakeholders analyzed.
+Farm workers face automation anxiety — we mitigate with Advisory mode.
+PlantVillage dataset bias may misclassify Asian crops — we flag as HIGH
+severity, Phase 1 pilot collects Singapore data."
+
+→ Show: Drift Monitoring panel
+
+"Phase 13 Drift. 14 checks across 6 layers.
+XGBoost feature drift weekly. MILP infeasibility rate hourly.
+PPO reward drift weekly. RAG relevance daily. Scheduled via YAML."
+
+"This is not a demo. This is a production-ready governance framework."
+
+---
+
+## Act 3 — The Business (6:30–8:00)
+
+**6:30 — Business Model**
 "B2B SaaS: SGD 8K/rack/year. 20 racks. 82% gross margin."
 → Show: unit economics table.
 "11-month payback. CAC/LTV ratio 0.15."
 
-**6:00 — Go-to-Market**
+**7:00 — Go-to-Market**
 "Phase 1: 1 anchor farm, Jurong Innovation District."
 "Phase 2: 10 farms, B2C subscription."
 "Phase 3: APAC AI model licensing."
 
-**6:30 — Why Now**
+**7:30 — Why Now**
 "Swiss competitor entered Singapore Jan 2025. ACTF fund is open."
 "First-mover advantage in AI-native farm OS."
 
 ---
 
-## Act 4 — The Ask (7:00–8:00)
+## Act 4 — The Ask (8:00–9:00)
 
-**7:00 — Traction**
+**8:00 — Traction**
 "259 tests passing. Live dashboard running."
 "Silhouette 0.765. 30/30 customers served. 48ms MILP solve."
 
-**7:30 — The Ask**
+**8:30 — The Ask**
 "[Amount] for [purpose]."
 "[What happens next with the investment]."
