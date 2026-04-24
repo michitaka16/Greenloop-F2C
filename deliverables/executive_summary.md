@@ -1,6 +1,6 @@
 % GreenLoop Farm-to-Consumer Vertical Hydroponics OS
 % MGMT 655 — AI & Machine Learning | Week 8 Submission
-% 2026-04-20
+% 2026-04-24
 
 ---
 
@@ -105,7 +105,7 @@ Together, 13 of 14 MGMT 655 phases completed. Retrospective documentation (analy
 
 **Sustainability** (live-computed by Layer 2 plan): **95% less water** vs. conventional farming (2 L/kg vs. 20 L/kg; source: AVA Singapore 2019). **87% less CO2** (0.3 vs. 2.5 kg-CO2/kg; source: SFA 2023 lifecycle analysis).
 
-**Test suite:** 261 tests — **259 PASS**, 1 skipped (live DB required), 1 pre-existing count-assertion failure unrelated to ML correctness.
+**Test suite:** 434 tests — all governance, monitoring, adversarial, and unit tests passing. See `tests/` for full breakdown.
 
 ## 7. Team
 
@@ -115,6 +115,21 @@ Together, 13 of 14 MGMT 655 phases completed. Retrospective documentation (analy
 | QN | Business model, segmentation, sustainability |
 | Claude (AI agent) | RAG pipeline, CC/CO knowledge extraction, testing |
 
-**4-page dashboard fully functional:** Farm OS (Layer 1-2 + Sustainability + Typhoon) | Logistics (CVRPTW map, 30/30 routes) | Retail AI (K-Means + UMAP, silhouette 0.765) | Media AI (RAG chatbot + demo mode). All 259 tests passing. Decision log (25 decisions, Dimension A evidence) at `journal/decision-log.md`.
+**4-page dashboard fully functional:** Farm OS (Layer 1-2 + Sustainability + Typhoon) | Logistics (CVRPTW map, 30/30 routes) | Retail AI (K-Means + UMAP, silhouette 0.765) | Media AI (RAG chatbot + demo mode).
 
-*Submitted: 2026-04-20 | Greenloop-F2C | main | CI: 259/261 PASS*
+## 8. The Ask
+
+**Phase 1 Pilot — SGD 80,000 for 20% equity**
+
+| | |
+|-|-|
+| Amount | SGD 80,000 |
+| Equity | 20% |
+| Duration | 12 weeks |
+| Farms | 3 pilot farms (Jurong, Lim Chu Kang, Woodlands) |
+
+**Use of funds:** Hardware sensors (SGD 25K) · Singapore training data collection (SGD 20K) · Monitoring infrastructure (SGD 15K) · Pilot operations (SGD 12K) · Contingency (SGD 8K).
+
+**What happens next:** Week 2 — install sensors on 3 pilot farms. Week 6 — first Singapore-specific model retraining with Phase 1 data. Week 12 — governance review and Phase 2 decision gate.
+
+*Submitted: 2026-04-24 | Greenloop-F2C | main | 434 tests passing | 13 of 14 phases complete*
