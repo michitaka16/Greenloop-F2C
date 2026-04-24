@@ -793,3 +793,61 @@ Uptime monitoring (Option B) tells you the system is running, not whether it is 
 - `efficientnet_diagnosis_rate` alerts when 0 diagnoses in 24h. This is intentional: zero diagnoses in production = camera or automation failure = immediate alert.
 
 **Course connection:** MGMT655 Dimension A — proving we thought about long-term operation, not just demo correctness. Drift monitoring is the operational evidence that the system degrades gracefully and is monitored, not that it works on demo day.
+
+---
+
+## Retrospective COC Workflow Documentation (applied 2026-04-24)
+
+During rapid implementation of Phases 5, 7, 8, and 13, the full COC workflow
+(`/analyze` → `/todos` → `/implement` → `/redteam`) was compressed to `/implement` only,
+driven by the 3-week timeline to Week 8 Capstone pitch. The retrospective analyze +
+redteam documents were added post-implementation to satisfy MGMT655 Dimension A evidence
+requirements for systematic AI/ML governance.
+
+### Retrospective documents added
+
+| Phase | Analyze | Redteam |
+|-------|---------|---------|
+| Phase 7 Red-Team Adversarial Tests | `journal/phase7-analyze.md` | `journal/phase7-redteam.md` |
+| Phase 8 Deployment Gate | `journal/phase8-analyze.md` | `journal/phase8-redteam.md` |
+| Phase 5 Implications Audit | `journal/phase5-analyze.md` | `journal/phase5-redteam.md` |
+| Phase 13 Drift Monitoring | `journal/phase13-analyze.md` | `journal/phase13-redteam.md` |
+
+### Workflow compression trade-off analysis
+
+| | Full COC workflow (ideal) | Compressed (actual) | Retrospective (applied) |
+|-|--------------------------|---------------------|------------------------|
+| `/analyze` | 1h per phase | Skipped | Post-hoc documented |
+| `/todos` | 30min per phase | Skipped | Post-hoc documented |
+| `/implement` | 2h per phase | 2h × 4 phases | 2h × 4 phases |
+| `/redteam` | 30min per phase | Skipped | Post-hoc documented |
+| **Total** | ~4h 20min per phase | ~8h (4 phases) | ~10h (4 phases) |
+
+### Key meta-learnings
+
+1. **Retrospective analysis is weaker than live analysis.** Documenting design rationale
+   after the fact introduces confirmation bias — we rationalize decisions that were made
+   quickly under time pressure. Phase 1 production work will use the full workflow.
+
+2. **Self-review compounds the bias problem.** We wrote the implementations AND we judge
+   their weaknesses. An independent reviewer (Hong, or a pilot farm stakeholder) would
+   find different gaps. Phase 1 must include external review.
+
+3. **Documentation overhead is non-trivial.** Retrospective docs took ~2h after the fact.
+   Live analysis during implementation would have taken less time and produced stronger
+   evidence.
+
+4. **What the compression saved:** ~6h of deliberation time, which was re-invested in
+   implementation quality (more tests, better dashboard panels, fuller drift coverage).
+
+5. **What the compression cost:** Weaker evidence of systematic reasoning. A live
+   `/analyze` would have surfaced the Layer 1b PlantVillage bias as a CRITICAL (not HIGH)
+   finding before implementation — the retrospective had to backfill this.
+
+### Phase 1 workflow mandate
+Phase 1 pilot work will use the full COC workflow. Every phase gets:
+- `/analyze` before any code is written
+- `/todos` before any implementation
+- `/implement` with parallel specialist agents
+- `/redteam` as a parallel background agent before each gate
+- `/reflect` to capture cross-phase learnings
