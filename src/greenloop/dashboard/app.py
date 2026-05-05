@@ -1,14 +1,16 @@
 """GreenLoop Farm OS — Streamlit Dashboard.
 
-Single-screen dashboard integrating all 3 layers:
-- Layer 1: XGBoost demand forecast with confidence intervals
-- Layer 2: OR-Tools MILP daily plan optimization
-- Layer 3: PPO RL environment control (live inference log)
+Single-screen dashboard integrating all 4 layers:
+- Layer 0: Integration Platform (6 external APIs)
+- Layer 1: XGBoost demand forecast + MILP production optimization
+- Layer 2: PPO RL environment control (live inference log)
+- Layer 3: Media RAG + Retail segmentation + Logistics VRP
 """
 
 import time
 from datetime import date, datetime
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -19,6 +21,7 @@ import streamlit as st
 # ---------------------------------------------------------------------------
 st.set_page_config(
     page_title="GreenLoop Farm OS",
+    page_icon="🌱",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -30,10 +33,10 @@ from greenloop.dashboard.components.task_list import render_today_actions  # noq
 from greenloop.dashboard.design_decisions import render_design_decisions_panel  # noqa: E402
 from greenloop.data.loader import (  # noqa: E402
     load_crops,
-    load_electricity,
     load_shipments,
     load_staff,
 )
+from greenloop.data.ema import load_live_electricity  # noqa: E402
 
 # Layer 1 imports — if xgboost fails to load (usually missing libomp on macOS),
 # we fail loudly at dashboard startup rather than ship fake forecasts silently.
@@ -118,7 +121,7 @@ except Exception:
 def get_data():
     crops = load_crops()
     shipments = load_shipments()
-    electricity = load_electricity()
+    electricity = load_live_electricity()
     staff = load_staff()
     return crops, shipments, electricity, staff
 
@@ -216,31 +219,56 @@ def main():
     with col_date:
         st.markdown(f"### {date.today().strftime('%d %b %Y')}")
 
+    # ── v6.2 Autopilot Status Badge ─────────────────────────────────────
+    col_status, col_date_badge, col_farm = st.columns([2, 1, 1])
+    with col_status:
+        if st.session_state.get("typhoon_mode"):
+            st.error("⚡ Typhoon Mode Active | Re-optimization in progress")
+        elif st.session_state.get("override_active"):
+            st.warning("👤 Manager Override Applied")
+        else:
+            st.success("✓ Autopilot Status: Plan Generated 06:00 SGT")
+    with col_date_badge:
+        st.info(f"📅 {datetime.now().strftime('%Y-%m-%d')}")
+    with col_farm:
+        st.info("🏭 Jurong West Farm")
+
     st.divider()
 
-    # ── Sidebar: Inputs ──
-    st.sidebar.header("Farm Parameters")
+    # ── Sidebar: Farm AI ─────────────────────────────────────────────────
+    st.sidebar.header("Farm AI")
+    # ⚡ Electricity: date selector + 24h chart combined
+    st.sidebar.subheader("⚡ Electricity Tariff")
     selected_date = st.sidebar.selectbox(
-        "Electricity tariff date",
+        "Select date",
         options=available_days,
         index=len(available_days) - 1,
         format_func=lambda d: d.strftime("%d %b %Y") if hasattr(d, "strftime") else str(d),
     )
-    # Filter electricity to the selected day
     electricity = electricity_df[electricity_df["date"] == selected_date].copy()
-    headcount = st.sidebar.slider("Available staff", 1, 10, 6)
+    _render_electricity_sidebar(electricity_df, selected_date, electricity)
 
     # ── HITL: Optimization mode ──
     st.sidebar.divider()
     st.sidebar.subheader("🎯 Optimization Mode")
-    mode = st.sidebar.radio(
-        "Objective",
-        options=list(MODE_LABELS.values()),
-        index=2,  # Balanced default
-        format_func=lambda x: x,
-        help="Profit: maximise revenue. Sustainability: minimise energy/waste. Balanced: trade-off.",
+    mode = st.sidebar.segmented_control(
+        "What to prioritise",
+        options=list(MODE_LABELS.keys()),
+        default="balanced",
+        format_func=lambda k: {
+            "profit": "💰 Revenue",
+            "sustainability": "🌿 Sustainable",
+            "balanced": "⚖️ Balanced",
+        }.get(k, k),
     )
-    mode_key = next(k for k, v in MODE_LABELS.items() if v == mode)
+    mode_label = MODE_LABELS.get(mode, MODE_LABELS["balanced"])
+    st.caption(
+        {
+            "profit": "Maximize harvest revenue — ignores energy cost",
+            "sustainability": "Minimise electricity & waste — lower revenue OK",
+            "balanced": "Trade-off between revenue and sustainability",
+        }.get(mode, "")
+    )
 
     # ── HITL: Manual constraints ──
     with st.sidebar.expander("🔧 Override", expanded=False):
@@ -276,20 +304,44 @@ def main():
             excluded_racks = st.session_state.get("_hitl_excluded_racks", [])
             unavailable_shifts = st.session_state.get("_hitl_unavailable_shifts", [])
 
+    # ── Sidebar: Available Staff ──────────────────────────────────────────
+    st.sidebar.divider()
+    st.sidebar.subheader("👷 Available Staff")
+    _farm_ops = staff[staff["role"] == "Farm Operations"]
+    _logistics = staff[staff["role"] == "Logistics"]
+    role_counts: dict[str, int] = {}
+    if len(_farm_ops) > 0:
+        available = st.sidebar.slider("Farm Operations", 0, len(_farm_ops), len(_farm_ops), key="staff_farm_ops")
+        role_counts["Farm Operations"] = available
+    if len(_logistics) > 0:
+        available = st.sidebar.slider("Logistics", 0, len(_logistics), len(_logistics), key="staff_logistics")
+        role_counts["Logistics"] = available
+    st.sidebar.caption("Supervisor: 1 (fixed)")
+    role_counts["Supervisor"] = 1
+    headcount = sum(role_counts.values())
+
     # ── Sidebar: Design decisions (Dimension A evidence for VC pitch) ──
     render_design_decisions_panel()
 
     # ── Layer 2: Optimize ──
+    # Merge uploaded photo diagnoses into the simulation (photo takes priority per rack).
+    cv_overrides: dict = st.session_state.get("rack_diagnoses", {})
     plan = _solve_plan(
         forecast,
         crops,
         electricity,
         staff,
         headcount,
-        mode_key,
+        mode,
         excluded_racks,
         unavailable_shifts,
+        cv_diagnosis_overrides=cv_overrides if cv_overrides else None,
     )
+
+    # ── Share Farm AI outputs with other pages ────────────────────────────
+    if plan:
+        from greenloop.data.shared_data import save_farm_output
+        save_farm_output(plan, forecast)
 
     # ── Today's Actions — farm-manager task list ────────────────────────────
     render_today_actions(plan)
@@ -300,25 +352,19 @@ def main():
     # ── Top KPI strip — most VC-relevant numbers above the fold ──
     _render_kpi_strip(plan)
 
-    # ── Electricity tariff chart ──
-    _render_electricity_chart(electricity)
-
     # ── Optional AI narrative (provider-agnostic; any OpenAI-compatible endpoint) ──
     _render_ai_explainer(forecast, plan)
 
+    # ── Layout: plan first, then forecast (horizontal) ──
+    if plan:
+        _render_plan(plan)
+    else:
+        st.warning("No feasible plan. Try increasing staff or relaxing constraints.")
+
     st.divider()
 
-    # ── Layout: 2 columns ──
-    left, right = st.columns([1, 2])
-
-    with left:
-        _render_forecast_table(forecast)
-
-    with right:
-        if plan:
-            _render_plan(plan)
-        else:
-            st.warning("No feasible plan. Try increasing staff or relaxing constraints.")
+    # Forecast rendered horizontally — wide cards in a single row
+    _render_forecast_horizontal(forecast, plan)
 
     st.divider()
 
@@ -332,7 +378,7 @@ def main():
         _render_rl_control()
 
     with bot_right:
-        _render_scenario_testing(forecast, crops, electricity, staff, headcount, plan, mode_key, excluded_racks, unavailable_shifts)
+        _render_scenario_testing(forecast, crops, electricity, staff, headcount, plan, mode, excluded_racks, unavailable_shifts)
 
     st.divider()
 
@@ -528,10 +574,18 @@ def _solve_plan(
     mode_key="balanced",
     excluded_racks=None,
     unavailable_shifts=None,
+    cv_diagnosis_overrides: dict | None = None,
 ):
     """Solve Layer 2 MILP with CV diagnosis. Return plan dict or None on infeasibility."""
     # Run Layer 1b CV diagnosis across all 10 racks.
     cv_diagnosis = diagnose_all_racks_simulated()
+    # Override with per-rack diagnoses from uploaded photos (session_state).
+    # Per-rack diagnoses take priority over simulation for that rack.
+    if cv_diagnosis_overrides:
+        for rack_num, diag_result in cv_diagnosis_overrides.items():
+            rack_id = f"tier_{rack_num}"
+            if rack_id in cv_diagnosis:
+                cv_diagnosis[rack_id] = diag_result
 
     objective_weights = ObjectiveWeights.from_mode(mode_key)
 
@@ -555,10 +609,9 @@ def _solve_plan(
 
 
 # ---------------------------------------------------------------------------
-# Forecast display
-# ---------------------------------------------------------------------------
-def _render_forecast_table(forecast):
-    st.subheader("Demand Forecast (Layer 1)")
+def _render_forecast_horizontal(forecast, plan):
+    """Render forecast as a single horizontal row of rack cards + bar chart below."""
+    st.subheader("Demand Forecast & Rack Assignments (Layer 1 → 2)")
 
     crop_names = {
         "kai_lan": "Kai Lan",
@@ -573,61 +626,119 @@ def _render_forecast_table(forecast):
         "mint": "Mint",
     }
 
-    rows = []
-    for crop_id, vals in forecast.items():
+    crop_colors = {
+        "kai_lan": "#1abc9c",
+        "baby_spinach": "#3498db",
+        "lettuce_mambo": "#2c3e50",
+        "chye_sim": "#e67e22",
+        "arugula": "#2ecc71",
+        "pak_choi": "#00bcd4",
+        "kale": "#f1c40f",
+        "basil_thai": "#9b59b6",
+        "coriander": "#e74c3c",
+        "mint": "#e91e63",
+    }
+
+    rack_layout = plan.get("rack_layout", {}) if plan else {}
+
+    # ── Build rack rows ─────────────────────────────────────────────────
+    rack_rows = []
+    for tier_num in range(10):
+        rack_id = f"tier_{tier_num}"
+        crop_id = rack_layout.get(rack_id, None)
+        if crop_id is None or crop_id not in forecast:
+            continue
+        vals = forecast[crop_id]
         pred = vals["predicted_kg"]
         lower = vals["lower_ci"]
         upper = vals["upper_ci"]
         buffer_pct = ((upper - pred) / pred * 100) if pred > 0 else 0
-        rows.append(
-            {
-                "Crop": crop_names.get(crop_id, crop_id),
-                "Predicted (kg)": f"{pred:.1f}",
-                "Lower CI": f"{lower:.1f}",
-                "Upper CI": f"{upper:.1f}",
-                "Buffer": f"±{buffer_pct:.0f}%",
-            }
-        )
+        all_preds = sorted(forecast[c]["predicted_kg"] for c in forecast)
+        q75 = all_preds[int(len(all_preds) * 0.75)] if all_preds else pred
+        q25 = all_preds[int(len(all_preds) * 0.25)] if all_preds else pred
+        if pred >= q75:
+            priority = "🔴 High"
+        elif pred <= q25:
+            priority = "🟢 Low"
+        else:
+            priority = "🟡 Medium"
+        rack_rows.append({
+            "Rack": f"Rack {tier_num}",
+            "Crop": crop_names.get(crop_id, crop_id),
+            "Demand (kg)": round(pred, 1),
+            "Range": f"{lower:.1f} – {upper:.1f}",
+            "Buffer": f"±{buffer_pct:.0f}%",
+            "Priority": priority,
+            "_crop_id": crop_id,
+        })
 
-    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    if not rack_rows:
+        st.info("No rack assignments yet — click **Re-solve Layer 2** to generate.")
+        return
 
-    # CI bar chart
+    # Sort by demand descending
+    rack_rows.sort(key=lambda r: r["Demand (kg)"], reverse=True)
+
+    # ── Legend ───────────────────────────────────────────────────────────
+    leg = st.columns([1, 1, 1, 1])
+    with leg[0]:
+        st.markdown("🔴 **High** — top 25% demand")
+    with leg[1]:
+        st.markdown("🟡 **Medium** — mid 50%")
+    with leg[2]:
+        st.markdown("🟢 **Low** — bottom 25%")
+    with leg[3]:
+        st.markdown("📊 Sorted by demand ↓")
+
+    # ── Horizontal rack cards — one column per rack ────────────────────
+    n = len(rack_rows)
+    col_widths = [1] * n
+    rack_cols = st.columns(col_widths)
+
+    for i, r in enumerate(rack_rows):
+        color = crop_colors.get(r["_crop_id"], "#888888")
+        with rack_cols[i]:
+            st.markdown(
+                f"""
+                <div style="
+                    border: 2px solid {color};
+                    border-radius: 8px;
+                    padding: 8px 10px;
+                    text-align: center;
+                    background: #fafafa;
+                    height: 100%;
+                ">
+                    <div style="font-size:0.75em; color:#888;">{r["Rack"]}</div>
+                    <div style="font-size:0.85em; font-weight:bold; color:{color};">{r["Crop"]}</div>
+                    <div style="font-size:1.4em; font-weight:bold; color:{color};">{r["Demand (kg)"]} kg</div>
+                    <div style="font-size:0.75em; color:#666;">{r["Priority"]}</div>
+                    <div style="font-size:0.7em; color:#aaa; margin-top:2px;">{r["Range"]} kg</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    # ── Bar chart below ──────────────────────────────────────────────────
+    sorted_crops = [row["_crop_id"] for row in rack_rows]
+    sorted_names = [crop_names.get(c, c) for c in sorted_crops]
+    sorted_preds = [forecast[c]["predicted_kg"] for c in sorted_crops]
+    sorted_colors = [crop_colors.get(c, "#888888") for c in sorted_crops]
+
     fig = go.Figure()
-    crops_sorted = list(forecast.keys())
-    names = [crop_names.get(c, c) for c in crops_sorted]
-    preds = [forecast[c]["predicted_kg"] for c in crops_sorted]
-    lowers = [forecast[c]["lower_ci"] for c in crops_sorted]
-    uppers = [forecast[c]["upper_ci"] for c in crops_sorted]
-    errors_low = [p - lo for p, lo in zip(preds, lowers, strict=True)]
-    errors_high = [u - p for u, p in zip(uppers, preds, strict=True)]
-
-    fig.add_trace(
-        go.Bar(
-            x=names,
-            y=preds,
-            error_y=dict(type="data", symmetric=False, array=errors_high, arrayminus=errors_low),
-            marker_color=[
-                "#2ecc71",  # Arugula — green
-                "#3498db",  # Baby Spinach — blue
-                "#9b59b6",  # Thai Basil — purple
-                "#e67e22",  # Chye Sim — orange
-                "#e74c3c",  # Coriander — red
-                "#1abc9c",  # Kai Lan — teal
-                "#f1c40f",  # Kale — yellow
-                "#2c3e50",  # Lettuce — dark blue
-                "#e91e63",  # Mint — pink
-                "#00bcd4",  # Pak Choi — cyan
-            ],
-            name="Predicted (kg)",
-        )
-    )
+    fig.add_trace(go.Bar(
+        x=sorted_names,
+        y=sorted_preds,
+        marker_color=sorted_colors,
+        name="Predicted (kg)",
+    ))
     fig.update_layout(
-        title="Demand Forecast with 90% CI",
+        title="Crop demand — sorted by tomorrow's orders",
         yaxis_title="kg",
-        height=280,
-        margin=dict(l=20, r=20, t=40, b=20),
+        height=200,
+        margin=dict(l=10, r=10, t=30, b=60),
+        showlegend=False,
     )
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
 
 
 # ---------------------------------------------------------------------------
@@ -657,8 +768,10 @@ def _render_cv_diagnosis(plan):
 
     # ── Phase context ────────────────────────────────────────────────────────
     st.info(
-        "ℹ️ **Phase 1 pilot:** farm managers photograph racks manually. "
-        "**Phase 2** uses fixed ceiling cameras. **Phase 3** uses robot patrol. "
+        "ℹ️ **Phase 1:** Rack maintenance photographs each rack at ~7:30am → upload → "
+        "supervisor reviews updated plan by 8:30am. "
+        "**Phase 2** adds fixed ceiling cameras (auto-capture at 6am). "
+        "**Phase 3** adds robot patrol for continuous monitoring. "
         "Same AI pipeline across all phases."
     )
 
@@ -702,11 +815,12 @@ def _render_cv_diagnosis(plan):
 
     with col_resolve:
         has_diagnoses = bool(st.session_state.rack_diagnoses)
-        st.button(
+        if st.button(
             "Re-solve Layer 2 with diagnoses →",
             use_container_width=True,
             disabled=not has_diagnoses,
-        )
+        ):
+            st.rerun()
 
     # ── Rack grid (3 cols × 4 rows) ─────────────────────────────────────────
     rack_nums = list(range(10))
@@ -800,7 +914,8 @@ _DEMO_RACK_ASSIGNMENTS = [
 
 def _load_demo_images(rack_layout: dict[str, str]) -> None:
     """Populate all 10 racks with preset demo images and run diagnoses."""
-    demo_dir = Path(__file__).resolve().parent.parent.parent / "data" / "demo_images"
+    # demo_images lives at repo-root/data/demo_images (not src/data/)
+    demo_dir = Path(__file__).resolve().parents[3] / "data" / "demo_images"
 
     images: dict[str, bytes] = {}
     diagnoses: dict[int, object] = {}
@@ -863,20 +978,23 @@ def _render_ai_explainer(forecast, plan):
             st.caption(f"Refreshes in 5 min")
 
 
-def _render_electricity_chart(electricity):
-    """Render a line chart of the day's hourly electricity tariff rates."""
-    st.subheader("Electricity Tariff (24h)")
-    electricity = electricity.sort_values("hour").reset_index(drop=True)
+def _render_electricity_sidebar(electricity_df, selected_date, electricity):
+    """Render the electricity date selector + 24h tariff chart in the sidebar."""
+    st.sidebar.divider()
+    st.sidebar.subheader("⚡ Electricity Tariff")
+
+    # ── 24h tariff chart ──────────────────────────────────────────────────
+    elec = electricity.sort_values("hour").reset_index(drop=True)
     peak_hours = set(range(8, 22))  # 8am–10pm
 
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
-            x=list(electricity["hour"]),
-            y=list(electricity["tariff_rate_sgd_per_kwh"]),
+            x=list(elec["hour"]),
+            y=list(elec["tariff_rate_sgd_per_kwh"]),
             mode="lines+markers",
             line=dict(color="#3498db", width=2),
-            marker=dict(size=6),
+            marker=dict(size=5),
             name="Tariff (SGD/kWh)",
         )
     )
@@ -884,39 +1002,25 @@ def _render_electricity_chart(electricity):
     for h in range(24):
         if h in peak_hours:
             fig.add_vrect(
-                x0=h - 0.5,
-                x1=h + 0.5,
-                fillcolor="#e74c3c",
-                opacity=0.06,
-                line_width=0,
+                x0=h - 0.5, x1=h + 0.5,
+                fillcolor="#e74c3c", opacity=0.08, line_width=0,
             )
     fig.update_layout(
-        xaxis_title="Hour of day",
+        xaxis_title="Hour",
         yaxis_title="SGD/kWh",
-        height=180,
-        margin=dict(l=20, r=20, t=30, b=20),
-        xaxis=dict(dtick=2, tick0=0),
+        height=160,
+        margin=dict(l=10, r=10, t=10, b=10),
+        xaxis=dict(dtick=4, tick0=0),
         showlegend=False,
-        annotations=[
-            dict(
-                x=3,
-                y=electricity["tariff_rate_sgd_per_kwh"].max() + 0.01,
-                text="🌙 Off-peak (< 8am / ≥ 10pm)",
-                showarrow=False,
-                font=dict(size=10, color="#2c3e50"),
-            ),
-            dict(
-                x=15,
-                y=electricity["tariff_rate_sgd_per_kwh"].max() + 0.01,
-                text="☀️ Peak (8am–10pm)",
-                showarrow=False,
-                font=dict(size=10, color="#e74c3c"),
-            ),
-        ],
     )
-    st.plotly_chart(fig, width="stretch")
-    avg_rate = electricity["tariff_rate_sgd_per_kwh"].mean()
-    st.caption(f"Average: **${avg_rate:.2f}/kWh** · Off-peak **$0.18** · Peak **$0.28**")
+    st.sidebar.plotly_chart(fig, use_container_width=True)
+
+    avg_rate = elec["tariff_rate_sgd_per_kwh"].mean()
+    off_peak = elec[~elec["hour"].isin(peak_hours)]["tariff_rate_sgd_per_kwh"].mean()
+    peak_rate = elec[elec["hour"].isin(peak_hours)]["tariff_rate_sgd_per_kwh"].mean()
+    st.sidebar.caption(
+        f"Avg **${avg_rate:.3f}** · Off-peak **${off_peak:.2f}** · Peak **${peak_rate:.2f}**"
+    )
 
 
 def _render_kpi_strip(plan):
@@ -1759,3 +1863,25 @@ def _render_drift_monitoring_panel():
             "Concept drift: relationship changes between predictions and outcomes. "
             "Run: uv run python scripts/run_drift_check.py"
         )
+
+# ===== v6.2 Phase 1 Footer =====
+st.divider()
+
+with st.container():
+    st.caption("📍 **Phase 1 MVP** — All metrics displayed are simulated values. Phase 1 pilot will validate the hypotheses below.")
+
+    with st.expander("🧪 Phase 1 Validation Hypotheses (6)", expanded=False):
+        st.markdown("""
+        Each hypothesis has a pass threshold. If any fails, we redesign or pivot:
+
+        1. **Manufacturing — Electricity savings**: LED time-shift saves ≥5% electricity (target: 5–15%)
+        2. **Manufacturing — Waste reduction**: Demand forecast + order integration cuts waste ≥5pt (target: 5–10pt)
+        3. **Integration Platform — Time savings**: Morning planning time reduced from 60min to <30min
+        4. **Media — RAG accuracy**: RAG Chat answers ≥60% accuracy (human evaluation)
+        5. **Logistics — Fuel savings**: Route optimization saves ≥5% fuel (target: 5–10%)
+        6. **B2B SaaS viability**: ≥2 of 3 pilot farms show continuation intent at SGD 500/month
+
+        *Methodology: Lean Startup Validated Learning. Each hypothesis is independently testable in the 6-month Phase 1 pilot.*
+        """)
+
+    st.caption("MGMT 655 Machine Learning for Decision Making | SMU Term 1 2026")
