@@ -261,9 +261,11 @@ def main():
         st.markdown(f"### {date.today().strftime('%d %b %Y')}")
 
     # ── v6.2 Autopilot Status Badge ─────────────────────────────────────
+    # v6.2: checks both typhoon_active (existing button) and typhoon_mode (promo trigger)
+    typhoon_on = st.session_state.get("typhoon_mode") or st.session_state.get("typhoon_active")
     col_status, col_date_badge, col_farm = st.columns([2, 1, 1])
     with col_status:
-        if st.session_state.get("typhoon_mode"):
+        if typhoon_on:
             st.error("⚡ Typhoon Mode Active | Re-optimization in progress")
         elif st.session_state.get("override_active"):
             st.warning("👤 Manager Override Applied")
@@ -370,6 +372,42 @@ def main():
                         if k in st.session_state:
                             del st.session_state[k]
                     st.rerun()
+
+    st.divider()
+
+    # ── v6.2 NEA Typhoon Quick Trigger (Promo Button) ──────────────────
+    typhoon_promo_col1, typhoon_promo_col2 = st.columns([1, 3])
+    with typhoon_promo_col1:
+        if not (st.session_state.get("typhoon_mode") or st.session_state.get("typhoon_active")):
+            if st.button(
+                "⚡ Simulate NEA Typhoon Alert",
+                type="primary",
+                use_container_width=True,
+                key="typhoon_promo_trigger",
+                help="Triggers re-optimization with typhoon constraints. Full comparison shown in Scenario Testing section below.",
+            ):
+                st.session_state["typhoon_mode"] = True
+                st.session_state["typhoon_active"] = True
+                st.session_state["typhoon_needs_recompute"] = True
+                st.rerun()
+        else:
+            if st.button(
+                "🔄 Clear Typhoon Mode",
+                use_container_width=True,
+                key="typhoon_promo_clear",
+            ):
+                for k in ["typhoon_active", "typhoon_mode", "typhoon_needs_recompute",
+                          "typhoon_plan_cache", "typhoon_elapsed_ms", "typhoon_error",
+                          "typhoon_error_constraint"]:
+                    if k in st.session_state:
+                        del st.session_state[k]
+                st.rerun()
+
+    with typhoon_promo_col2:
+        if st.session_state.get("typhoon_mode") or st.session_state.get("typhoon_active"):
+            st.error("⚡ Typhoon Mode Active — Scroll down to 'Scenario Testing' for detailed re-optimization comparison.")
+        else:
+            st.info("💡 Click left button to simulate a NEA typhoon alert (or use the detailed scenario tester below).")
 
     st.divider()
 
@@ -1599,7 +1637,7 @@ def _render_scenario_testing(
 ):
     st.subheader("Scenario Testing")
 
-    # Red alert banner when typhoon is active
+    # v6.2: Red alert banner when typhoon is active
     if st.session_state.get("typhoon_active"):
         st.error(
             "⚠️ TYPHOON ACTIVE — 6h delivery window | "
@@ -1607,7 +1645,6 @@ def _render_scenario_testing(
             "Demand surge: +20% | Emergency harvest: triggered"
         )
 
-        # Live countdown display (4 hours = 240 minutes)
         ups_hours = 4
         st.markdown(
             f"""
@@ -1629,93 +1666,102 @@ def _render_scenario_testing(
         )
 
         if st.button("Clear Typhoon Scenario"):
-            st.session_state.typhoon_active = False
+            for k in ["typhoon_active", "typhoon_mode", "typhoon_needs_recompute",
+                      "typhoon_plan_cache", "typhoon_elapsed_ms", "typhoon_error",
+                      "typhoon_error_constraint"]:
+                if k in st.session_state:
+                    del st.session_state[k]
             st.rerun()
         st.divider()
 
-    if st.button("⚡ Typhoon Warning", type="primary"):
-        st.session_state.typhoon_active = True
-        t0 = time.time()
+    # v6.2: Re-optimization triggered by button OR top-level promo;
+    # result cached in session_state to avoid re-running on every Streamlit rerun.
+    if st.session_state.get("typhoon_active"):
+        if st.session_state.get("typhoon_needs_recompute", True):
+            with st.spinner("Running typhoon re-optimization..."):
+                t0 = time.time()
+                scenario = TyphoonScenarioInput(
+                    delivery_hours=6,
+                    power_outage_probability=0.3,
+                    ups_countdown_hours=4,
+                    emergency_harvest=True,
+                    demand_multiplier=1.2,
+                    cold_storage_switch=True,
+                    staff_reduced_pct=30,
+                )
+                base_kwargs = dict(
+                    forecast=forecast,
+                    crops_df=crops,
+                    electricity_df=electricity,
+                    staff_df=staff,
+                    available_headcount=headcount,
+                )
+                typhoon_kwargs = apply_typhoon(base_kwargs, scenario)
+                typhoon_kwargs["excluded_racks"] = excluded_racks or []
+                typhoon_kwargs["unavailable_shifts"] = unavailable_shifts or []
+                typhoon_kwargs["objective_weights"] = ObjectiveWeights.from_mode(mode_key)
+                try:
+                    typhoon_plan = build_and_solve(**typhoon_kwargs)
+                    elapsed = (time.time() - t0) * 1000
+                    st.session_state["typhoon_plan_cache"] = typhoon_plan
+                    st.session_state["typhoon_elapsed_ms"] = elapsed
+                    st.session_state["typhoon_error"] = None
+                except InfeasibleError as e:
+                    st.session_state["typhoon_plan_cache"] = None
+                    st.session_state["typhoon_elapsed_ms"] = (time.time() - t0) * 1000
+                    st.session_state["typhoon_error"] = str(e)
+                    st.session_state["typhoon_error_constraint"] = (
+                        e.binding_constraint if hasattr(e, "binding_constraint") else None
+                    )
+                st.session_state["typhoon_needs_recompute"] = False
 
-        # Build scenario with full typhoon parameters
-        scenario = TyphoonScenarioInput(
-            delivery_hours=6,
-            power_outage_probability=0.3,
-            ups_countdown_hours=4,
-            emergency_harvest=True,
-            demand_multiplier=1.2,
-            cold_storage_switch=True,
-            staff_reduced_pct=30,
-        )
+        # Display cached results
+        typhoon_plan = st.session_state.get("typhoon_plan_cache")
+        elapsed = st.session_state.get("typhoon_elapsed_ms", 0)
+        error_msg = st.session_state.get("typhoon_error")
 
-        base_kwargs = dict(
-            forecast=forecast,
-            crops_df=crops,
-            electricity_df=electricity,
-            staff_df=staff,
-            available_headcount=headcount,
-        )
-
-        typhoon_kwargs = apply_typhoon(base_kwargs, scenario)
-        # Carry HITL constraints into typhoon scenario
-        typhoon_kwargs["excluded_racks"] = excluded_racks or []
-        typhoon_kwargs["unavailable_shifts"] = unavailable_shifts or []
-        typhoon_kwargs["objective_weights"] = ObjectiveWeights.from_mode(mode_key)
-
-        try:
-            typhoon_plan = build_and_solve(**typhoon_kwargs)
-            elapsed = (time.time() - t0) * 1000
-
+        if error_msg:
+            st.error(f"Typhoon plan infeasible ({elapsed:.0f}ms): {error_msg}")
+            constraint = st.session_state.get("typhoon_error_constraint")
+            if constraint:
+                st.info(f"Try: {constraint}")
+        elif typhoon_plan:
             st.success(f"Re-optimized in {elapsed:.0f}ms")
-
             if current_plan:
                 comparison = compare_plans(current_plan, typhoon_plan)
                 delta = comparison.get("delta", {})
-
-                # Expanded metrics row
                 m1, m2, m3, m4 = st.columns(4)
                 m1.metric(
                     "Forecasted Profit",
                     f"${typhoon_plan.get('objective_value_sgd', 0):,.0f}",
                     delta=f"{delta.get('objective_value_sgd', 0):,.0f}",
                 )
-                m2.metric(
-                    "Delivery Window",
-                    "6 hours",
-                    delta="-6h",
-                    delta_color="inverse",
-                )
-                m3.metric(
-                    "Power Outage",
-                    "ACTIVE",
-                    delta="-yield 100%",
-                    delta_color="inverse",
-                )
-                m4.metric(
-                    "Demand Surge",
-                    "+20%",
-                    delta="panic buying",
-                )
-
-                # Update Layer 3 targets
+                m2.metric("Delivery Window", "6 hours", delta="-6h", delta_color="inverse")
+                m3.metric("Power Outage", "ACTIVE", delta="-yield 100%", delta_color="inverse")
+                m4.metric("Demand Surge", "+20%", delta="panic buying")
                 if "rl_env" in st.session_state:
                     st.session_state.rl_env.update_targets(
-                        {
-                            "temp": typhoon_plan.get("room_temp_target_c", 22),
-                        }
+                        {"temp": typhoon_plan.get("room_temp_target_c", 22)}
                     )
-                    # Trigger power outage in RL env if available
                     if hasattr(st.session_state.rl_env, "trigger_power_outage"):
                         st.session_state.rl_env.trigger_power_outage()
-                    st.info("Layer 3 targets updated — power outage triggered in RL environment")
+                    st.info("Layer 3 targets updated")
             else:
                 st.write(f"Typhoon plan forecast profit: ${typhoon_plan.get('objective_value_sgd', 0):,.0f}")
 
-        except InfeasibleError as e:
-            elapsed = (time.time() - t0) * 1000
-            st.error(f"Typhoon plan infeasible ({elapsed:.0f}ms): {e}")
-            if e.binding_constraint:
-                st.info(f"Try: {e.binding_constraint}")
+    # Trigger button (only sets state + flags recompute)
+    col_trigger, col_force = st.columns([3, 1])
+    with col_trigger:
+        if st.button("⚡ Typhoon Warning", type="primary", key="typhoon_main_btn"):
+            st.session_state["typhoon_mode"] = True
+            st.session_state["typhoon_active"] = True
+            st.session_state["typhoon_needs_recompute"] = True
+            st.rerun()
+    with col_force:
+        if st.session_state.get("typhoon_active"):
+            if st.button("🔁 Re-solve", key="typhoon_force_recompute", help="Force re-optimization with current settings"):
+                st.session_state["typhoon_needs_recompute"] = True
+                st.rerun()
 
     st.caption(
         "Typhoon Warning: 6h delivery | 30% power outage probability | "
