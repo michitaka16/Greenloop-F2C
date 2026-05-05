@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 SEED = 42
-WEEKS = 24
+WEEKS = 30  # ~210 days ending ~2026-04-29
 DATA_DIR = Path(__file__).resolve().parent.parent.parent.parent / "data"
 
 
@@ -301,16 +301,16 @@ def generate_electricity() -> pd.DataFrame:
 
 
 def generate_staff() -> pd.DataFrame:
-    """Generate staff.csv: 8 workers with varying availability and rates."""
+    """Generate staff.csv: 8 workers with varying availability, rates and roles."""
     return pd.DataFrame([
-        {"staff_id": "S001", "name": "Ahmad", "availability": "morning,afternoon", "hourly_rate_sgd": 12.50},
-        {"staff_id": "S002", "name": "Wei Lin", "availability": "morning,afternoon", "hourly_rate_sgd": 13.00},
-        {"staff_id": "S003", "name": "Priya", "availability": "morning", "hourly_rate_sgd": 14.00},
-        {"staff_id": "S004", "name": "Jun Hao", "availability": "afternoon,night", "hourly_rate_sgd": 12.00},
-        {"staff_id": "S005", "name": "Siti", "availability": "morning,afternoon,night", "hourly_rate_sgd": 15.00},
-        {"staff_id": "S006", "name": "Ravi", "availability": "night", "hourly_rate_sgd": 16.00},
-        {"staff_id": "S007", "name": "Mei Ying", "availability": "morning,afternoon", "hourly_rate_sgd": 11.50},
-        {"staff_id": "S008", "name": "Ismail", "availability": "afternoon,night", "hourly_rate_sgd": 13.50},
+        {"staff_id": "S001", "name": "Ahmad",      "role": "Farm Operations", "availability": "morning,afternoon", "hourly_rate_sgd": 12.50},
+        {"staff_id": "S002", "name": "Wei Lin",    "role": "Farm Operations", "availability": "morning,afternoon", "hourly_rate_sgd": 13.00},
+        {"staff_id": "S003", "name": "Priya",      "role": "Farm Operations", "availability": "morning",       "hourly_rate_sgd": 14.00},
+        {"staff_id": "S004", "name": "Jun Hao",    "role": "Supervisor",    "availability": "afternoon,night", "hourly_rate_sgd": 12.00},
+        {"staff_id": "S005", "name": "Siti",       "role": "Logistics",     "availability": "morning,afternoon,night", "hourly_rate_sgd": 15.00},
+        {"staff_id": "S006", "name": "Ravi",       "role": "Farm Operations", "availability": "night",        "hourly_rate_sgd": 16.00},
+        {"staff_id": "S007", "name": "Mei Ying",   "role": "Farm Operations", "availability": "morning,afternoon", "hourly_rate_sgd": 11.50},
+        {"staff_id": "S008", "name": "Ismail",     "role": "Logistics",     "availability": "afternoon,night", "hourly_rate_sgd": 13.50},
     ])
 
 

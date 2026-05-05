@@ -1,0 +1,543 @@
+{
+  "plan_date": "2026-05-05",
+  "rack_layout": {
+    "tier_0": "kai_lan",
+    "tier_1": "arugula",
+    "tier_2": "mint",
+    "tier_3": "coriander",
+    "tier_4": "mint",
+    "tier_5": "arugula",
+    "tier_6": "coriander",
+    "tier_7": "coriander",
+    "tier_8": "mint",
+    "tier_9": "arugula"
+  },
+  "forecast": {
+    "arugula": {
+      "predicted_kg": 10.9,
+      "lower_ci": 8.78,
+      "upper_ci": 16.0,
+      "interval_width": 7.22
+    },
+    "baby_spinach": {
+      "predicted_kg": 24.58,
+      "lower_ci": 16.85,
+      "upper_ci": 30.79,
+      "interval_width": 13.94
+    },
+    "basil_thai": {
+      "predicted_kg": 8.3,
+      "lower_ci": 8.23,
+      "upper_ci": 12.9,
+      "interval_width": 4.66
+    },
+    "chye_sim": {
+      "predicted_kg": 30.14,
+      "lower_ci": 21.29,
+      "upper_ci": 41.72,
+      "interval_width": 20.43
+    },
+    "coriander": {
+      "predicted_kg": 14.45,
+      "lower_ci": 10.68,
+      "upper_ci": 17.24,
+      "interval_width": 6.55
+    },
+    "kai_lan": {
+      "predicted_kg": 45.56,
+      "lower_ci": 37.25,
+      "upper_ci": 57.21,
+      "interval_width": 19.96
+    },
+    "kale": {
+      "predicted_kg": 17.61,
+      "lower_ci": 13.32,
+      "upper_ci": 22.97,
+      "interval_width": 9.64
+    },
+    "lettuce_mambo": {
+      "predicted_kg": 54.87,
+      "lower_ci": 45.59,
+      "upper_ci": 66.18,
+      "interval_width": 20.59
+    },
+    "mint": {
+      "predicted_kg": 6.54,
+      "lower_ci": 6.44,
+      "upper_ci": 10.85,
+      "interval_width": 4.41
+    },
+    "pak_choi": {
+      "predicted_kg": 64.12,
+      "lower_ci": 53.66,
+      "upper_ci": 67.25,
+      "interval_width": 13.6
+    }
+  },
+  "led_schedule": {
+    "tier_0": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1
+    ],
+    "tier_1": [
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "tier_2": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "tier_3": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "tier_4": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "tier_5": [
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "tier_6": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "tier_7": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "tier_8": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    "tier_9": [
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ]
+  },
+  "staff_shifts": [
+    {
+      "shift": "morning",
+      "staff_count": 0,
+      "hours": 8
+    },
+    {
+      "shift": "afternoon",
+      "staff_count": 0,
+      "hours": 8
+    },
+    {
+      "shift": "night",
+      "staff_count": 1,
+      "hours": 8
+    }
+  ],
+  "cv_diagnosis_summary": {
+    "num_diagnosed": 10,
+    "nitrogen_low_count": 2,
+    "water_stress_count": 2,
+    "low_confidence_count": 0,
+    "details": {
+      "tier_0": {
+        "rack_id": "tier_0",
+        "growth_stage": "harvest_ready",
+        "growth_confidence": 0.9371181934084414,
+        "growth_probs": [
+          0.009164540880324682,
+          0.05371726571123394,
+          0.9371181934084414
+        ],
+        "nutrition_status": "normal",
+        "nutrition_confidence": 0.9065419279933696,
+        "nutrition_probs": [
+          0.09103091192488257,
+          0.002427160081747797,
+          0.9065419279933696
+        ]
+      },
+      "tier_1": {
+        "rack_id": "tier_1",
+        "growth_stage": "mid",
+        "growth_confidence": 0.8777736827686468,
+        "growth_probs": [
+          0.005212218470494759,
+          0.8777736827686468,
+          0.11701409876085847
+        ],
+        "nutrition_status": "normal",
+        "nutrition_confidence": 0.9440396745019773,
+        "nutrition_probs": [
+          0.05594107398183988,
+          1.925151618277567e-05,
+          0.9440396745019773
+        ]
+      },
+      "tier_2": {
+        "rack_id": "tier_2",
+        "growth_stage": "early",
+        "growth_confidence": 0.8674482343243423,
+        "growth_probs": [
+          0.8674482343243423,
+          0.129288635144828,
+          0.0032631305308297542
+        ],
+        "nutrition_status": "normal",
+        "nutrition_confidence": 0.9200529317131808,
+        "nutrition_probs": [
+          0.05487660587807,
+          0.02507046240874919,
+          0.9200529317131808
+        ]
+      },
+      "tier_3": {
+        "rack_id": "tier_3",
+        "growth_stage": "harvest_ready",
+        "growth_confidence": 0.9266463668813544,
+        "growth_probs": [
+          0.06378735169940546,
+          0.009566281419240156,
+          0.9266463668813544
+        ],
+        "nutrition_status": "nitrogen_low",
+        "nutrition_confidence": 0.6746532504300566,
+        "nutrition_probs": [
+          0.6746532504300566,
+          0.207478088542731,
+          0.11786866102721236
+        ]
+      },
+      "tier_4": {
+        "rack_id": "tier_4",
+        "growth_stage": "mid",
+        "growth_confidence": 0.8956608263170961,
+        "growth_probs": [
+          0.043525199481199366,
+          0.8956608263170961,
+          0.06081397420170454
+        ],
+        "nutrition_status": "water_stress",
+        "nutrition_confidence": 0.822317695734017,
+        "nutrition_probs": [
+          0.11580923912149757,
+          0.822317695734017,
+          0.06187306514448541
+        ]
+      },
+      "tier_5": {
+        "rack_id": "tier_5",
+        "growth_stage": "harvest_ready",
+        "growth_confidence": 0.9646459547381344,
+        "growth_probs": [
+          0.0008623158486063345,
+          0.034491729413259245,
+          0.9646459547381344
+        ],
+        "nutrition_status": "normal",
+        "nutrition_confidence": 0.9632711737319828,
+        "nutrition_probs": [
+          0.03477592388192968,
+          0.001952902386087522,
+          0.9632711737319828
+        ]
+      },
+      "tier_6": {
+        "rack_id": "tier_6",
+        "growth_stage": "mid",
+        "growth_confidence": 0.8631327301359734,
+        "growth_probs": [
+          0.05285403473783597,
+          0.8631327301359734,
+          0.08401323512619067
+        ],
+        "nutrition_status": "nitrogen_low",
+        "nutrition_confidence": 0.7622101435488766,
+        "nutrition_probs": [
+          0.7622101435488766,
+          0.2182662952548192,
+          0.019523561196304186
+        ]
+      },
+      "tier_7": {
+        "rack_id": "tier_7",
+        "growth_stage": "early",
+        "growth_confidence": 0.8952335679531036,
+        "growth_probs": [
+          0.8952335679531036,
+          0.10042912485302226,
+          0.00433730719387415
+        ],
+        "nutrition_status": "normal",
+        "nutrition_confidence": 0.9497067526502456,
+        "nutrition_probs": [
+          0.019178156451656495,
+          0.03111509089809788,
+          0.9497067526502456
+        ]
+      },
+      "tier_8": {
+        "rack_id": "tier_8",
+        "growth_stage": "harvest_ready",
+        "growth_confidence": 0.9349268439042241,
+        "growth_probs": [
+          0.062440708704156786,
+          0.002632447391619127,
+          0.9349268439042241
+        ],
+        "nutrition_status": "normal",
+        "nutrition_confidence": 0.926221616544081,
+        "nutrition_probs": [
+          0.05331261119309828,
+          0.020465772262820744,
+          0.926221616544081
+        ]
+      },
+      "tier_9": {
+        "rack_id": "tier_9",
+        "growth_stage": "mid",
+        "growth_confidence": 0.8908331372780677,
+        "growth_probs": [
+          0.10182266093903249,
+          0.8908331372780677,
+          0.007344201782899831
+        ],
+        "nutrition_status": "water_stress",
+        "nutrition_confidence": 0.8078735341245844,
+        "nutrition_probs": [
+          0.18737048908006138,
+          0.8078735341245844,
+          0.00475597679535425
+        ]
+      }
+    }
+  },
+  "cost_breakdown": {
+    "revenue": 0.0,
+    "electricity": 9.15,
+    "labour": -107.52,
+    "waste_penalty": -0.0,
+    "nutrient_adjustment": 0.3
+  },
+  "objective_value_sgd": -125.0,
+  "solve_time_ms": 82.0
+}

@@ -1,5 +1,5 @@
 {
-  "audit_date": "2026-04-24T09:19:25.451750",
+  "audit_date": "2026-04-24T09:22:55.722620",
   "total_implications": 6,
   "by_severity": {
     "low": 1,
@@ -114,7 +114,7 @@
       "name": "AVA / Singapore Food Agency",
       "net": 1,
       "positive": [
-        "Progress toward Singapore Food Story 2 targets (30% local production by 2030)",
+        "Progress toward Singapore Food Story 2 targets (veggies 20%, protein 30% by 2035)",
         "Sustainability metrics aligned with AVA reporting requirements",
         "Data from pilot farms can inform future policy on AI in agriculture"
       ],

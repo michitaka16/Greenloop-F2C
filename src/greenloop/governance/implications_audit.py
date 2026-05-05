@@ -341,7 +341,7 @@ _STAKEHOLDER_IMPACTS: list[StakeholderImpact] = [
     StakeholderImpact(
         stakeholder="AVA / Singapore Food Agency",
         positive_effects=[
-            "Progress toward Singapore Food Story 2 targets (30% local production by 2030)",
+            "Progress toward Singapore Food Story 2 targets (veggies 20%, protein 30% by 2035)",
             "Sustainability metrics aligned with AVA reporting requirements",
             "Data from pilot farms can inform future policy on AI in agriculture",
         ],

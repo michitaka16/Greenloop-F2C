@@ -30,6 +30,7 @@ st.set_page_config(
 # Imports
 # ---------------------------------------------------------------------------
 from greenloop.rag import RAGAgent
+from greenloop.data.shared_data import load_farm_output
 
 # ---------------------------------------------------------------------------
 # Session state
@@ -118,6 +119,72 @@ st.caption(
     "RAG-powered chatbot for GreenLoop Farm — produce, sustainability, and operations. "
     "Powered by ChromaDB + sentence-transformers"
 )
+
+# ── Farm AI Live Status ──────────────────────────────────────────────────
+farm = load_farm_output()
+if farm:
+    rack_layout = farm.get("rack_layout", {})
+    forecast = farm.get("forecast", {})
+    led_schedule = farm.get("led_schedule", {})
+    cv_summary = farm.get("cv_diagnosis_summary") or {}
+    cost = farm.get("cost_breakdown", {})
+    profit = farm.get("objective_value_sgd", 0)
+
+    crop_names = {
+        "kai_lan": "Kai Lan", "baby_spinach": "Baby Spinach",
+        "lettuce_mambo": "Lettuce", "chye_sim": "Chye Sim",
+        "arugula": "Arugula", "pak_choi": "Pak Choi",
+        "kale": "Kale", "basil_thai": "Thai Basil",
+        "coriander": "Coriander", "mint": "Mint",
+    }
+    crop_colors = {
+        "kai_lan": "#1abc9c", "baby_spinach": "#3498db",
+        "lettuce_mambo": "#2c3e50", "chye_sim": "#e67e22",
+        "arugula": "#2ecc71", "pak_choi": "#00bcd4",
+        "kale": "#f1c40f", "basil_thai": "#9b59b6",
+        "coriander": "#e74c3c", "mint": "#e91e63",
+    }
+
+    with st.expander("🌾 Today's Farm AI Status — click to expand", expanded=True):
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.markdown("**Today's Profit**")
+            st.markdown(f"### ${profit:.2f}")
+        with c2:
+            st.markdown("**Revenue / Energy / Labour**")
+            st.markdown(
+                f"${cost.get('revenue', 0):.2f}"
+                f" / ${abs(cost.get('electricity', 0)):.2f}"
+                f" / ${abs(cost.get('labour', 0)):.2f}"
+            )
+        with c3:
+            st.markdown("**Crop Health**")
+            n_low = cv_summary.get("nitrogen_low_count", 0)
+            w_stress = cv_summary.get("water_stress_count", 0)
+            if n_low or w_stress:
+                st.markdown(f"⚠️ {n_low} nitrogen low, {w_stress} water stress")
+            else:
+                st.markdown("✅ All racks healthy")
+
+        # Growing now
+        active_crops = set(rack_layout.values())
+        growing = [crop_names.get(c, c) for c in active_crops if c in crop_names]
+        if growing:
+            st.markdown(f"**🌱 Growing today:** {', '.join(growing)}")
+
+        # LED schedule summary
+        if led_schedule:
+            tier0 = led_schedule.get("tier_0", [])
+            if tier0:
+                on_hours = [i for i, v in enumerate(tier0) if v == 1]
+                if on_hours:
+                    st.markdown(
+                        f"**💡 LED photoperiod:** Rack 0 on {min(on_hours):02d}:00–{max(on_hours):02d}:00"
+                    )
+        st.caption(f"Updated: {farm.get('plan_date', 'unknown')} · Source: Farm AI")
+else:
+    st.info("🌾 Run **Farm AI** first to see today's farm status here.")
+
 
 # ── Sidebar: knowledge base status ────────────────────────────────────────
 with st.sidebar:

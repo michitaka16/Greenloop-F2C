@@ -15,7 +15,7 @@
 → Show: manual planning vs. AI planning contrast.
 
 **1:30 — Introduce GreenLoop F2C**
-"Five-layer AI platform. Seed to delivery. Every decision optimized."
+"Four-layer AI platform. Seed to delivery. Every decision optimized."
 → Show: Layer 1 → Layer 2 → Layer 3 → Layer 4 → Layer 5 overview.
 
 ---

@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from greenloop.layer2b.vrp_solver import solve_vrp
+from greenloop.data.shared_data import load_farm_output
 
 # ── Constants ────────────────────────────────────────────────────────────────
 DEPOT_LAT = 1.3328
@@ -152,6 +153,87 @@ if is_typhoon:
 # ── Header ──────────────────────────────────────────────────────────────────
 st.title("🚚 Last-Mile Delivery Routing")
 st.caption(f"Depot: Jurong Innovation District ({DEPOT_LAT}, {DEPOT_LNG})")
+
+# ── Today's Harvest (from Farm AI) ──────────────────────────────────────────
+farm = load_farm_output()
+if farm:
+    st.subheader("🌾 Today's Harvest (from Farm AI)")
+
+    rack_layout = farm.get("rack_layout", {})
+    forecast = farm.get("forecast", {})
+
+    crop_names = {
+        "kai_lan": "Kai Lan", "baby_spinach": "Baby Spinach",
+        "lettuce_mambo": "Lettuce", "chye_sim": "Chye Sim",
+        "arugula": "Arugula", "pak_choi": "Pak Choi",
+        "kale": "Kale", "basil_thai": "Thai Basil",
+        "coriander": "Coriander", "mint": "Mint",
+    }
+
+    crop_colors = {
+        "kai_lan": "#1abc9c", "baby_spinach": "#3498db",
+        "lettuce_mambo": "#2c3e50", "chye_sim": "#e67e22",
+        "arugula": "#2ecc71", "pak_choi": "#00bcd4",
+        "kale": "#f1c40f", "basil_thai": "#9b59b6",
+        "coriander": "#e74c3c", "mint": "#e91e63",
+    }
+
+    # Build per-crop harvest table
+    crop_rows = []
+    for tier_num in range(10):
+        rack_id = f"tier_{tier_num}"
+        crop_id = rack_layout.get(rack_id)
+        if crop_id and crop_id in forecast:
+            vals = forecast[crop_id]
+            crop_rows.append({
+                "Rack": f"Rack {tier_num}",
+                "Crop": crop_names.get(crop_id, crop_id),
+                "Predicted Harvest (kg)": round(vals.get("predicted_kg", 0), 1),
+                "Lower CI": round(vals.get("lower_ci", 0), 1),
+                "Upper CI": round(vals.get("upper_ci", 0), 1),
+                "_color": crop_colors.get(crop_id, "#888888"),
+            })
+
+    if crop_rows:
+        # Summary metric
+        total_kg = sum(r["Predicted Harvest (kg)"] for r in crop_rows)
+        m_h1, m_h2 = st.columns(2)
+        m_h1.metric("Total Predicted Harvest", f"{total_kg:.1f} kg")
+        m_h2.metric("Active Racks", f"{len(crop_rows)} / 10")
+
+        # Per-rack cards
+        cols = st.columns(min(len(crop_rows), 5))
+        for i, r in enumerate(crop_rows):
+            with cols[i % len(cols)]:
+                color = r["_color"]
+                st.markdown(
+                    f"""
+                    <div style="border:2px solid {color}; border-radius:6px;
+                                padding:8px; text-align:center; margin-bottom:4px;">
+                        <div style="font-size:0.75em; color:#888;">{r["Rack"]}</div>
+                        <div style="font-size:0.9em; font-weight:bold; color:{color};">{r["Crop"]}</div>
+                        <div style="font-size:1.1em; font-weight:bold;">{r["Predicted Harvest (kg)"]} kg</div>
+                        <div style="font-size:0.7em; color:#aaa;">{r["Lower CI"]} – {r["Upper CI"]} kg</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+    else:
+        st.info("No rack assignments yet — run Farm AI first.")
+
+    cost = farm.get("cost_breakdown", {})
+    if cost:
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Farm Revenue", f"${cost.get('revenue', 0):.2f}")
+        c2.metric("Energy Cost", f"${abs(cost.get('electricity', 0)):.2f}")
+        c3.metric("Labour Cost", f"${abs(cost.get('labour', 0)):.2f}")
+        profit = farm.get("objective_value_sgd", 0)
+        c4.metric("Farm Profit", f"${profit:.2f}")
+
+    st.caption(f"Source: Farm AI · Plan date: {farm.get('plan_date', 'unknown')}")
+    st.divider()
+else:
+    st.info("🌾 Run **Farm AI** first to see today's harvest data here.")
 
 # ── Solve ────────────────────────────────────────────────────────────────────
 customers_df = load_customers()

@@ -278,6 +278,36 @@ def main():
 
     st.divider()
 
+    # ── v6.2 Autonomy Mode Status Strip ────────────────────────────────
+    _gate = st.session_state.get("rl_gate")
+    _mode_label = _gate.mode_label if _gate is not None else "Advisory"
+    _typhoon_on = bool(st.session_state.get("typhoon_mode") or st.session_state.get("typhoon_active"))
+    _override_on = bool(st.session_state.get("override_active"))
+    _degraded = _typhoon_on or _override_on
+
+    _ac1, _ac2, _ac3 = st.columns([1, 2, 2])
+    with _ac1:
+        st.markdown("**🛡️ Autopilot Mode**")
+    with _ac2:
+        if _degraded:
+            st.warning(f"**Advisory** ← Auto-degraded")
+        elif _mode_label == "Autonomous":
+            st.success(f"🤖 **{_mode_label}** — AI runs operations")
+        elif _mode_label == "Advisory":
+            st.info(f"🤝 **{_mode_label}** — AI proposes, human can override")
+        else:
+            st.info(f"👤 **{_mode_label}** — Human approves every action")
+    with _ac3:
+        if _degraded:
+            _why = []
+            if _typhoon_on: _why.append("Typhoon active")
+            if _override_on: _why.append("Manager override")
+            st.caption(f"⚠️ Reduced to Advisory: {' + '.join(_why)}")
+        else:
+            st.caption("ℹ️ Change mode in 'RL Control' panel below.")
+
+    st.divider()
+
     # ── v6.2 Integration Platform — Auto-Fetched Cards ─────────────────
     st.markdown("##### 📡 Integration Platform — Auto-Fetched Data")
     st.caption("Phase 1 MVP: 2 live integrations (EMA Energy, Staff Calendar). Phase 2: full 6-API stack.")
@@ -1480,6 +1510,18 @@ def _render_rl_control():
         st.session_state.rl_current_obs = obs
 
     gate = st.session_state.rl_gate
+    # v6.2: Auto-degrade to ADVISORY during typhoon or manager override
+    _typhoon_on = bool(st.session_state.get("typhoon_mode") or st.session_state.get("typhoon_active"))
+    _override_on = bool(st.session_state.get("override_active"))
+    if _typhoon_on or _override_on:
+        if "_preferred_mode" not in st.session_state:
+            st.session_state["_preferred_mode"] = gate.get_mode()
+        if gate.get_mode() != AutonomyMode.ADVISORY:
+            gate.set_mode(AutonomyMode.ADVISORY)
+    elif "_preferred_mode" in st.session_state:
+        _pref = st.session_state.pop("_preferred_mode")
+        if gate.get_mode() != _pref:
+            gate.set_mode(_pref)
     history = st.session_state.rl_history
 
     # Autonomy mode selector

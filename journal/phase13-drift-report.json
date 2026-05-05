@@ -1,0 +1,206 @@
+{
+  "generated_at": "2026-04-24T09:43:32.938028",
+  "total_checks": 14,
+  "summary": {
+    "ok": 13,
+    "warning": 0,
+    "alert": 1,
+    "critical": 0
+  },
+  "checks": [
+    {
+      "check_name": "xgboost_feature_drift",
+      "layer": "Layer 1",
+      "drift_type": "feature_drift",
+      "severity": "ok",
+      "status": "no_baseline",
+      "details": {
+        "status": "no_baseline",
+        "message": "crops.csv not found — cannot compute feature drift",
+        "checked": "crops.csv"
+      },
+      "action_on_alert": "retrain"
+    },
+    {
+      "check_name": "xgboost_performance_drift",
+      "layer": "Layer 1",
+      "drift_type": "performance_drift",
+      "severity": "ok",
+      "status": "no_baseline",
+      "details": {
+        "status": "no_baseline",
+        "message": "shipments.csv not found — cannot compute RMSE drift"
+      },
+      "action_on_alert": "retrain"
+    },
+    {
+      "check_name": "xgboost_prediction_bias",
+      "layer": "Layer 1",
+      "drift_type": "concept_drift",
+      "severity": "ok",
+      "status": "no_data",
+      "details": {
+        "status": "no_data",
+        "message": "shipments.csv not found"
+      },
+      "action_on_alert": "retrain"
+    },
+    {
+      "check_name": "efficientnet_confidence_drift",
+      "layer": "Layer 1b",
+      "drift_type": "performance_drift",
+      "severity": "ok",
+      "status": "no_recent_diagnoses",
+      "details": {
+        "status": "no_recent_diagnoses",
+        "message": "No diagnosis confidence data in last 7 days",
+        "note": "Use _log_diagnosis_confidence() to record diagnoses"
+      },
+      "action_on_alert": "retrain"
+    },
+    {
+      "check_name": "efficientnet_diagnosis_rate",
+      "layer": "Layer 1b",
+      "drift_type": "feature_drift",
+      "severity": "alert",
+      "status": "low_volume_alert",
+      "details": {
+        "diagnoses_last_24h": 0,
+        "avg_daily_rate_7d": 1,
+        "7d_total": 0,
+        "status": "low_volume_alert"
+      },
+      "action_on_alert": "alert_manager"
+    },
+    {
+      "check_name": "milp_infeasibility_rate",
+      "layer": "Layer 2",
+      "drift_type": "performance_drift",
+      "severity": "ok",
+      "status": "no_recent_solves",
+      "details": {
+        "status": "no_recent_solves",
+        "message": "No MILP solves logged in last 7 days",
+        "note": "Use _log_milp_result() to record solve outcomes"
+      },
+      "action_on_alert": "alert_manager"
+    },
+    {
+      "check_name": "milp_solve_time_drift",
+      "layer": "Layer 2",
+      "drift_type": "performance_drift",
+      "severity": "ok",
+      "status": "no_recent_solves",
+      "details": {
+        "status": "no_recent_solves",
+        "message": "No MILP solve times logged in last 7 days",
+        "note": "Use _log_milp_solve_time() to record solve times"
+      },
+      "action_on_alert": "alert_manager"
+    },
+    {
+      "check_name": "milp_constraint_violations",
+      "layer": "Layer 2",
+      "drift_type": "concept_drift",
+      "severity": "ok",
+      "status": "requires_solver_log_parsing",
+      "details": {
+        "status": "requires_solver_log_parsing",
+        "message": "MILP constraint violation tracking requires solver log parsing",
+        "layer": "Layer 2"
+      },
+      "action_on_alert": "review_immediately"
+    },
+    {
+      "check_name": "ppo_reward_drift",
+      "layer": "Layer 3",
+      "drift_type": "performance_drift",
+      "severity": "ok",
+      "status": "no_recent_episodes",
+      "details": {
+        "status": "no_recent_episodes",
+        "message": "No PPO episode rewards logged in last 7 days",
+        "note": "Use _log_ppo_reward() to record episode rewards"
+      },
+      "action_on_alert": "retrain"
+    },
+    {
+      "check_name": "ppo_action_distribution_drift",
+      "layer": "Layer 3",
+      "drift_type": "concept_drift",
+      "severity": "ok",
+      "status": "no_recent_episodes",
+      "details": {
+        "status": "no_recent_episodes",
+        "message": "No PPO action distribution data available",
+        "note": "Requires action histogram logging from RL environment"
+      },
+      "action_on_alert": "retrain"
+    },
+    {
+      "check_name": "segment_stability",
+      "layer": "Layer 4",
+      "drift_type": "concept_drift",
+      "severity": "ok",
+      "status": "requires_production_data",
+      "details": {
+        "status": "requires_production_data",
+        "message": "K-means segment stability requires customer order history",
+        "note": "In production: compare cluster membership week-over-week using Jaccard similarity",
+        "layer": "Layer 4"
+      },
+      "action_on_alert": "recluster"
+    },
+    {
+      "check_name": "customer_segment_size_drift",
+      "layer": "Layer 4",
+      "drift_type": "feature_drift",
+      "severity": "ok",
+      "status": "requires_production_segment_data",
+      "details": {
+        "status": "requires_production_segment_data",
+        "message": "Customer segment size drift requires production segment assignments",
+        "layer": "Layer 4"
+      },
+      "action_on_alert": "recluster"
+    },
+    {
+      "check_name": "rag_relevance_drift",
+      "layer": "Layer 5",
+      "drift_type": "performance_drift",
+      "severity": "ok",
+      "status": "no_recent_feedback",
+      "details": {
+        "status": "no_recent_feedback",
+        "message": "No RAG feedback logged in last 7 days",
+        "note": "Use _log_rag_feedback() to record query feedback"
+      },
+      "action_on_alert": "knowledge_base_review"
+    },
+    {
+      "check_name": "data_freshness",
+      "layer": "System-wide",
+      "drift_type": "feature_drift",
+      "severity": "ok",
+      "status": "ok",
+      "details": {
+        "files": {
+          "crops.csv": {
+            "status": "file_missing",
+            "message": "crops.csv not found"
+          },
+          "shipments.csv": {
+            "status": "file_missing",
+            "message": "shipments.csv not found"
+          },
+          "electricity.csv": {
+            "status": "file_missing",
+            "message": "electricity.csv not found"
+          }
+        },
+        "note": "All files fresh"
+      },
+      "action_on_alert": "alert_immediately"
+    }
+  ]
+}

@@ -1,9 +1,9 @@
-staff_id,name,availability,hourly_rate_sgd
-S001,Ahmad,"morning,afternoon",12.5
-S002,Wei Lin,"morning,afternoon",13.0
-S003,Priya,morning,14.0
-S004,Jun Hao,"afternoon,night",12.0
-S005,Siti,"morning,afternoon,night",15.0
-S006,Ravi,night,16.0
-S007,Mei Ying,"morning,afternoon",11.5
-S008,Ismail,"afternoon,night",13.5
+staff_id,name,role,availability,hourly_rate_sgd
+S001,Ahmad,Farm Operations,"morning,afternoon",12.5
+S002,Wei Lin,Farm Operations,"morning,afternoon",13.0
+S003,Priya,Farm Operations,morning,14.0
+S004,Jun Hao,Supervisor,"afternoon,night",12.0
+S005,Siti,Logistics,"morning,afternoon,night",15.0
+S006,Ravi,Farm Operations,night,16.0
+S007,Mei Ying,Farm Operations,"morning,afternoon",11.5
+S008,Ismail,Logistics,"afternoon,night",13.5

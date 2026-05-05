@@ -86,22 +86,58 @@ def _build_routine_tasks(plan: dict[str, Any]) -> list[dict[str, Any]]:
     led_schedule = plan.get("led_schedule", {})
     rack_layout = plan.get("rack_layout", {})
 
+    # ── LED on (start of photoperiod — from MILP schedule) ───────────────
+    # Find earliest tier that turns ON during morning hours (5-8am)
+    led_on_hour = None
+    for tier_name in sorted(led_schedule.keys()):
+        schedule = led_schedule[tier_name]
+        for hour in range(5, 9):  # 5am-8am window
+            if hour < len(schedule) and schedule[hour] == 1:
+                if led_on_hour is None or hour < led_on_hour:
+                    led_on_hour = hour
+                break
+    if led_on_hour is not None:
+        tasks.append({
+            "type": "routine",
+            "time": f"{led_on_hour:02d}:00",
+            "action": "LED panels on",
+            "detail": "MILP photoperiod start",
+            "role": "Farm Operations",
+        })
+    else:
+        # Default to 6am if no clear schedule
+        tasks.append({
+            "type": "routine",
+            "time": "06:00",
+            "action": "LED panels on",
+            "detail": "MILP photoperiod start",
+            "role": "Farm Operations",
+        })
+
+    # ── Pre-farm check (before photo walkabout) ────────────────────────────
+    tasks.append({
+        "type": "routine",
+        "time": "06:00",
+        "action": "Pre-farm check",
+        "detail": "Irrigation, LED wiring, rack inspection",
+        "role": "Farm Operations",
+    })
+
     # ── Harvest tasks ────────────────────────────────────────────────────────
     for rack_id, diag in cv_details.items():
         if diag.get("growth_stage") == "harvest_ready":
             tier_num = rack_id.replace("tier_", "")
             crop_id = rack_layout.get(rack_id, "unknown")
             crop_name = CROP_DISPLAY_NAMES.get(crop_id, crop_id.replace("_", " ").title())
-            # Estimate yield (simplified — in prod this would come from plan data)
             tasks.append({
                 "type": "routine",
-                "time": "07:00",
+                "time": "09:00",
                 "action": f"Harvest Rack {tier_num}",
                 "detail": f"{crop_name}",
+                "role": "Farm Operations",
             })
 
     # ── Dispatch ────────────────────────────────────────────────────────────
-    # Check if staff are scheduled for morning shift
     staff_shifts = plan.get("staff_shifts", [])
     has_morning = any(
         s.get("shift", "").lower() == "morning" and s.get("staff_count", 0) > 0
@@ -113,10 +149,10 @@ def _build_routine_tasks(plan: dict[str, Any]) -> list[dict[str, Any]]:
             "time": "10:00",
             "action": "Dispatch deliveries",
             "detail": "Morning dispatch — check VRP routes in Logistics tab",
+            "role": "Logistics",
         })
 
-    # ── LED off (peak tariff) ───────────────────────────────────────────────
-    # Find earliest tier that turns off during peak hours
+    # ── LED off (peak tariff — from MILP schedule) ─────────────────────────
     led_off_hour = None
     for tier_name in sorted(led_schedule.keys()):
         schedule = led_schedule[tier_name]
@@ -132,14 +168,15 @@ def _build_routine_tasks(plan: dict[str, Any]) -> list[dict[str, Any]]:
             "time": f"{led_off_hour:02d}:00",
             "action": "LED panels off",
             "detail": "Peak tariff avoidance",
+            "role": "Farm Operations",
         })
     else:
-        # Default to 17:00 if no clear schedule
         tasks.append({
             "type": "routine",
             "time": "17:00",
             "action": "LED panels off",
             "detail": "Peak tariff avoidance",
+            "role": "Farm Operations",
         })
 
     # ── Review tomorrow's plan ──────────────────────────────────────────────
@@ -148,6 +185,7 @@ def _build_routine_tasks(plan: dict[str, Any]) -> list[dict[str, Any]]:
         "time": "18:00",
         "action": "Review tomorrow's plan",
         "detail": "Check Layer 2 dashboard for updated forecast",
+        "role": "Supervisor",
     })
 
     return tasks
@@ -191,27 +229,35 @@ def render_today_actions(plan: dict[str, Any] | None) -> None:
             st.info("No actions for today. Everything looks good!")
             return
 
-        # Priority section
+        # Priority section — driven by Layer 1b Crop Health Diagnosis
         if priority_tasks:
-            st.markdown("⚠️ **Priority** *(respond now)*")
+            st.markdown("⚠️ **Priority — Crop Health Diagnosis** *(respond now)*")
+            st.caption("Source: Layer 1b Transfer Learning · EfficientNet-B0 on rack leaf images · PlantVillage pre-trained")
             for task in priority_tasks:
-                st.checkbox(
-                    f"□ **{task['action']}** — {task['rack']} ({task['crop']})",
-                    value=False,
-                    key=f"priority_{task['rack']}_{task['action']}",
-                )
+                with st.container(border=True):
+                    col_act, col_src = st.columns([3, 1])
+                    with col_act:
+                        st.checkbox(
+                            f"**{task['action']}** — {task['rack']} · {task['crop']}",
+                            value=False,
+                            key=f"priority_{task['rack']}_{task['action']}",
+                        )
+                    with col_src:
+                        st.caption(f"🔬 {task['diagnosis']}")
             st.divider()
 
-        # Routine section
+        # Routine section — driven by MILP Layer 2 optimization
         if routine_tasks:
             st.markdown("✓ **Routine**")
-            # Group by time
+            st.caption("Source: Layer 2 MILP optimization · OR-Tools · LED tariff scheduling + staff shifts")
             for task in sorted(routine_tasks, key=lambda t: t["time"]):
                 time_str = task["time"]
                 action = task["action"]
                 detail = task["detail"]
+                role = task.get("role", "")
+                role_badge = f"[{role}]" if role else ""
                 st.checkbox(
-                    f"□ **{time_str}** — {action} ({detail})",
+                    f"□ **{time_str}** — {action} {role_badge} ({detail})",
                     value=False,
                     key=f"routine_{time_str}_{action[:20]}",
                 )

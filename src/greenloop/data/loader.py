@@ -57,7 +57,7 @@ def load_staff(data_dir: Path | None = None) -> pd.DataFrame:
     df = pd.read_csv(path)
     _validate_columns(
         df,
-        ["staff_id", "name", "availability", "hourly_rate_sgd"],
+        ["staff_id", "name", "role", "availability", "hourly_rate_sgd"],
         "staff.csv",
     )
     return df

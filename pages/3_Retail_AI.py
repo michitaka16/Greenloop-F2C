@@ -30,6 +30,7 @@ st.set_page_config(
 # Imports
 # ---------------------------------------------------------------------------
 from greenloop.data.loader import load_customers, load_orders
+from greenloop.data.shared_data import load_farm_output
 from greenloop.layer4.features import load_features
 from greenloop.layer4.segmentation import cluster_customers, name_segment
 from greenloop.layer4.visualization import reduce_pca, reduce_umap
@@ -99,6 +100,82 @@ kpi4.metric("Silhouette score", f"{silhouette:.3f}")
 
 st.divider()
 
+# ── Farm AI Forecast Panel ───────────────────────────────────────────────
+farm = load_farm_output()
+if farm:
+    forecast = farm.get("forecast", {})
+    rack_layout = farm.get("rack_layout", {})
+
+    crop_names = {
+        "kai_lan": "Kai Lan", "baby_spinach": "Baby Spinach",
+        "lettuce_mambo": "Lettuce", "chye_sim": "Chye Sim",
+        "arugula": "Arugula", "pak_choi": "Pak Choi",
+        "kale": "Kale", "basil_thai": "Thai Basil",
+        "coriander": "Coriander", "mint": "Mint",
+    }
+    crop_colors = {
+        "kai_lan": "#1abc9c", "baby_spinach": "#3498db",
+        "lettuce_mambo": "#2c3e50", "chye_sim": "#e67e22",
+        "arugula": "#2ecc71", "pak_choi": "#00bcd4",
+        "kale": "#f1c40f", "basil_thai": "#9b59b6",
+        "coriander": "#e74c3c", "mint": "#e91e63",
+    }
+
+    st.subheader("📦 Farm AI — Tomorrow's Demand Forecast")
+
+    # Derive which crops are growing this cycle
+    active_crops = set(rack_layout.values()) & set(forecast.keys())
+
+    # Summary
+    total_kg = sum(forecast[c].get("predicted_kg", 0) for c in active_crops)
+    c1, c2 = st.columns(2)
+    c1.metric("Predicted Total Demand", f"{total_kg:.1f} kg")
+    c2.metric("Crops in Production", f"{len(active_crops)} varieties")
+    st.caption(f"Source: Farm AI · Plan date: {farm.get('plan_date', 'unknown')}")
+
+    # Demand cards per active crop
+    forecast_rows = []
+    for crop_id in active_crops:
+        vals = forecast[crop_id]
+        all_preds = sorted(forecast[c].get("predicted_kg", 0) for c in forecast)
+        all_preds_sorted = sorted(all_preds)
+        q75 = all_preds_sorted[int(len(all_preds_sorted) * 0.75)] if all_preds else 0
+        q25 = all_preds_sorted[int(len(all_preds_sorted) * 0.25)] if all_preds else 0
+        pred = vals.get("predicted_kg", 0)
+        badge = "🔴 High" if pred >= q75 else ("🟢 Low" if pred <= q25 else "🟡 Medium")
+        forecast_rows.append({
+            "crop_id": crop_id,
+            "crop": crop_names.get(crop_id, crop_id),
+            "pred_kg": round(pred, 1),
+            "lower": round(vals.get("lower_ci", 0), 1),
+            "upper": round(vals.get("upper_ci", 0), 1),
+            "badge": badge,
+            "color": crop_colors.get(crop_id, "#888888"),
+        })
+    forecast_rows.sort(key=lambda r: r["pred_kg"], reverse=True)
+
+    cols = st.columns(min(len(forecast_rows), 5))
+    for i, r in enumerate(forecast_rows):
+        with cols[i % len(cols)]:
+            color = r["color"]
+            st.markdown(
+                f"""
+                <div style="border:2px solid {color}; border-radius:6px;
+                            padding:8px; text-align:center; margin-bottom:4px;">
+                    <div style="font-size:0.9em; font-weight:bold; color:{color};">{r["crop"]}</div>
+                    <div style="font-size:1.2em; font-weight:bold;">{r["pred_kg"]} kg</div>
+                    <div style="font-size:0.7em; color:#aaa;">{r["lower"]}–{r["upper"]} kg</div>
+                    <div style="font-size:0.75em; margin-top:2px;">{r["badge"]}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    st.divider()
+else:
+    st.info("🌾 Run **Farm AI** first to see tomorrow's demand forecast here.")
+    st.divider()
+
 # ---------------------------------------------------------------------------
 # Scatter Plot
 # ---------------------------------------------------------------------------
@@ -151,6 +228,16 @@ st.plotly_chart(fig, use_container_width=True)
 # ---------------------------------------------------------------------------
 st.subheader("Segment Detail")
 
+farm = load_farm_output()
+forecast = farm.get("forecast", {}) if farm else {}
+crop_names_inv = {
+    "kai_lan": "kai_lan", "baby spinach": "baby_spinach",
+    "lettuce": "lettuce_mambo", "chye sim": "chye_sim",
+    "arugula": "arugula", "pak choi": "pak_choi",
+    "kale": "kale", "thai basil": "basil_thai",
+    "coriander": "coriander", "mint": "mint",
+}
+
 table_rows = []
 for profile in result.profiles:
     name, emoji, action = name_segment(profile)
@@ -164,6 +251,14 @@ for profile in result.profiles:
         "Top crop": profile.dominant_crop,
         "Recommended action": action,
     })
+
+# Annotate Top crop with Farm AI demand forecast
+if forecast:
+    for row in table_rows:
+        top = row.get("Top crop", "")
+        cid = crop_names_inv.get(top.lower(), top.lower().replace(" ", "_"))
+        if cid in forecast:
+            row["Top crop"] = f"{top} → {forecast[cid]['predicted_kg']:.1f} kg"
 
 st.dataframe(
     pd.DataFrame(table_rows),
