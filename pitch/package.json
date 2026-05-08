@@ -1,0 +1,22 @@
+{
+  "name": "adopt-a-kale-pitch",
+  "version": "1.0.0",
+  "description": "Adopt a Kale — Singapore's AI-managed garden share. MGMT 655 Capstone pitch deck (GreenLoop F2C).",
+  "private": true,
+  "scripts": {
+    "leaves": "node leaves.js",
+    "build": "node build.js",
+    "slim": "node slim.js",
+    "pdf": "soffice --headless --convert-to pdf --outdir output output/AdoptAKale.pptx",
+    "all": "node build.js && node slim.js"
+  },
+  "dependencies": {
+    "pptxgenjs": "^4.0.1",
+    "sharp": "^0.34.4"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "Queenie · Takahide KAWABE · Dingyao CHU",
+  "license": "UNLICENSED"
+}
