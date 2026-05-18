@@ -47,10 +47,10 @@ with col_left:
         if st.button("🌱  Start your plot", type="primary", use_container_width=True):
             st.switch_page("pages/1_🚀_Start.py")
     with btn_col2:
-        if st.button("👀  See Sarah's plot", type="secondary", use_container_width=True):
+        if st.button("👀  See my plot", type="secondary", use_container_width=True):
             st.switch_page("pages/2_🌿_My_Plot.py")
 
-    st.caption("From S$10/mo · Cancel anytime · Singapore-grown · Pesticide-free")
+    st.caption("From S$40/mo · Cancel anytime · Singapore-grown · Pesticide-free")
 
 with col_right:
     # Stack the two leaves with relative positioning via HTML
@@ -80,10 +80,13 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-tier_cols = st.columns(3)
-for i, tier in enumerate(TIERS):
+standard_pro = [t for t in TIERS if not t.get("enterprise")]
+enterprise = [t for t in TIERS if t.get("enterprise")]
+
+tier_cols = st.columns(len(standard_pro))
+for i, tier in enumerate(standard_pro):
     with tier_cols[i]:
-        is_premium = tier["id"] == "Real"
+        is_premium = tier["id"] == "Pro"
         is_recommended = tier.get("recommended", False)
         bg = KALE if is_premium else "white"
         text_color = LIME if is_premium else INK
@@ -124,6 +127,38 @@ for i, tier in enumerate(TIERS):
             """,
             unsafe_allow_html=True,
         )
+
+# Enterprise card — full width
+for tier in enterprise:
+    features_html = "".join([
+        f"<li style='font-size:0.9rem;color:rgba(199,230,107,0.85);margin-bottom:0.3rem;'>"
+        f"✓ {f}</li>"
+        for f in tier["features"]
+    ])
+    st.markdown(
+        f"""
+        <div style="background:linear-gradient(135deg,#1a3a0f 0%,#2D5016 100%);
+                    border-radius:24px;padding:2rem 2.5rem;margin-top:1rem;
+                    border:2px solid #4a7c3f;">
+          <div style="display:flex;align-items:flex-start;gap:2rem;flex-wrap:wrap;">
+            <div style="flex:1;min-width:240px;">
+              <p style="font-size:0.7rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;
+                        color:#C7E66B;margin:0;">{tier['id']}</p>
+              <p style="font-size:2.5rem;font-weight:800;color:white;margin:0.5rem 0 0.75rem 0;">
+                S${tier['price']:,}<span style="font-size:1rem;color:rgba(199,230,107,0.7);font-weight:400;"> / month</span>
+              </p>
+              <p style="color:rgba(255,255,255,0.85);font-size:1rem;margin:0 0 1rem 0;">{tier['body']}</p>
+            </div>
+            <div style="flex:2;min-width:280px;">
+              <ul style="list-style:none;padding:0;margin:0;columns:2;column-gap:2rem;">
+                {features_html}
+              </ul>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 st.markdown('<hr class="kale-hr"/>', unsafe_allow_html=True)
 

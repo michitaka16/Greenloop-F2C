@@ -1,4 +1,4 @@
-"""My Plot — Sarah's app centerpiece (Slide 10 implementation)."""
+"""My Plot — Adopt a Kale app centerpiece."""
 
 import sys
 from pathlib import Path
@@ -36,49 +36,29 @@ with st.container():
     hero_left, hero_right = st.columns([1, 1])
 
     with hero_left:
-        st.markdown(
-            f"""
-            <div style="background:linear-gradient(135deg,{CREAM} 0%,white 50%,{PAPER} 100%);
-                        padding:2.5rem 2rem;text-align:center;border-right:1px solid {HAIR};">
-              <div style="margin-bottom:1.5rem;">{pill("FOR SARAH'S DINNER", "coral")}</div>
-              {maturity_ring_html(STATUS['maturity'], size=240)}
-              <p style="margin-top:2.5rem;color:{MUTED};font-size:0.85rem;">
-                Plot #{SARAH['plot_id']} · Day {SARAH['days_in']} of {SARAH['total_days']}
-              </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        left_html = (
+            "<div style='background:linear-gradient(135deg," + CREAM + " 0%,white 50%," + PAPER + " 100%);"
+            "padding:2.5rem 2rem;text-align:center;border-right:1px solid " + HAIR + ";'>"
+            "<div style='margin-bottom:1.5rem;'>" + pill("FOR DINNER", "coral") + "</div>"
+            + maturity_ring_html(STATUS['maturity'], size=240)
+            + "<p style='margin-top:2.5rem;color:" + MUTED + ";font-size:0.85rem;'>Plot #042 · Day 31 of 42</p>"
+            "</div>"
         )
+        st.markdown(left_html, unsafe_allow_html=True)
 
     with hero_right:
-        st.markdown(
-            f"""
-            <div style="padding:2.5rem 2rem;">
-              <p style="font-size:0.7rem;font-weight:700;letter-spacing:0.2em;
-                        text-transform:uppercase;color:{CORAL};margin:0;">Now growing</p>
-              <h2 style="font-size:1.8rem;font-weight:800;color:{INK};margin:0.4rem 0;">
-                Curly Kale <span style="color:{MUTED};font-weight:400;">+ Thai Basil</span>
-              </h2>
-              <p style="color:{MUTED};margin:0 0 1.5rem 0;font-size:0.9rem;">
-                Singapore vertical farm · run by AI 24/7
-              </p>
-
-              <div style="background:{KALE};color:{LIME};border-radius:16px;padding:1rem 1.25rem;">
-                <p style="font-size:0.65rem;font-weight:700;letter-spacing:0.15em;
-                          text-transform:uppercase;color:rgba(199,230,107,0.75);margin:0;">
-                  Next harvest
-                </p>
-                <p style="font-size:1.8rem;font-weight:800;color:white;margin:0.25rem 0;">
-                  {SARAH['next_harvest']}
-                </p>
-                <p style="font-size:0.85rem;color:rgba(199,230,107,0.9);margin:0;">
-                  Auto-tuned at {STATUS['last_tuned']} · weather-corrected
-                </p>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        right_html = (
+            "<div style='padding:2.5rem 2rem;'>"
+            "<p style='font-size:0.7rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:" + CORAL + ";margin:0;'>Now growing</p>"
+            "<h2 style='font-size:1.8rem;font-weight:800;color:" + INK + ";margin:0.4rem 0;'>Curly Kale <span style='color:" + MUTED + ";font-weight:400;'>+ Thai Basil</span></h2>"
+            "<p style='color:" + MUTED + ";margin:0 0 1.5rem 0;font-size:0.9rem;'>Singapore vertical farm · run by AI 24/7</p>"
+            "<div style='background:" + KALE + ";color:" + LIME + ";border-radius:16px;padding:1rem 1.25rem;'>"
+            "<p style='font-size:0.65rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:rgba(199,230,107,0.75);margin:0;'>Next harvest</p>"
+            "<p style='font-size:1.8rem;font-weight:800;color:white;margin:0.25rem 0;'>" + SARAH['next_harvest'] + "</p>"
+            "<p style='font-size:0.85rem;color:rgba(199,230,107,0.9);margin:0;'>Auto-tuned at " + STATUS['last_tuned'] + " · weather-corrected</p>"
+            "</div></div>"
         )
+        st.markdown(right_html, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -232,7 +212,7 @@ st.markdown(
         </div>
         <div>
           <p style="color:rgba(199,230,107,0.85);margin:0;font-size:0.9rem;">
-              Want more? Upgrade to <strong style="color:white;">Real</strong> for 4–5 crops.
+              Want more? Upgrade to <strong style="color:white;">Pro</strong> for 4–5 crops.
           </p>
         </div>
       </div>

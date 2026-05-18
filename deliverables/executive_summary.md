@@ -84,6 +84,47 @@ Together, 13 of 14 MGMT 655 phases completed. Retrospective documentation (analy
 
 **Unit economics:** ACV SGD 8,000/rack/year; 20-rack farm; 82% gross margin; CAC/LTV ratio 0.15; payback 11 months. **GTM:** Phase 1 — 1 anchor farm, Jurong Innovation District, 3 paying accounts. Phase 2 — 10 farms (SG + Malaysia), B2C subscription, SGD 500 K ARR. Phase 3 — APAC AI model licensing, SFA national monitoring partnership.
 
+## 5.1 B2C Consumer App — Adopt a Kale
+
+A consumer-facing Streamlit app enabling Singapore residents to adopt a hydroponic plot and receive weekly harvests. The app provides a live dashboard for monitoring crop growth, an AI chatbot for personalised cultivation advice, and subscription management.
+
+> **Current Status:** Demo/Mock — all features are functional UI mocks. Production requires the integrations noted below.
+
+**Subscription Tiers**
+
+| Tier | Price | Crops | Description | Key Features |
+|------|-------|-------|-------------|--------------|
+| **Standard** | S$40/mo | 2 crops | Shared kale slot. Weekly home delivery. | Weekly delivery, Choose 2 crops, WhatsApp updates, Pause for travel |
+| **Pro** | S$100/mo | 4–5 crops | Your own 1m² rack. Premium crops. Personalised grow log. | Your own 1m² rack, 4–5 premium crops, Growth progress reports, Harvest alerts + sensor data |
+| **Corporate** | S$5,000/mo | 50+ crops | For teams, offices, and wellness programmes. Named employee slots. Bulk billing. | Named employee slots, Wellness programme, Bulk billing, Dedicated account manager, 50+ crop varieties, Priority harvest scheduling |
+
+**Available Crops:** Curly Kale, Thai Basil, Spinach, Arugula, Mint, Edible Flowers
+
+**App Pages**
+
+| Page | Purpose | Status |
+|------|---------|--------|
+| Home | Landing page — tier comparison, hero section | ✅ Complete |
+| Start | Onboarding wizard — tier selection + crop selection | ✅ Complete |
+| My Plot | Live dashboard — maturity ring, next harvest, crop status | ✅ Complete |
+| Chat | AI chatbot — ask about your plot, growth, harvest | ⚠️ Mock (RAG pending) |
+| Schedule | Harvest calendar — upcoming deliveries, growth timeline | ✅ Complete |
+| Account | Subscription management — plan details, preferences | ⚠️ Partial (billing/stripe pending) |
+
+**Implemented Differentiation Features**
+
+| Feature | Description | Production Requirement |
+|--------|-------------|----------------------|
+| **Maturity Ring** | Visual progress indicator (0–100%) showing days to harvest | Real sensor data integration |
+| **Harvest Prediction** | AI-estimated yield (g) with confidence interval | Trained growth model |
+| **Growth Timeline** | Day-by-day crop history with milestone markers | Sensor event log |
+| **Growth Progress Reports** | Weekly PDF/email summary of plot activity | Report generation pipeline + email |
+| **Harvest Alerts** | Push notification when crop is ready to pick | WhatsApp/Stripe integration |
+| **Sensor Data Access** | Real-time humidity, temperature, pH readings | IoT sensor API |
+| **Harvest Certificate** | Digital proof of harvest with timestamp + photo | Photo capture + NFT/storage |
+
+**Tech Stack:** Streamlit (Python) · CSS styling · Mock data → Production: real sensor data + RAG + Stripe + WhatsApp API · Multi-page navigation
+
 ## 6. Evidence & Validation
 
 **Live Dashboard Metrics (typical run)**

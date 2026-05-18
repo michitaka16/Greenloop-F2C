@@ -86,46 +86,64 @@ elif step == 1:
                 unsafe_allow_html=True)
     st.write("")
 
-    for tier in TIERS:
+    standard_pro = [t for t in TIERS if not t.get("enterprise")]
+    enterprise = [t for t in TIERS if t.get("enterprise")]
+
+    for tier in standard_pro:
         selected = st.session_state.onboarding_tier == tier["id"]
         check = "●" if selected else "○"
         check_color = KALE if selected else HAIR
         border = f"2px solid {KALE}" if selected else f"1px solid {HAIR}"
         shadow = "box-shadow: 0 4px 16px rgba(45,80,22,0.10);" if selected else ""
+        is_premium = tier["id"] == "Pro"
+        price_color = "#C7E66B" if is_premium else INK
         recommended = (
             f"<span style='background:{CORAL};color:white;font-size:0.6rem;font-weight:700;"
             f"letter-spacing:0.15em;padding:0.2rem 0.6rem;border-radius:999px;'>MOST POPULAR</span>"
             if tier.get("recommended") else ""
         )
-        features_html = " · ".join([f"✓ {f}" for f in tier["features"]])
-
-        st.markdown(
-            f"""
-            <div style="background:white;border:{border};border-radius:24px;padding:1.5rem;
-                        margin-bottom:0.75rem;{shadow}">
-              <div style="display:flex;align-items:flex-start;gap:1rem;">
-                <div style="font-size:1.5rem;color:{check_color};line-height:1;">{check}</div>
-                <div style="flex:1;">
-                  <div style="display:flex;align-items:baseline;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.4rem;">
-                    <h3 style="margin:0;color:{INK};">{tier['id']}</h3>
-                    {recommended}
-                    <span style="margin-left:auto;font-size:1.6rem;font-weight:800;color:{KALE};">
-                        S${tier['price']}<span style="font-size:0.8rem;font-weight:400;color:{MUTED};"> / mo</span>
-                    </span>
-                  </div>
-                  <p style="margin:0;color:{INK};">{tier['body']}</p>
-                  <p style="margin:0.5rem 0 0 0;font-size:0.75rem;color:{MUTED};">{features_html}</p>
-                </div>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        features_html = " · ".join([f"&#10003; {f}" for f in tier["features"]])
+        price_html = "S$" + str(tier['price']) + " <span style='font-size:0.8rem;font-weight:400;color:#6B7280;'>/ mo</span>"
+        tier_html = (
+            "<div style='background:white;border:" + border + ";border-radius:24px;padding:1.5rem;margin-bottom:0.75rem;" + shadow + "'>"
+            "<div style='display:flex;align-items:flex-start;gap:1rem;'>"
+            "<div style='font-size:1.5rem;color:" + check_color + ";line-height:1;'>" + check + "</div>"
+            "<div style='flex:1;'>"
+            "<div style='display:flex;align-items:baseline;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.4rem;'>"
+            "<h3 style='margin:0;color:" + INK + ";'>" + tier['id'] + "</h3>"
+            + recommended + "<span style='margin-left:auto;font-size:1.6rem;font-weight:800;color:" + price_color + ";'>" + price_html + "</span>"
+            "</div>"
+            "<p style='margin:0;color:" + INK + ";'>" + tier['body'] + "</p>"
+            "<p style='margin:0.5rem 0 0 0;font-size:0.75rem;color:#6B7280;'>" + features_html + "</p>"
+            "</div></div></div>"
         )
+        st.markdown(tier_html, unsafe_allow_html=True)
         if st.button(f"Pick {tier['id']}", key=f"tier_{tier['id']}", use_container_width=True,
                      type="primary" if selected else "secondary"):
             st.session_state.onboarding_tier = tier["id"]
-            st.session_state.onboarding_crops = []  # reset crops on tier change
+            st.session_state.onboarding_crops = []
             st.rerun()
+
+    # Enterprise section — contact sales
+    for tier in enterprise:
+        features_html = " · ".join([f"&#10003; {f}" for f in tier["features"]])
+        price_html = "S$" + str(tier['price']) + " <span style='font-size:0.8rem;font-weight:400;color:rgba(199,230,107,0.7);'>/ mo</span>"
+        ent_html = (
+            "<div style='background:linear-gradient(135deg,#1a3a0f,#2D5016);border-radius:24px;"
+            "padding:1.5rem;border:2px solid #4a7c3f;'>"
+            "<div style='display:flex;align-items:flex-start;gap:1rem;flex-wrap:wrap;'>"
+            "<div style='flex:1;min-width:200px;'>"
+            "<p style='font-size:0.7rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;"
+            "color:#C7E66B;margin:0;'>" + tier['id'] + "</p>"
+            "<p style='font-size:2rem;font-weight:800;color:white;margin:0.5rem 0;'>" + price_html + "</p>"
+            "<p style='color:rgba(255,255,255,0.85);font-size:0.9rem;margin:0;'>" + tier['body'] + "</p>"
+            "<p style='margin:0.5rem 0 0 0;font-size:0.75rem;color:rgba(199,230,107,0.7);'>" + features_html + "</p>"
+            "</div>"
+            "</div></div>"
+        )
+        st.markdown(ent_html, unsafe_allow_html=True)
+        if st.button(f"Contact sales", key=f"tier_{tier['id']}", use_container_width=True, type="secondary"):
+            st.info("Our corporate team will reach out within 24 hours. Email us at enterprise@greenloop.sg")
 
     st.write("")
     nav1, _, nav2 = st.columns([1, 2, 1])
@@ -246,7 +264,7 @@ elif step == 3:
                           color:{MUTED};margin:0;">First harvest</p>
                 <p style="font-size:1.8rem;font-weight:800;color:{KALE};margin:0.25rem 0;">~ 6 weeks</p>
                 <p style="font-size:0.85rem;color:{MUTED};margin:0;">
-                    We'll WhatsApp you weekly, and Sarah's app shows live status anytime.
+                    We'll WhatsApp you weekly, and your app shows live status anytime.
                 </p>
             </div>
         </div>
