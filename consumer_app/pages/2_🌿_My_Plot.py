@@ -6,14 +6,36 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import streamlit as st
 from lib.styles import (
-    inject_css, brand_header, eyebrow, pill, maturity_ring_html, progress_card,
+    inject_css, inject_gamification_css, brand_header, eyebrow, pill, maturity_ring_html,
+    progress_card, confetti_html, badge_card, leaderboard_row,
     KALE, LEAF, LIME, CORAL, CREAM, PAPER, HAIR, MUTED, INK, ASSETS, img_to_base64,
 )
-from lib.mock_data import SARAH, CROPS, STATUS, UPCOMING_DELIVERIES, RECENT_EVENTS
+from lib.mock_data import (
+    SARAH, CROPS, STATUS, UPCOMING_DELIVERIES, RECENT_EVENTS,
+    MILESTONES, SARAH_BADGES, LEADERBOARD,
+    get_earned_badges, get_next_badge, get_leaderboard_position,
+)
+
+# ── Gamification session state ─────────────────────
+if "show_confetti" not in st.session_state:
+    st.session_state.show_confetti = False
+if "celebration_shown" not in st.session_state:
+    st.session_state.celebration_shown = False
+
+# Trigger confetti if harvest day just completed (demo: auto-trigger once)
+if not st.session_state.celebration_shown and SARAH["days_in"] >= 31:
+    st.session_state.show_confetti = True
+    st.session_state.celebration_shown = True
 
 st.set_page_config(page_title="My Plot — Adopt a Kale", page_icon="🌿", layout="wide")
 inject_css()
+inject_gamification_css()
 brand_header()
+
+# ── Confetti celebration ───────────────────────────
+if st.session_state.get("show_confetti"):
+    st.markdown(confetti_html(), unsafe_allow_html=True)
+    st.session_state.show_confetti = False
 
 # ───────────────────────────────────────────
 # Greeting
@@ -92,7 +114,7 @@ for col, (emoji, label, value, sub) in zip(stat_cols, stats_data):
 
 # CTA buttons
 st.write("")
-btn_col1, btn_col2, btn_col3, _ = st.columns([1, 1, 1, 2])
+btn_col1, btn_col2, btn_col3, btn_col4, _ = st.columns([1, 1, 1, 1, 2])
 with btn_col1:
     if st.button("💬  Ask your kale", type="primary", use_container_width=True):
         st.switch_page("pages/3_💬_Chat.py")
@@ -102,8 +124,89 @@ with btn_col2:
 with btn_col3:
     if st.button("📷  Plant Camera", type="secondary", use_container_width=True):
         st.switch_page("pages/6_📷_PlantCamera.py")
+with btn_col4:
+    if st.button("🎉  Share & NFT", type="secondary", use_container_width=True):
+        st.switch_page("pages/7_🎉_Celebration.py")
 
 st.markdown('<hr class="kale-hr"/>', unsafe_allow_html=True)
+
+# ───────────────────────────────────────────
+# Achievements — Badges
+# ───────────────────────────────────────────
+earned = get_earned_badges()
+next_badge = get_next_badge()
+rank = get_leaderboard_position()
+
+ach_col1, ach_col2 = st.columns([3, 1])
+with ach_col1:
+    st.markdown(f"<h2 style='color:{INK};font-weight:700;'>🏆 My Achievements</h2>", unsafe_allow_html=True)
+with ach_col2:
+    st.markdown(
+        f"<p style='color:{MUTED};font-size:0.85rem;text-align:right;margin-top:0.6rem;'>"
+        f"Rank #{rank} on the leaderboard · {len(earned)}/{len(MILESTONES)} badges</p>",
+        unsafe_allow_html=True,
+    )
+
+badge_cols = st.columns(len(SARAH_BADGES))
+for i, badge in enumerate(SARAH_BADGES):
+    with badge_cols[i]:
+        unlocked = badge["earned"]
+        st.markdown(badge_card(badge, unlocked=unlocked), unsafe_allow_html=True)
+
+if next_badge:
+    st.write("")
+    next_col1, next_col2 = st.columns([3, 1])
+    with next_col1:
+        st.markdown(
+            f"<div class='kale-card' style='display:flex;align-items:center;gap:1rem;'>"
+            f"<div style='font-size:1.8rem;'>🔒</div>"
+            f"<div>"
+            f"<p style='font-size:0.65rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:{MUTED};margin:0;'>NEXT BADGE</p>"
+            f"<p style='font-weight:700;color:{INK};margin:0.2rem 0;'>{next_badge['emoji']} {next_badge['title']}</p>"
+            f"<p style='font-size:0.75rem;color:{MUTED};margin:0;'>Criterion: {next_badge['criterion']}</p>"
+            f"</div></div>",
+            unsafe_allow_html=True,
+        )
+    with next_col2:
+        st.markdown(
+            f"<div style='text-align:center;padding:1rem;'>"
+            f"<p style='font-size:3rem;margin:0;'>🎯</p>"
+            f"<p style='color:{KALE};font-weight:700;font-size:0.8rem;margin:0.25rem 0 0 0;'>1 harvest away!</p>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+# ───────────────────────────────────────────
+# Leaderboard
+# ───────────────────────────────────────────
+st.write("")
+with st.expander("🏅 See how you compare — Singapore Growers Leaderboard"):
+    st.markdown(
+        f"<p style='font-size:0.75rem;color:{MUTED};margin-bottom:1rem;'>"
+        f"Updated daily · {len(LEADERBOARD)} growers tracked</p>",
+        unsafe_allow_html=True,
+    )
+    for entry in LEADERBOARD:
+        is_sarah = entry["name"] == "Sarah T."
+        st.markdown(
+            leaderboard_row(
+                rank=entry["rank"],
+                name=entry["name"],
+                plot=entry["plot"],
+                badges=entry["badges"],
+                kg_grown=entry["kg_grown"],
+                deliveries=entry["deliveries"],
+                tier=entry["tier"],
+                hood=entry["hood"],
+                is_sarah=is_sarah,
+            ),
+            unsafe_allow_html=True,
+        )
+    st.markdown(
+        f"<p style='font-size:0.7rem;color:{MUTED};text-align:center;margin-top:0.75rem;'>"
+        f"↑ Complete 1 more delivery to reach #2</p>",
+        unsafe_allow_html=True,
+    )
 
 # ───────────────────────────────────────────
 # What's growing

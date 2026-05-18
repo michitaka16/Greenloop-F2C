@@ -242,3 +242,150 @@ def mock_response(question: str) -> dict:
         ),
         "citations": [],
     }
+
+
+# ────────────────────────────────────────────
+# Gamification — Milestones (6 levels)
+# ────────────────────────────────────────────
+MILESTONES = [
+    {
+        "id": "seed_planted",
+        "level": 1,
+        "emoji": "🌱",
+        "title": "Seed Planted",
+        "description": "Your journey begins — a seed is now in the soil.",
+        "criterion": "Start your subscription",
+        "color": "#7BA05B",
+    },
+    {
+        "id": "germination",
+        "level": 2,
+        "emoji": "🌿",
+        "title": "Germination",
+        "description": "First sprouts breaking through — life finds a way.",
+        "criterion": "Crop reaches Day 8",
+        "color": "#7BA05B",
+    },
+    {
+        "id": "vegetative",
+        "level": 3,
+        "emoji": "🥬",
+        "title": "Vegetative Growth",
+        "description": "Leaves stretching wide — photosynthesis in full swing.",
+        "criterion": "Crop reaches Day 15",
+        "color": "#2D5016",
+    },
+    {
+        "id": "pre_harvest",
+        "level": 4,
+        "emoji": "✨",
+        "title": "Pre-Harvest",
+        "description": "Final growth spurt — harvest window is close.",
+        "criterion": "Crop reaches Day 29",
+        "color": "#C7E66B",
+    },
+    {
+        "id": "first_harvest",
+        "level": 5,
+        "emoji": "🏆",
+        "title": "First Harvest",
+        "description": "You did it — fresh produce from your own plot.",
+        "criterion": "Complete first delivery",
+        "color": "#E07856",
+    },
+    {
+        "id": "harvest_master",
+        "level": 6,
+        "emoji": "👑",
+        "title": "Harvest Master",
+        "description": "5+ successful harvests. You're a natural.",
+        "criterion": "Complete 5 deliveries",
+        "color": "#C7E66B",
+    },
+]
+
+# Sarah's earned badges (matches her Day 31, 18 deliveries)
+SARAH_BADGES = [
+    {**MILESTONES[0], "earned": True,  "earned_date": "2026-04-08"},
+    {**MILESTONES[1], "earned": True,  "earned_date": "2026-04-15"},
+    {**MILESTONES[2], "earned": True,  "earned_date": "2026-04-22"},
+    {**MILESTONES[3], "earned": True,  "earned_date": "2026-05-03"},
+    {**MILESTONES[4], "earned": True,  "earned_date": "2026-04-28"},
+    {**MILESTONES[5], "earned": False, "earned_date": None},
+]
+
+# ────────────────────────────────────────────
+# Gamification — Leaderboard
+# ────────────────────────────────────────────
+LEADERBOARD = [
+    {"rank": 1,  "name": "Priya M.",       "plot": "Plot #017", "badges": 6, "kg_grown": 31.2, "deliveries": 52, "tier": "Pro",      "hood": "Bishan"},
+    {"rank": 2,  "name": "Wei L.",         "plot": "Plot #003", "badges": 6, "kg_grown": 28.7, "deliveries": 48, "tier": "Corporate", "hood": "Jurong"},
+    {"rank": 3,  "name": "Sarah T.",      "plot": "Plot #042", "badges": 5, "kg_grown": 12.4, "deliveries": 18, "tier": "Standard",  "hood": "Tanglin"},
+    {"rank": 4,  "name": "Ahmad F.",      "plot": "Plot #009", "badges": 4, "kg_grown":  9.1, "deliveries": 14, "tier": "Pro",      "hood": "Ang Mo Kio"},
+    {"rank": 5,  "name": "Li H.",         "plot": "Plot #031", "badges": 3, "kg_grown":  6.3, "deliveries":  9, "tier": "Standard",  "hood": "Tampines"},
+]
+
+# ────────────────────────────────────────────
+# Gamification — Harvest NFT Certificates
+# ────────────────────────────────────────────
+# Certificate to be minted (next harvest)
+HARVEST_CERTIFICATE_NFT = {
+    "id": "gl-nft-pending-001",
+    "crop": "Curly Kale",
+    "variety": "Winterbor",
+    "harvest_date": "2026-05-28",
+    "biomass_g": 210,
+    "total_kg_grown": 13.2,
+    "delivery_count": 19,
+    "wallet_address": "0x71C...3F2E",
+    "tx_hash": "0x9a4b...7c21",
+    "token_id": 4282,
+    "plot_id": "042",
+    "status": "pending",
+}
+
+# Already-minted NFTs
+MINTED_NFTS = [
+    {
+        "id": "gl-nft-2026-0428-001",
+        "crop": "Curly Kale",
+        "variety": "Winterbor",
+        "harvest_date": "2026-04-28",
+        "biomass_g": 184,
+        "total_kg_grown": 12.4,
+        "delivery_count": 18,
+        "wallet_address": "0x71C...3F2E",
+        "tx_hash": "0x9a4b...7c21",
+        "token_id": 4281,
+        "plot_id": "042",
+        "status": "minted",
+    }
+]
+
+# ────────────────────────────────────────────
+# Helper functions
+# ────────────────────────────────────────────
+def get_earned_badges():
+    return [b for b in SARAH_BADGES if b["earned"]]
+
+def get_next_badge():
+    for b in SARAH_BADGES:
+        if not b["earned"]:
+            return b
+    return None
+
+def get_leaderboard_position():
+    return next(r for r in LEADERBOARD if r["name"] == "Sarah T.")["rank"]
+
+def get_share_card_data():
+    return {
+        "crop": "Curly Kale",
+        "variety": "Winterbor",
+        "kg_grown": SARAH["total_kg_grown"],
+        "deliveries": SARAH["total_deliveries"],
+        "badges": len(get_earned_badges()),
+        "plot_id": SARAH["plot_id"],
+        "date": "May 2026",
+        "name": SARAH["name"],
+        "tier": SARAH["tier"],
+    }

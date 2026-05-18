@@ -111,6 +111,7 @@ A consumer-facing Streamlit app enabling Singapore residents to adopt a hydropon
 | Chat | AI chatbot — ask about your plot, growth, harvest | ⚠️ Mock (RAG pending) |
 | Schedule | Harvest calendar — upcoming deliveries, growth timeline | ✅ Complete |
 | Account | Subscription management — plan details, preferences | ⚠️ Partial (billing/stripe pending) |
+| Share & NFT | Harvest celebration — share card (IG/Twitter/WhatsApp) + NFT minting flow | ✅ Complete |
 
 **Implemented Differentiation Features**
 
@@ -124,6 +125,10 @@ A consumer-facing Streamlit app enabling Singapore residents to adopt a hydropon
 | **Harvest Alerts** | Push notification when crop is ready to pick | WhatsApp/Stripe integration |
 | **Sensor Data Access** | Real-time humidity, temperature, pH readings | IoT sensor API |
 | **Harvest Certificate** | Digital proof of harvest with timestamp + photo | Photo capture + NFT/storage |
+| **Milestone Badges** | 6-level achievement system (Seed Planted → Harvest Master) | Real milestone event tracking |
+| **Leaderboard** | Singapore growers ranking by kg grown + deliveries | Real competitor data |
+| **Share Card** | Downloadable/shareable harvest card for Instagram, Twitter, WhatsApp | — |
+| **NFT Minting** | On-chain harvest certificate via MetaMask + Polygon | MetaMask wallet + MATIC tokens |
 
 **Tech Stack:** Streamlit (Python) · CSS styling · Mock data → Production: real sensor data + RAG + Stripe + WhatsApp API · Multi-page navigation
 

@@ -302,3 +302,219 @@ def progress_card(label: str, value: int, total: int, emoji: str = "🌱", varie
         """,
         unsafe_allow_html=True,
     )
+
+
+# ────────────────────────────────────────────
+# Gamification — Confetti animation
+# ────────────────────────────────────────────
+GAMIFICATION_CSS = """
+/* Confetti keyframes */
+@keyframes confetti-fall {
+  0%   { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(600px) rotate(720deg); opacity: 0; }
+}
+@keyframes badge-unlock {
+  0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+  60%  { transform: scale(1.2) rotate(5deg);  opacity: 1; }
+  100% { transform: scale(1) rotate(0deg);    opacity: 1; }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+@keyframes pulse-glow {
+  0%,100% { box-shadow: 0 0 8px rgba(199,230,107,0.4); }
+  50%     { box-shadow: 0 0 24px rgba(199,230,107,0.8); }
+}
+.confetti-piece {
+  position: fixed;
+  top: -20px;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  animation: confetti-fall linear forwards;
+  pointer-events: none;
+  z-index: 9999;
+}
+.badge-unlocked {
+  animation: badge-unlock 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+.badge-locked {
+  filter: grayscale(1);
+  opacity: 0.4;
+}
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+.rank-1 { background: linear-gradient(135deg,#FFD700,#FFA500); color: white; }
+.rank-2 { background: linear-gradient(135deg,#C0C0C0,#9E9E9E); color: white; }
+.rank-3 { background: linear-gradient(135deg,#CD7F32,#A0522D); color: white; }
+.rank-other { background: #F8F4EC; color: #6B7280; }
+.share-card {
+  border-radius: 20px;
+  overflow: hidden;
+  border: 2px solid #2D5016;
+  max-width: 540px;
+}
+.nft-card {
+  background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%);
+  border: 1px solid #C7E66B;
+  border-radius: 20px;
+  padding: 1.5rem;
+  color: white;
+}
+"""
+
+
+def inject_gamification_css():
+    st.markdown(f"<style>{GAMIFICATION_CSS}</style>", unsafe_allow_html=True)
+
+
+def confetti_html() -> str:
+    colors = ["#2D5016","#7BA05B","#C7E66B","#E07856","#FFD700","#FF6B6B","#4ECDC4"]
+    pieces = ""
+    for i in range(60):
+        color = colors[i % len(colors)]
+        left = (i * 37 + 13) % 100
+        delay = (i * 0.07) % 4
+        size = 8 + (i % 8)
+        pieces += (
+            f"<div class='confetti-piece' style='"
+            f"left:{left}%;"
+            f"background:{color};"
+            f"width:{size}px;height:{size}px;"
+            f"animation-duration:{(2.5 + i%3)}s;"
+            f"animation-delay:{delay}s;'></div>"
+        )
+    return f"<div style='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden;'>{pieces}</div>"
+
+
+def badge_card(badge: dict, unlocked: bool = True) -> str:
+    cls = "badge-unlocked" if unlocked else "badge-locked"
+    lock_icon = "" if unlocked else "🔒"
+    earned_str = f"<p style='font-size:0.65rem;color:{MUTED};margin:0.2rem 0 0 0;'>Earned {badge.get('earned_date','')}</p>" if unlocked else ""
+    return f"""
+    <div class='kale-card' style='text-align:center;padding:1rem;flex:1;min-width:110px;'>
+      <div style='font-size:2.2rem;margin-bottom:0.5rem;{"" if unlocked else "filter:grayscale(1);opacity:0.4;"}'>
+        {lock_icon}{badge['emoji']}
+      </div>
+      <p style='font-weight:700;color:{INK};font-size:0.75rem;margin:0;'>{badge['title']}</p>
+      <p style='font-size:0.65rem;color:{MUTED};margin:0.2rem 0;'>{badge['description']}</p>
+      {earned_str}
+    </div>
+    """
+
+
+def leaderboard_row(rank: int, name: str, plot: str, badges: int, kg_grown: float,
+                    deliveries: int, tier: str, hood: str, is_sarah: bool = False) -> str:
+    bg = "#F8F4EC" if is_sarah else "white"
+    border = f"2px solid {KALE}" if is_sarah else f"1px solid {HAIR}"
+    rank_cls = f"rank-{rank}" if rank <= 3 else "rank-other"
+    rank_label = "🥇" if rank == 1 else ("🥈" if rank == 2 else ("🥉" if rank == 3 else f"#{rank}"))
+    return f"""
+    <div style='display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0.75rem;
+                background:{bg};border:{border};border-radius:12px;margin-bottom:0.4rem;'>
+      <div class='rank-badge {rank_cls}' style='flex-shrink:0;'>
+        {rank_label if rank <= 3 else rank}
+      </div>
+      <div style='flex:1;'>
+        <p style='font-weight:700;color:{INK};margin:0;font-size:0.9rem;'>{name}
+          <span style='font-size:0.65rem;color:{MUTED};font-weight:400;'> · {tier}</span>
+        </p>
+        <p style='font-size:0.65rem;color:{MUTED};margin:0;'>📍 {hood} · {plot}</p>
+      </div>
+      <div style='text-align:right;flex-shrink:0;'>
+        <p style='font-weight:800;color:{KALE};margin:0;font-size:0.9rem;'>{kg_grown}kg</p>
+        <p style='font-size:0.6rem;color:{MUTED};margin:0;'>{badges} badges · {deliveries} deliveries</p>
+      </div>
+    </div>
+    """
+
+
+def share_card_html(data: dict) -> str:
+    return f"""
+    <div class='share-card' style='font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;'>
+      <div style='background:linear-gradient(135deg,#2D5016 0%,#4A7C2E 100%);padding:2rem 1.5rem;text-align:center;'>
+        <p style='color:rgba(199,230,107,0.8);font-size:0.7rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;margin:0;'>Adopt a Kale</p>
+        <h1 style='color:white;font-size:1.6rem;font-weight:800;margin:0.25rem 0;'>My Harvest Report</h1>
+        <p style='color:rgba(255,255,255,0.75);font-size:0.8rem;margin:0;'>Plot #{data['plot_id']} · {data['date']}</p>
+      </div>
+      <div style='background:white;padding:1.5rem;'>
+        <div style='display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;'>
+          <div style='font-size:3rem;'>🥬</div>
+          <div>
+            <p style='font-weight:800;color:#1A1A1A;font-size:1.1rem;margin:0;'>{data['crop']}</p>
+            <p style='color:#6B7280;font-size:0.8rem;margin:0;'>{data['variety']} · {data['tier']} tier</p>
+          </div>
+        </div>
+        <div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;'>
+          <div style='background:#F8F4EC;border-radius:12px;padding:0.75rem;text-align:center;'>
+            <p style='font-size:1.5rem;font-weight:800;color:#2D5016;margin:0;'>{data['kg_grown']}</p>
+            <p style='font-size:0.65rem;color:#6B7280;margin:0;'>kg grown</p>
+          </div>
+          <div style='background:#F8F4EC;border-radius:12px;padding:0.75rem;text-align:center;'>
+            <p style='font-size:1.5rem;font-weight:800;color:#2D5016;margin:0;'>{data['deliveries']}</p>
+            <p style='font-size:0.65rem;color:#6B7280;margin:0;'>deliveries</p>
+          </div>
+          <div style='background:#F8F4EC;border-radius:12px;padding:0.75rem;text-align:center;'>
+            <p style='font-size:1.5rem;font-weight:800;color:#2D5016;margin:0;'>{data['badges']}</p>
+            <p style='font-size:0.65rem;color:#6B7280;margin:0;'>badges</p>
+          </div>
+        </div>
+        <p style='font-size:0.75rem;color:#6B7280;text-align:center;margin:0;'>
+          🌱 Grown with AI in Singapore · @AdoptaKaleSG
+        </p>
+      </div>
+    </div>
+    """
+
+
+def nft_card_html(nft: dict) -> str:
+    return f"""
+    <div class='nft-card'>
+      <div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;'>
+        <p style='font-size:0.65rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#C7E66B;margin:0;'>
+          🌿 GreenLoop Harvest NFT
+        </p>
+        <span style='background:#C7E66B;color:#1A1A1A;font-size:0.6rem;font-weight:800;padding:0.2rem 0.6rem;border-radius:999px;'>MINTED</span>
+      </div>
+      <div style='text-align:center;padding:1rem 0;'>
+        <div style='font-size:4rem;margin-bottom:0.5rem;'>🥬</div>
+        <h3 style='color:white;font-size:1.2rem;margin:0 0 0.25rem 0;'>{nft['crop']}</h3>
+        <p style='color:rgba(199,230,107,0.7);font-size:0.8rem;margin:0;'>{nft['variety']} · Plot #{nft['plot_id']}</p>
+      </div>
+      <div style='display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem;'>
+        <div style='background:rgba(255,255,255,0.08);border-radius:10px;padding:0.6rem;'>
+          <p style='font-size:0.6rem;color:rgba(255,255,255,0.5);margin:0;'>HARVEST DATE</p>
+          <p style='font-weight:700;color:white;font-size:0.85rem;margin:0.1rem 0 0 0;'>{nft['harvest_date']}</p>
+        </div>
+        <div style='background:rgba(255,255,255,0.08);border-radius:10px;padding:0.6rem;'>
+          <p style='font-size:0.6rem;color:rgba(255,255,255,0.5);margin:0;'>BIOMASS</p>
+          <p style='font-weight:700;color:white;font-size:0.85rem;margin:0.1rem 0 0 0;'>{nft['biomass_g']}g</p>
+        </div>
+        <div style='background:rgba(255,255,255,0.08);border-radius:10px;padding:0.6rem;'>
+          <p style='font-size:0.6rem;color:rgba(255,255,255,0.5);margin:0;'>TOTAL GROWN</p>
+          <p style='font-weight:700;color:white;font-size:0.85rem;margin:0.1rem 0 0 0;'>{nft['total_kg_grown']} kg</p>
+        </div>
+        <div style='background:rgba(255,255,255,0.08);border-radius:10px;padding:0.6rem;'>
+          <p style='font-size:0.6rem;color:rgba(255,255,255,0.5);margin:0;'>TOKEN ID</p>
+          <p style='font-weight:700;color:#C7E66B;font-size:0.85rem;margin:0.1rem 0 0 0;'>#{nft['token_id']}</p>
+        </div>
+      </div>
+      <div style='background:rgba(255,255,255,0.05);border-radius:10px;padding:0.6rem;margin-bottom:0.75rem;'>
+        <p style='font-size:0.6rem;color:rgba(255,255,255,0.4);margin:0;'>WALLET</p>
+        <p style='font-family:monospace;font-size:0.75rem;color:#C7E66B;margin:0.1rem 0 0 0;'>{nft['wallet_address']}</p>
+      </div>
+      <div style='background:rgba(255,255,255,0.05);border-radius:10px;padding:0.6rem;'>
+        <p style='font-size:0.6rem;color:rgba(255,255,255,0.4);margin:0;'>TX HASH</p>
+        <p style='font-family:monospace;font-size:0.7rem;color:rgba(255,255,255,0.6);margin:0.1rem 0 0 0;word-break:break-all;'>{nft['tx_hash']}</p>
+      </div>
+    </div>
+    """
