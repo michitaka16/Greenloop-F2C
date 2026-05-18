@@ -60,6 +60,74 @@ RECENT_EVENTS = [
     {"time": "May 1",       "text": "Delivery received — kale microleaves 180g"},
 ]
 
+CAMERA = {
+    "status": "live",
+    "last_capture": "today 06:00 SGT",
+    "interval_hours": 24,
+    "rack_id": "RACK-A7",
+    "ai_diagnosis": {
+        "crop": "Curly Kale",
+        "growth_stage": "Vegetative",
+        "nutrition_status": "Optimal",
+        "health_score": 94,
+        "leaf_area_m2": 0.42,
+        "biomass_g": 184,
+        "anomalies": [],
+        "recommendation": "Continue current nutrient protocol. Harvest window opens May 27.",
+    },
+}
+
+CAMERA_TIMELINE = [
+    {
+        "day": 1,
+        "date": "Mar 29",
+        "label": "Day 1 — Germination",
+        "status": "normal",
+        "health_score": 78,
+        "note": "Seeds planted. Humidity dome applied.",
+    },
+    {
+        "day": 8,
+        "date": "Apr 5",
+        "label": "Day 8 — Seedling",
+        "status": "normal",
+        "health_score": 81,
+        "note": "First true leaves visible. LED intensity increased.",
+    },
+    {
+        "day": 15,
+        "date": "Apr 12",
+        "label": "Day 15 — Vegetative",
+        "status": "normal",
+        "health_score": 88,
+        "note": "Rapid leaf expansion. Nutrient concentration increased.",
+    },
+    {
+        "day": 22,
+        "date": "Apr 19",
+        "label": "Day 22 — Mid growth",
+        "status": "normal",
+        "health_score": 91,
+        "note": "Canopy closing. pH adjusted to 5.8.",
+    },
+    {
+        "day": 29,
+        "date": "Apr 26",
+        "label": "Day 29 — Pre-harvest",
+        "status": "normal",
+        "health_score": 93,
+        "note": "Leaf colour deepening. Final nutrient adjustment.",
+    },
+    {
+        "day": 31,
+        "date": "Apr 28",
+        "label": "Day 31 — Today",
+        "status": "normal",
+        "health_score": 94,
+        "note": "74% to harvest. Climate auto-tuned this morning.",
+    },
+]
+
 TIERS = [
     {
         "id": "Standard",

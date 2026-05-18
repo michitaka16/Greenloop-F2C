@@ -107,6 +107,7 @@ A consumer-facing Streamlit app enabling Singapore residents to adopt a hydropon
 | Home | Landing page — tier comparison, hero section | ✅ Complete |
 | Start | Onboarding wizard — tier selection + crop selection | ✅ Complete |
 | My Plot | Live dashboard — maturity ring, next harvest, crop status | ✅ Complete |
+| Plant Camera | Fixed-point rack camera — live feed, AI diagnosis, sensor readings | ✅ Complete |
 | Chat | AI chatbot — ask about your plot, growth, harvest | ⚠️ Mock (RAG pending) |
 | Schedule | Harvest calendar — upcoming deliveries, growth timeline | ✅ Complete |
 | Account | Subscription management — plan details, preferences | ⚠️ Partial (billing/stripe pending) |
@@ -116,6 +117,7 @@ A consumer-facing Streamlit app enabling Singapore residents to adopt a hydropon
 | Feature | Description | Production Requirement |
 |--------|-------------|----------------------|
 | **Maturity Ring** | Visual progress indicator (0–100%) showing days to harvest | Real sensor data integration |
+| **Plant Camera** | Fixed-point camera feed with AI crop diagnosis (EfficientNet-B0), growth timeline, live sensor readings | Real camera hardware + IoT API |
 | **Harvest Prediction** | AI-estimated yield (g) with confidence interval | Trained growth model |
 | **Growth Timeline** | Day-by-day crop history with milestone markers | Sensor event log |
 | **Growth Progress Reports** | Weekly PDF/email summary of plot activity | Report generation pipeline + email |

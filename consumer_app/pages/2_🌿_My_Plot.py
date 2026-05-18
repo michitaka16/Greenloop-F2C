@@ -92,13 +92,16 @@ for col, (emoji, label, value, sub) in zip(stat_cols, stats_data):
 
 # CTA buttons
 st.write("")
-btn_col1, btn_col2, _ = st.columns([1, 1, 2])
+btn_col1, btn_col2, btn_col3, _ = st.columns([1, 1, 1, 2])
 with btn_col1:
     if st.button("💬  Ask your kale", type="primary", use_container_width=True):
         st.switch_page("pages/3_💬_Chat.py")
 with btn_col2:
     if st.button("📅  Schedule", type="secondary", use_container_width=True):
         st.switch_page("pages/4_📅_Schedule.py")
+with btn_col3:
+    if st.button("📷  Plant Camera", type="secondary", use_container_width=True):
+        st.switch_page("pages/6_📷_PlantCamera.py")
 
 st.markdown('<hr class="kale-hr"/>', unsafe_allow_html=True)
 
