@@ -1,4 +1,4 @@
-# GreenLoop F2C — Q&A Preparation
+# Adopt a Kale — Q&A Preparation
 
 ## Anticipated Questions
 

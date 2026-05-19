@@ -1,14 +1,14 @@
 # Adopt a Kale — Consumer App (Streamlit)
 
-Sarah's app の Streamlit 実装。既存 GreenLoop F2C と同じ Python / Streamlit スタックで構築。
-ピッチ Slide 10 をそのまま動かせるレベルまでスキャフォールド済み。モックデータ (`lib/mock_data.py`) で全ページ動作。後から既存 GreenLoop の AI コンポーネントを呼ぶように接続するだけ。
+Sarah's app の Streamlit 実装。既存 Adopt a Kale (旧 Adopt a Kale F2C) と同じ Python / Streamlit スタックで構築。
+ピッチ Slide 10 をそのまま動かせるレベルまでスキャフォールド済み。モックデータ (`lib/mock_data.py`) で全ページ動作。後から既存 Adopt a Kale の AI コンポーネントを呼ぶように接続するだけ。
 
 ---
 
 ## クイックスタート
 
 ```bash
-# 1. 依存インストール (uv 推奨, 既存 GreenLoop 同様)
+# 1. 依存インストール (uv 推奨, 既存 Adopt a Kale 同様)
 uv pip install -r requirements.txt
 # または
 pip install -r requirements.txt
@@ -18,7 +18,7 @@ streamlit run Home.py
 # → http://localhost:8501 が自動で開く
 ```
 
-`uv` を既存 GreenLoop で使っているなら、同じ環境内で動くはずです。
+`uv` を既存 Adopt a Kale で使っているなら、同じ環境内で動くはずです。
 
 ---
 
@@ -98,7 +98,7 @@ secondaryBackgroundColor = "#F8F4EC"  # クリーム — サイドバー
 
 ### Chat (最優先 — デモで一番効く)
 
-`lib/mock_data.py` の `mock_response()` 関数を、既存 GreenLoop の RAG-LLM 呼び出しに置き換え:
+`lib/mock_data.py` の `mock_response()` 関数を、既存 Adopt a Kale の RAG-LLM 呼び出しに置き換え:
 
 ```python
 # Before (mock)
@@ -156,9 +156,9 @@ def get_status():
 
 ---
 
-## GreenLoop F2C リポジトリへの取り込み
+## Adopt a Kale リポジトリへの取り込み
 
-既存 GreenLoop と並列で運用できる構成。同じ uv 環境を共有。
+既存 Adopt a Kale と並列で運用できる構成。同じ uv 環境を共有。
 
 ```bash
 # 1. リポジトリへ
@@ -174,7 +174,7 @@ cd consumer_app
 streamlit run Home.py
 # → http://localhost:8501
 
-# 4. 既存 GreenLoop と同時起動 (デモ構成)
+# 4. 既存 Adopt a Kale と同時起動 (デモ構成)
 # Terminal 1 — Operator dashboard (既存)
 #   cd ~/Documents/GitHub/Greenloop-F2C
 #   uv run streamlit run src/greenloop/dashboard/app.py --server.port 8501
@@ -204,7 +204,7 @@ git push origin main
 
 | タブ | 内容 | URL |
 |---|---|---|
-| 1 | **Operator dashboard** (既存 GreenLoop) — AI の中身、運営側ビュー | `localhost:8501` |
+| 1 | **Operator dashboard** (既存 Adopt a Kale) — AI の中身、運営側ビュー | `localhost:8501` |
 | 2 | **Consumer app** (Adopt a Kale) — Sarah が見ている消費者ビュー | `localhost:8502` |
 
 「同じ AI で 2 つのオーディエンス」のストーリーが立つので、PE rep / Hong 教授に対するデモ強度が大きく上がります。
@@ -223,7 +223,7 @@ git push origin main
 
 ## トラブルシュート
 
-**ポート衝突**: 既存 GreenLoop が 8501 を使っている場合、`--server.port 8502` で起動。
+**ポート衝突**: 既存 Adopt a Kale が 8501 を使っている場合、`--server.port 8502` で起動。
 
 **画像が表示されない**: `assets/leaf-*.png` が存在するか確認。`ls assets/` で 5 ファイルあれば OK。
 

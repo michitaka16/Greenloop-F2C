@@ -471,8 +471,8 @@ def get_share_card_data():
 # ESG & Sustainability Metrics
 # ────────────────────────────────────────────
 ESG_METRICS = {
-    "water_per_kg": 2.0,   # litres/kg (GreenLoop) vs 20 L/kg conventional
-    "co2_per_kg": 0.3,     # kg-CO2/kg (GreenLoop) vs 2.5 kg/kg conventional
+    "water_per_kg": 2.0,   # litres/kg (Adopt a Kale) vs 20 L/kg conventional
+    "co2_per_kg": 0.3,     # kg-CO2/kg (Adopt a Kale) vs 2.5 kg/kg conventional
     "trees_equiv_per_kg": 0.05,  # trees worth of CO2 offset per kg
 }
 

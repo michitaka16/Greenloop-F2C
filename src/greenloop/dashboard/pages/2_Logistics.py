@@ -1,4 +1,4 @@
-"""VRP Logistics page — GreenLoop Farm OS last-mile delivery routing."""
+"""VRP Logistics page — Adopt a Kale last-mile delivery routing."""
 from __future__ import annotations
 
 import pandas as pd
@@ -8,7 +8,7 @@ from greenloop.layer2b.vrp_solver import solve_vrp
 
 # ── Page config ────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Logistics — GreenLoop Farm OS",
+    page_title="Logistics — Adopt a Kale",
     layout="wide",
 )
 
@@ -41,7 +41,7 @@ def _render_map(result: dict, customers_df: pd.DataFrame) -> None:
     # Depot marker
     folium.Marker(
         [DEPOT_LAT, DEPOT_LNG],
-        popup="GreenLoop Farm — Jurong Innovation District Depot",
+        popup="Adopt a Kale Farm — Jurong Innovation District Depot",
         icon=folium.Icon(color="blue", icon="home"),
     ).add_to(m)
 
@@ -107,7 +107,7 @@ def _render_map_empty() -> None:
     )
     folium.Marker(
         [DEPOT_LAT, DEPOT_LNG],
-        popup="GreenLoop Farm — Jurong Innovation District Depot",
+        popup="Adopt a Kale Farm — Jurong Innovation District Depot",
         icon=folium.Icon(color="blue", icon="home"),
     ).add_to(m)
     st_folium(m, width="100%", height=500)

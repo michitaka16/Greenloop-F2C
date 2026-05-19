@@ -1,4 +1,4 @@
-# GreenLoop F2C — Role Allocation
+# Adopt a Kale — Role Allocation
 
 ## Team Members
 
@@ -6,7 +6,7 @@
 |--------|------|
 | Takahide Kawabe | Member 1 — Architect |
 | QN | Member 2 — HR Specialist / Operations |
-| Claude (AI agent) | Member 3 — Finance / Governance |
+| Dongyao Chu | Member 3 — Finance / Governance |
 
 ---
 
@@ -56,7 +56,7 @@
 - Governance Moment transition (6:00–6:30)
 - Business model and GTM narrative
 
-**Member 3 — Finance (Claude AI)**
+**Member 3 — Finance (Dongyao Chu)**
 - Unit economics: B2B SaaS, B2C subscription, licensing
 - Implications Audit (Phase 5): bias, stakeholder net scores
 - COC methodology transparency (workflow compression admission)

@@ -1,4 +1,4 @@
-# GreenLoop F2C — Pitch Storyline
+# Adopt a Kale — Pitch Storyline
 
 ## Act 1 — The Problem (0:00–3:00)
 
@@ -11,10 +11,10 @@
 → Show: ACTF SGD 70M fund commitment, Greenphyto AG CHF 12M raise (Jan 2025).
 
 **1:00 — The Gap**
-"Competitors plan farms by hand. GreenLoop plans by AI."
+"Competitors plan farms by hand. Adopt a Kale plans by AI."
 → Show: manual planning vs. AI planning contrast.
 
-**1:30 — Introduce GreenLoop F2C**
+**1:30 — Introduce Adopt a Kale**
 "Four-layer AI platform. Seed to delivery. Every decision optimized."
 → Show: Layer 1 → Layer 2 → Layer 3 → Layer 4 → Layer 5 overview.
 

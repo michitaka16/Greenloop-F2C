@@ -1,18 +1,20 @@
-% GreenLoop Farm-to-Consumer Vertical Hydroponics OS
+% Adopt a Kale — Farm-to-Consumer Vertical Hydroponics OS
 % MGMT 655 — AI & Machine Learning | Week 8 Submission
 % 2026-05-19
 
 ---
 
-# GreenLoop F2C — Executive Summary
+# Adopt a Kale — Executive Summary
+
+*Formerly known as Adopt a Kale F2C. The Python package and GitHub repository slug retain `greenloop` / `Greenloop-F2C` for technical continuity.*
 
 ## 1. The Opportunity
 
-Singapore imports over 90% of its food. The COVID-19 pandemic and 2022 egg shortage caused price spikes lasting months. The government commits SGD 70M through the ACTF fund to shorten supply chains. Swiss vertical-farm competitor Greenphyto AG raised CHF 12M in January 2025 citing Singapore as their APAC entry point. GreenLoop is first to build the AI-native operating system for hydroponics — competitors plan farms by hand.
+Singapore imports over 90% of its food. The COVID-19 pandemic and 2022 egg shortage caused price spikes lasting months. The government commits SGD 70M through the ACTF fund to shorten supply chains. Swiss vertical-farm competitor Greenphyto AG raised CHF 12M in January 2025 citing Singapore as their APAC entry point. Adopt a Kale is first to build the AI-native operating system for hydroponics — competitors plan farms by hand.
 
 ## 2. The Product
 
-GreenLoop F2C is a 5-layer AI platform managing a vertical-hydroponic farm from seed to delivery. Layer 1 (XGBoost quantile regression) predicts demand with confidence intervals using 9 indoor-farm-appropriate features: lag shipments (7/14/28d), rolling 28d mean/std, cyclical week encoding, day-of-week, Singapore holiday flags, consumer rainy-day signal (simulated by monsoon month), indoor climate readings (temperature, humidity, CO2 deviation from 800 ppm optimal), electricity tariff tiers, and cross-crop market density. Layer 2 (OR-Tools MILP) generates the profit-maximising daily operating plan in **< 50 ms** — enabling real-time re-planning when conditions change. Layer 3 (PPO RL via Gymnasium) autonomously controls climate. Layer 4 (K-Means k=4 + UMAP) segments customers. Layer 5 (RAG with ChromaDB + Claude) answers investor questions live.
+Adopt a Kale is a 5-layer AI platform managing a vertical-hydroponic farm from seed to delivery. Layer 1 (XGBoost quantile regression) predicts demand with confidence intervals using 9 indoor-farm-appropriate features: lag shipments (7/14/28d), rolling 28d mean/std, cyclical week encoding, day-of-week, Singapore holiday flags, consumer rainy-day signal (simulated by monsoon month), indoor climate readings (temperature, humidity, CO2 deviation from 800 ppm optimal), electricity tariff tiers, and cross-crop market density. Layer 2 (OR-Tools MILP) generates the profit-maximising daily operating plan in **< 50 ms** — enabling real-time re-planning when conditions change. Layer 3 (PPO RL via Gymnasium) autonomously controls climate. Layer 4 (K-Means k=4 + UMAP) segments customers. Layer 5 (RAG with ChromaDB + Claude) answers investor questions live.
 
 **Key differentiators:**
 
@@ -164,8 +166,8 @@ A consumer-facing Streamlit app enabling Singapore residents to adopt a hydropon
 | Member | Focus |
 |--------|-------|
 | Takahide Kawabe | Farm OS, MILP, VRP, RL, full-stack integration |
-| QN | Business model, segmentation, sustainability |
-| Claude (AI agent) | RAG pipeline, CC/CO knowledge extraction, testing |
+| QN (Queenie) | Business model, segmentation, sustainability, brand & GTM |
+| Dongyao Chu | Unit economics, governance, finance / ops, supply chain |
 
 **4-page dashboard fully functional:** Farm OS (Layer 1-2 + Sustainability + Typhoon) | Logistics (CVRPTW map, 30/30 routes) | Retail AI (K-Means + UMAP, silhouette 0.765) | Media AI (RAG chatbot + demo mode).
 
@@ -184,4 +186,4 @@ A consumer-facing Streamlit app enabling Singapore residents to adopt a hydropon
 
 **What happens next:** Week 2 — install sensors on 3 pilot farms. Week 6 — first Singapore-specific model retraining with Phase 1 data. Week 12 — governance review and Phase 2 decision gate.
 
-*Submitted: 2026-05-19 | Greenloop-F2C | main | 494 tests passing | 13 of 14 phases complete*
+*Submitted: 2026-05-19 | Adopt a Kale (Greenloop-F2C) | main | 494 tests passing | 13 of 14 phases complete*

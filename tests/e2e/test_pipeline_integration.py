@@ -120,7 +120,7 @@ class TestLayer1bDiagnosis:
                 _wait_streamlit_ready(page)
 
                 # Verify page title
-                assert "GreenLoop Farm OS" in page.title()
+                assert "Adopt a Kale" in page.title()
 
                 # Diagnosis section — use get_by_text for partial match
                 diag = page.get_by_text("Crop Health")

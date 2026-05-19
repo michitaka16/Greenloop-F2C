@@ -1,4 +1,4 @@
-"""OR-Tools CVRPTW solver for GreenLoop last-mile delivery routing.
+"""OR-Tools CVRPTW solver for Adopt a Kale last-mile delivery routing.
 
 Depot: Jurong Innovation District (1.3328°N, 103.7436°E)
 """

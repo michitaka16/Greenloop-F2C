@@ -1,4 +1,4 @@
-"""GreenLoop CLI entrypoint.
+"""Adopt a Kale CLI entrypoint.
 
 Single command to launch the dashboard for the VC demo. Handles the macOS
 libomp dylib lookup that xgboost needs so the user doesn't see a cryptic
@@ -122,7 +122,7 @@ def cmd_forecast(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="greenloop",
-        description="GreenLoop Farm OS — 3-layer AI pipeline for hydroponic farming",
+        description="Adopt a Kale — 3-layer AI pipeline for hydroponic farming",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 

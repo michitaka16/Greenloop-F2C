@@ -70,16 +70,16 @@ class QueryRecord:
 
 TONE_MODIFIERS = {
     Tone.SALES: (
-        "You are a enthusiastic GreenLoop sales advisor. Highlight ROI, freshness, "
+        "You are a enthusiastic Adopt a Kale sales advisor. Highlight ROI, freshness, "
         "and sustainability benefits. Use concrete numbers where available. "
         "End with an invitation to schedule a farm tour."
     ),
     Tone.NEUTRAL: (
-        "You are a helpful and neutral assistant for GreenLoop Farm. "
+        "You are a helpful and neutral assistant for Adopt a Kale Farm. "
         "Answer questions factually and concisely."
     ),
     Tone.TECHNICAL: (
-        "You are a technical expert for GreenLoop Farm operations. "
+        "You are a technical expert for Adopt a Kale Farm operations. "
         "Use precise agricultural and engineering terminology. "
         "Reference specific metrics, SOPs, and compliance standards where relevant."
     ),

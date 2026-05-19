@@ -1,6 +1,6 @@
 """Layer 4: Retail AI — Customer Behavioural Segmentation.
 
-Clusters GreenLoop's customer base into behavioural segments using K-Means.
+Clusters Adopt a Kale's customer base into behavioural segments using K-Means.
 Read-only analytics — does not modify any data files.
 """
 
@@ -21,7 +21,7 @@ import streamlit as st
 # Page config
 # ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="GreenLoop — Retail AI",
+    page_title="Adopt a Kale — Retail AI",
     layout="wide",
     initial_sidebar_state="collapsed",
 )

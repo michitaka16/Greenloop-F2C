@@ -177,7 +177,7 @@ uvicorn api.main:app --reload --port 8000
 
 ---
 
-## GreenLoop F2C リポジトリへの取り込み
+## Adopt a Kale リポジトリへの取り込み
 
 ```bash
 # 1. リポジトリへ
@@ -193,7 +193,7 @@ npm install
 npm run dev
 # → http://localhost:3000
 
-# 4. 既存 GreenLoop と同時起動 (デモ時の構成)
+# 4. 既存 Adopt a Kale (旧 Adopt a Kale) と同時起動 (デモ時の構成)
 # Terminal 1 (Operator dashboard):
 #   cd ~/Documents/GitHub/Greenloop-F2C
 #   uv run streamlit run src/greenloop/dashboard/app.py

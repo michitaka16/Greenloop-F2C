@@ -1,4 +1,4 @@
-"""GreenLoop Farm OS — Streamlit Dashboard.
+"""Adopt a Kale — Streamlit Dashboard.
 
 Single-screen dashboard integrating all 4 layers:
 - Layer 0: Integration Platform (6 external APIs)
@@ -21,7 +21,7 @@ import streamlit as st
 # Page config — MUST be first Streamlit call
 # ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="GreenLoop Farm OS",
+    page_title="Adopt a Kale",
     page_icon="🌱",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -323,7 +323,7 @@ def main():
     # ── Header ──
     col_title, col_date = st.columns([3, 1])
     with col_title:
-        st.title("GreenLoop Farm OS")
+        st.title("Adopt a Kale")
     with col_date:
         st.markdown(f"### {date.today().strftime('%d %b %Y')}")
 
@@ -717,7 +717,7 @@ def _render_media_ai_chat():
                 st.warning("Incorrect password.")
 
     # Chat input
-    if agent_ready and (question := st.chat_input("Ask about GreenLoop Farm...")):
+    if agent_ready and (question := st.chat_input("Ask about Adopt a Kale Farm...")):
         # Add to history
         st.session_state.rag_history.append({"role": "user", "content": question})
         st.session_state["_last_question"] = question
@@ -727,7 +727,7 @@ def _render_media_ai_chat():
         answer_text = "Sorry, I encountered an error generating a response."
         try:
             tone = st.session_state.rag_tone
-            system_prompt = get_system_prompt(tone, "You are a helpful assistant for GreenLoop Farm.")
+            system_prompt = get_system_prompt(tone, "You are a helpful assistant for Adopt a Kale Farm.")
 
             # Call RAG agent (uses demo-mode answers if no LLM API key)
             answer_obj = agent.ask(question)

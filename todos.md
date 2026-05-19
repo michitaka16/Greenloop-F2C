@@ -1,4 +1,4 @@
-# GreenLoop F2C Farm OS - Implementation Todos
+# Adopt a Kale Farm OS - Implementation Todos
 
 ## STATUS: DEMO READY ✅
 

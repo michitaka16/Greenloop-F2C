@@ -133,7 +133,7 @@ st.markdown(
     <div style="display:flex;justify-content:space-between;align-items:center;
                 font-size:0.75rem;color:{MUTED};padding:1rem 0;">
       <span style="font-weight:700;letter-spacing:0.25em;color:{KALE};">ADOPT A KALE</span>
-      <span>© 2026 GreenLoop F2C · Singapore · MGMT 655 Capstone</span>
+      <span>© 2026 Adopt a Kale F2C · Singapore · MGMT 655 Capstone</span>
     </div>
     """,
     unsafe_allow_html=True,

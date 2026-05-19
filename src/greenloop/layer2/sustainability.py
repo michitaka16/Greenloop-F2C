@@ -16,7 +16,7 @@ _LED_KWH_PER_TIER_HOUR = 0.5
 
 # Conventional farming benchmarks (per kg of produce)
 _CONVENTIONAL_WATER_L_PER_KG = 20.0  # Singapore soil farming average
-HYDROPONIC_WATER_L_PER_KG = 2.0  # GreenLoop hydroponics
+HYDROPONIC_WATER_L_PER_KG = 2.0  # Adopt a Kale hydroponics
 _CONVENTIONAL_CO2_KG_PER_KG = 2.5  # vs conventional farming baseline
 
 

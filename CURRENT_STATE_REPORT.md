@@ -1,13 +1,14 @@
-# GreenLoop F2C — Current State Report
+# Adopt a Kale — Current State Report
 
-**Generated:** 2026-05-04
-**Repository:** `Greenloop-F2C` · `main` branch
+**Generated:** 2026-05-19
+**Repository:** `Greenloop-F2C` (legacy slug) · `main` branch
+**Brand:** Adopt a Kale (formerly Adopt a Kale F2C)
 
 ---
 
 ## 1. Repository Overview
 
-GreenLoop F2C is a 3-layer AI pipeline for Singapore vertical hydroponic farming. It is built as a multi-page Streamlit application with 4 pages (Farm AI, Logistics, Retail AI, Media AI) sharing a common data layer. The project is a Python 3.11–3.13 application.
+Adopt a Kale is a 5-layer AI platform (6 ML techniques) for Singapore vertical hydroponic farming. It is built as a multi-page Streamlit application: a B2B Farm OS dashboard with 4 pages (Farm AI, Logistics, Retail AI, Media AI) and a B2C consumer app (`consumer_app/`) with 9 pages branded *Adopt a Kale*. Both share a common data layer. The project is a Python 3.11–3.13 application.
 
 ### Project Metadata
 

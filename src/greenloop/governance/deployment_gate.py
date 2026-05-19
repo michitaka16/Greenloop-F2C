@@ -1,4 +1,4 @@
-"""GreenLoop Phase 8 Deployment Gate — production-readiness judgment system.
+"""Adopt a Kale Phase 8 Deployment Gate — production-readiness judgment system.
 
 MGMT655 Dimension A: explicit ship/no-ship decision criteria.
 All 5 gates with 25 criteria, automated evaluation.

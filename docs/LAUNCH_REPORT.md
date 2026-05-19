@@ -1,10 +1,10 @@
-% GreenLoop F2C — Launch Report
+% Adopt a Kale — Launch Report
 % MGMT 655 Capstone · Phase 8 Deployment Gate
 % 2026-05-19
 
 ---
 
-# GreenLoop F2C — Launch Report
+# Adopt a Kale — Launch Report
 
 **Repository:** https://github.com/michitaka16/Greenloop-F2C
 **Submitted:** 2026-05-19 · main branch · 494 tests passing · 13/14 phases complete
@@ -14,7 +14,7 @@
 
 # Executive Overview
 
-GreenLoop F2C is a 6-layer AI operating system for vertical-hydroponic farms in Singapore's urban environment. It manages the full farm-to-consumer lifecycle — from seed to harvest to weekly home delivery — using six ML techniques: XGBoost demand forecasting, OR-Tools MILP production planning, PPO reinforcement learning for climate control, EfficientNet computer vision for crop health, K-Means customer segmentation, and RAG for investor-facing AI chat. Two revenue streams: B2B Farm OS licensing (SGD 8K/rack/year) and B2C Adopt a Kale subscriptions (S$40–5,000/month).
+Adopt a Kale is a 5-layer AI platform (6 ML techniques) for vertical-hydroponic farms in Singapore's urban environment. It manages the full farm-to-consumer lifecycle — from seed to harvest to weekly home delivery — using six ML techniques: XGBoost demand forecasting, OR-Tools MILP production planning, PPO reinforcement learning for climate control, EfficientNet computer vision for crop health, K-Means customer segmentation, and RAG for investor-facing AI chat. Two revenue streams: B2B Farm OS licensing (SGD 8K/rack/year) and B2C Adopt a Kale subscriptions (S$40–5,000/month).
 
 Current status: **434 tests passing, 13/14 MGMT 655 phases complete, CONDITIONAL SHIP for Phase 1 Pilot.** The app is deployed and live at the Streamlit Community Cloud URL above.
 
@@ -26,7 +26,7 @@ Current status: **434 tests passing, 13/14 MGMT 655 phases complete, CONDITIONAL
 
 ## Product Value Proposition
 
-Singapore imports over 90% of its food. The COVID-19 pandemic and 2022 egg shortage caused price spikes lasting months. The government has committed SGD 70M through the ACTF fund to shorten supply chains. Swiss competitor Greenphyto AG raised CHF 12M in January 2025 citing Singapore as their APAC entry point. GreenLoop's differentiator is **AI-native farm management** — competitors plan farms by hand; GreenLoop's layers plan, re-plan, and self-heal autonomously.
+Singapore imports over 90% of its food. The COVID-19 pandemic and 2022 egg shortage caused price spikes lasting months. The government has committed SGD 70M through the ACTF fund to shorten supply chains. Swiss competitor Greenphyto AG raised CHF 12M in January 2025 citing Singapore as their APAC entry point. Adopt a Kale's differentiator is **AI-native farm management** — competitors plan farms by hand; Adopt a Kale's layers plan, re-plan, and self-heal autonomously.
 
 ## Market Opportunity
 
@@ -189,7 +189,7 @@ Yes. Standard and Pro subscriptions can be paused or cancelled from the Account 
 No — vertical hydroponic farms grow indoors year-round regardless of Singapore's heat and humidity.
 
 **Do you use pesticides?**
-Never. GreenLoop uses Integrated Pest Management (IPM) with beneficial insects (predatory mites, lacewings). All produce is zero pesticide residue and HACCP certified.
+Never. Adopt a Kale uses Integrated Pest Management (IPM) with beneficial insects (predatory mites, lacewings). All produce is zero pesticide residue and HACCP certified.
 
 **Who do I contact for Corporate plans?**
 Click **Contact sales** in the Start wizard or in the Account page. Our enterprise team responds within 24 hours.
@@ -441,4 +441,4 @@ Full cascade is automated. MILP re-solve confirmed < 50 ms even under emergency 
 
 ---
 
-*End of Launch Report · GreenLoop F2C · 2026-05-19 · 494 tests passing · 13/14 phases*
+*End of Launch Report · Adopt a Kale · 2026-05-19 · 494 tests passing · 13/14 phases*

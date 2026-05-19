@@ -481,7 +481,7 @@ def nft_card_html(nft: dict) -> str:
     <div class='nft-card'>
       <div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;'>
         <p style='font-size:0.65rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#C7E66B;margin:0;'>
-          🌿 GreenLoop Harvest NFT
+          🌿 Adopt a Kale Harvest NFT
         </p>
         <span style='background:#C7E66B;color:#1A1A1A;font-size:0.6rem;font-weight:800;padding:0.2rem 0.6rem;border-radius:999px;'>MINTED</span>
       </div>
@@ -792,7 +792,7 @@ def donation_receipt_html(receipt: dict) -> str:
         </div>
       </div>
       <p style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin:0;">
-        Receipt {r['receipt_id']} · {r['date']} · GreenLoop F2C
+        Receipt {r['receipt_id']} · {r['date']} · Adopt a Kale F2C
       </p>
     </div>
     """

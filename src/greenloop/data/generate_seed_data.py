@@ -1,4 +1,4 @@
-"""Generate simulated CSV seed files for GreenLoop Farm OS.
+"""Generate simulated CSV seed files for Adopt a Kale.
 
 Produces 5 CSV files with realistic Singapore hydroponic farm patterns.
 Reproducible via np.random.seed(42).

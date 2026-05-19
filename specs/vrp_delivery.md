@@ -2,7 +2,7 @@
 
 ## Overview
 
-VRP (Vehicle Routing Problem) optimizes last-mile delivery routes for the GreenLoop farm.
+VRP (Vehicle Routing Problem) optimizes last-mile delivery routes for the the farm.
 It sits at Layer 4 alongside the retail segmentation module, consuming Layer 2 optimizer
 output and producing delivery routes for the 3-truck fleet.
 
@@ -21,7 +21,7 @@ output and producing delivery routes for the 3-truck fleet.
 @dataclass
 class Depot:
     depot_id: str          # "DEPOT_JURONG"
-    name: str              # "GreenLoop Jurong Innovation District Farm"
+    name: str              # "Adopt a Kale Jurong Innovation District Farm"
     lat: float             # 1.3328°N
     lng: float             # 103.7436°E
 ```
@@ -241,7 +241,7 @@ def render_vrp_map(solution, depot_lat, depot_lng, customers_df) -> folium.Map:
     # Depot marker
     folium.Marker(
         [depot_lat, depot_lng],
-        popup="GreenLoop Farm — Jurong Innovation District Depot",
+        popup="Adopt a Kale Farm — Jurong Innovation District Depot",
         icon=folium.Icon(color="blue", icon="home"),
     ).add_to(m)
 

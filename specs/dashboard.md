@@ -4,7 +4,7 @@
 
 ```
 +--------------------------------------------------+
-|  GreenLoop Farm OS          [Today: 12 Apr 2026]  |
+|  Adopt a Kale          [Today: 12 Apr 2026]  |
 +---------------+----------------------------------+
 | INPUTS        |  TODAY'S OPTIMAL PLAN            |
 | Electricity   |  LED Schedule  [bar chart 24h]   |
@@ -26,7 +26,7 @@
 ## Sections
 
 ### Top Bar
-- App title: "GreenLoop Farm OS"
+- App title: "Adopt a Kale"
 - Current date display
 - Farm name / logo area
 
