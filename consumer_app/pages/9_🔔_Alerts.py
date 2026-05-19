@@ -110,7 +110,7 @@ if active:
         st.markdown(alert_banner_html(alert), unsafe_allow_html=True)
         col_dismiss, col_action = st.columns([1, 3])
         with col_dismiss:
-            if st.button(f"✓ Mark All Clear", key=f"clear_{alert['id']}", use_container_width=True):
+            if st.button("✓ Mark All Clear", use_container_width=True):
                 st.session_state.dismissed_alerts.add(alert["id"])
                 # Move to history
                 history_entry = {**alert, "dismissed": False, "timestamp": "May 19, 06:00 SGT"}
@@ -118,8 +118,7 @@ if active:
                 st.rerun()
         with col_action:
             if alert.get("action"):
-                st.button(f"{alert['action']} →", key=f"act_{alert['id']}",
-                         use_container_width=True, type="primary")
+                st.button(f"{alert['action']} →", use_container_width=True, type="primary")
         st.write("")
 else:
     st.markdown(
