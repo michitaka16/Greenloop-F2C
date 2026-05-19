@@ -98,6 +98,54 @@ kpi2.metric("Total orders", f"{total_orders}")
 kpi3.metric("Avg basket (SGD)", f"${avg_basket:.2f}")
 kpi4.metric("Silhouette score", f"{silhouette:.3f}")
 
+# ── Today's Orders Summary (latest available date) ──────────────────────
+latest_date = orders["date"].max()
+latest_orders = orders[orders["date"] == latest_date]
+date_str = pd.Timestamp(latest_date).strftime("%d %b %Y")
+
+st.subheader(f"📦 Today's Orders — {date_str}")
+
+today_col1, today_col2, today_col3 = st.columns(3)
+today_col1.metric("Orders", str(len(latest_orders)))
+today_col2.metric("Total Weight", f"{latest_orders['kg'].sum():.1f} kg")
+today_col3.metric("Revenue", f"${latest_orders['sgd_total'].sum():.2f}")
+
+# Crop breakdown
+crop_breakdown = (
+    latest_orders.groupby("crop_id")["kg"]
+    .sum()
+    .sort_values(ascending=False)
+    .reset_index()
+)
+crop_breakdown.columns = ["Crop", "kg"]
+crop_colors_map = {
+    "kai_lan": "#1abc9c",
+    "spinach": "#3498db",
+    "lettuce": "#2ecc71",
+    "arugula": "#f1c40f",
+    "chye_sim": "#e67e22",
+}
+crop_breakdown["color"] = crop_breakdown["Crop"].map(
+    lambda c: crop_colors_map.get(c, "#95a5a6")
+)
+fig_today = px.bar(
+    crop_breakdown,
+    x="Crop",
+    y="kg",
+    color="color",
+    color_discrete_map="identity",
+    title=f"kg by crop — {date_str}",
+    labels={"kg": "kg", "Crop": ""},
+    text="kg",
+)
+fig_today.update_layout(
+    showlegend=False,
+    xaxis_tickangle=-30,
+    height=220,
+    margin=dict(l=20, r=20, t=40, b=20),
+)
+st.plotly_chart(fig_today, use_container_width=True)
+
 st.divider()
 
 # ── Farm AI Forecast Panel ───────────────────────────────────────────────

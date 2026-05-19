@@ -179,14 +179,13 @@ st.markdown('<hr class="kale-hr"/>', unsafe_allow_html=True)
 
 # ── Demo Trigger Section ─────────────────────
 st.markdown(
+    f"<div style='background:#FEF9C3;border:1px solid #EAB308;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem;'>"
     f"<p style='font-size:0.65rem;font-weight:700;letter-spacing:0.2em;"
-    f"text-transform:uppercase;color:{MUTED};margin-bottom:0.75rem;'>"
-    f"🧪 DEMO MODE — TRIGGER ALERTS</p>",
-    unsafe_allow_html=True,
-)
-st.markdown(
-    f"<p style='color:{MUTED};font-size:0.85rem;margin-bottom:1rem;'>"
-    f"Trigger simulated alerts to see how the AI protects your plot.</p>",
+    f"text-transform:uppercase;color:#854D0E;margin:0 0 0.25rem 0;'>"
+    f"🧪 DEMO MODE — TRIGGER ALERTS</p>"
+    f"<p style='color:#713F12;font-size:0.8rem;margin:0;'>"
+    f"Trigger simulated alerts to preview how the AI protects your plot. "
+    f"These alerts are for demonstration only and do not affect your real crops.</p></div>",
     unsafe_allow_html=True,
 )
 

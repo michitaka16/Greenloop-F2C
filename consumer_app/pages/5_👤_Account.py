@@ -74,29 +74,28 @@ st.markdown(f"<h3 style='color:{INK};margin-bottom:0.5rem;'>⚙️  Preferences<
             unsafe_allow_html=True)
 
 prefs = [
-    ("WhatsApp updates", "Weekly + on harvest", True),
-    ("Delivery window",  "Saturday morning",   None),
-    ("Pause subscription", "For travel or holidays", None),
+    ("WhatsApp updates", "Weekly + on harvest", True, "SMS and WhatsApp notifications for harvest updates"),
+    ("Delivery window",  "Saturday morning 9–11am",   False, "Contact support to change your delivery slot"),
+    ("Pause subscription", "No active pause", False, "Traveling? Pause up to 4 weeks per year"),
 ]
-for label, value, on in prefs:
+for label, value, on, note in prefs:
     badge_html = (
-        f"<div style='background:{CREAM};color:{KALE};padding:0.3rem 0.8rem;"
+        f"<div style='background:{KALE};color:white;padding:0.3rem 0.8rem;"
         f"border-radius:999px;font-size:0.65rem;font-weight:700;letter-spacing:0.15em;'>ON</div>"
         if on else ""
     )
-    button_html = "" if on else (
-        f"<div style='color:{KALE};font-weight:700;font-size:0.85rem;cursor:pointer;'>Change →</div>"
-    )
+    note_html = f"<p style='font-size:0.7rem;color:{MUTED};margin:0.2rem 0 0 0;'>{note}</p>"
     st.markdown(
         f"""
         <div class="kale-card" style="margin-bottom:0.5rem;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
             <div>
               <p style="font-weight:600;color:{INK};margin:0;">{label}</p>
-              <p style="font-size:0.8rem;color:{MUTED};margin:0;">{value}</p>
+              <p style='font-size:0.85rem;color:{KALE};font-weight:600;margin:0.2rem 0 0 0;'>{value}</p>
             </div>
-            {badge_html}{button_html}
+            {badge_html}
           </div>
+          {note_html}
         </div>
         """,
         unsafe_allow_html=True,
@@ -127,8 +126,18 @@ with col_a:
         unsafe_allow_html=True,
     )
 with col_b:
-    if st.button("📄  Download Weekly Report (PDF)", use_container_width=True, type="secondary"):
-        st.info("PDF report generation: coming soon! Your growth log will be exported as a PDF.")
+    st.markdown(
+        f"""
+        <div class="kale-card" style="margin-bottom:0.5rem;display:flex;align-items:center;justify-content:center;gap:0.75rem;padding:1.5rem;">
+          <div style="font-size:1.5rem;">📄</div>
+          <div>
+            <p style="font-size:0.85rem;font-weight:700;color:{MUTED};margin:0;">PDF Report</p>
+            <p style="font-size:0.75rem;color:{MUTED};margin:0.2rem 0 0 0;">Generated after your first harvest</p>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 st.write("")
 
@@ -152,11 +161,29 @@ with cert_col1:
         unsafe_allow_html=True,
     )
 with cert_col2:
-    if st.button("📜  View Full Certificate", use_container_width=True, type="secondary"):
-        st.info("Digital certificate with timestamp + photo: coming soon!")
-    st.write("")
-    if st.button("🔗  Get Harvest NFT Proof", use_container_width=True, type="secondary"):
-        st.info("NFT minting on Singapore blockchain: coming soon!")
+    cert_btn_col1, cert_btn_col2 = st.columns(2)
+    with cert_btn_col1:
+        st.markdown(
+            f"""
+            <div class="kale-card" style="text-align:center;padding:1.5rem;">
+              <p style="font-size:1.5rem;margin:0;">📜</p>
+              <p style="font-size:0.8rem;font-weight:700;color:{MUTED};margin:0.5rem 0 0 0;">Full Certificate</p>
+              <p style="font-size:0.7rem;color:{MUTED};margin:0.3rem 0 0 0;">Unlocks at first harvest</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with cert_btn_col2:
+        st.markdown(
+            f"""
+            <div class="kale-card" style="text-align:center;padding:1.5rem;">
+              <p style="font-size:1.5rem;margin:0;">🔗</p>
+              <p style="font-size:0.8rem;font-weight:700;color:{MUTED};margin:0.5rem 0 0 0;">NFT Proof</p>
+              <p style="font-size:0.7rem;color:{MUTED};margin:0.3rem 0 0 0;">Mint after first harvest</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 st.write("")
 

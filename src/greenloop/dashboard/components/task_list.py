@@ -76,7 +76,7 @@ def _build_priority_tasks(plan: dict[str, Any]) -> list[dict[str, str]]:
     return tasks
 
 
-def _build_routine_tasks(plan: dict[str, Any]) -> list[dict[str, Any]]:
+def _build_routine_tasks(plan: dict[str, Any], vrp_result: dict | None = None) -> list[dict[str, Any]]:
     """Extract routine tasks from MILP plan outputs."""
     tasks = []
     cv_details = (
@@ -86,7 +86,7 @@ def _build_routine_tasks(plan: dict[str, Any]) -> list[dict[str, Any]]:
     led_schedule = plan.get("led_schedule", {})
     rack_layout = plan.get("rack_layout", {})
 
-    # ── LED on (start of photoperiod — from MILP schedule) ───────────────
+    # ── LED Switch on (start of photoperiod — from MILP schedule) ───────────
     # Find earliest tier that turns ON during morning hours (5-8am)
     led_on_hour = None
     for tier_name in sorted(led_schedule.keys()):
@@ -100,7 +100,7 @@ def _build_routine_tasks(plan: dict[str, Any]) -> list[dict[str, Any]]:
         tasks.append({
             "type": "routine",
             "time": f"{led_on_hour:02d}:00",
-            "action": "LED panels on",
+            "action": "LED Switch on",
             "detail": "MILP photoperiod start",
             "role": "Farm Operations",
         })
@@ -109,7 +109,7 @@ def _build_routine_tasks(plan: dict[str, Any]) -> list[dict[str, Any]]:
         tasks.append({
             "type": "routine",
             "time": "06:00",
-            "action": "LED panels on",
+            "action": "LED Switch on",
             "detail": "MILP photoperiod start",
             "role": "Farm Operations",
         })
@@ -122,6 +122,34 @@ def _build_routine_tasks(plan: dict[str, Any]) -> list[dict[str, Any]]:
         "detail": "Irrigation, LED wiring, rack inspection",
         "role": "Farm Operations",
     })
+
+    # ── Room temperature check ────────────────────────────────────────────────
+    room_temp = plan.get("room_temp_target_c")
+    if room_temp is not None:
+        tasks.append({
+            "type": "routine",
+            "time": "06:30",
+            "action": "Set room temp",
+            "detail": f"MILP optimal: {room_temp}°C",
+            "role": "Farm Operations",
+        })
+
+    # ── Priority tasks (Crop Health) — also shown in Routine ───────────────
+    for rack_id, diag in cv_details.items():
+        nutrition = diag.get("nutrition_status", "normal")
+        if nutrition in ("nitrogen_low", "water_stress"):
+            tier_num = rack_id.replace("tier_", "")
+            crop_id = plan.get("rack_layout", {}).get(rack_id, "unknown")
+            crop_name = CROP_DISPLAY_NAMES.get(crop_id, crop_id.replace("_", " ").title())
+            tasks.append({
+                "type": "routine",
+                "time": "07:00",
+                "action": _priority_label(nutrition),
+                "detail": f"{crop_name} — Rack {tier_num}",
+                "role": "Farm Operations",
+                "is_priority": True,
+                "rack_id": rack_id,
+            })
 
     # ── Harvest tasks ────────────────────────────────────────────────────────
     for rack_id, diag in cv_details.items():
@@ -137,20 +165,40 @@ def _build_routine_tasks(plan: dict[str, Any]) -> list[dict[str, Any]]:
                 "role": "Farm Operations",
             })
 
-    # ── Dispatch ────────────────────────────────────────────────────────────
+    # ── Dispatch — from VRP result ─────────────────────────────────────────
     staff_shifts = plan.get("staff_shifts", [])
     has_morning = any(
         s.get("shift", "").lower() == "morning" and s.get("staff_count", 0) > 0
         for s in staff_shifts
     )
     if has_morning:
-        tasks.append({
-            "type": "routine",
-            "time": "10:00",
-            "action": "Dispatch deliveries",
-            "detail": "Morning dispatch — check VRP routes in Logistics tab",
-            "role": "Logistics",
-        })
+        if vrp_result and vrp_result.get("routes"):
+            # Build rich route summary
+            route_lines = []
+            total_stops = 0
+            for i, route in enumerate(vrp_result["routes"]):
+                if route:
+                    route_lines.append(f"Route {i+1}: {len(route)} stops")
+                    total_stops += len(route)
+            route_str = " / ".join(route_lines) if route_lines else "No routes"
+            tasks.append({
+                "type": "routine",
+                "time": "10:00",
+                "action": f"Dispatch ({total_stops} deliveries)",
+                "detail": route_str,
+                "role": "Logistics",
+                "is_delivery": True,
+                "vrp_result": vrp_result,
+            })
+        else:
+            tasks.append({
+                "type": "routine",
+                "time": "10:00",
+                "action": "Dispatch deliveries",
+                "detail": "Run VRP in Logistics tab → routes appear here",
+                "role": "Logistics",
+                "is_delivery": True,
+            })
 
     # ── LED off (peak tariff — from MILP schedule) ─────────────────────────
     led_off_hour = None
@@ -166,7 +214,7 @@ def _build_routine_tasks(plan: dict[str, Any]) -> list[dict[str, Any]]:
         tasks.append({
             "type": "routine",
             "time": f"{led_off_hour:02d}:00",
-            "action": "LED panels off",
+            "action": "LED Switch off",
             "detail": "Peak tariff avoidance",
             "role": "Farm Operations",
         })
@@ -174,7 +222,7 @@ def _build_routine_tasks(plan: dict[str, Any]) -> list[dict[str, Any]]:
         tasks.append({
             "type": "routine",
             "time": "17:00",
-            "action": "LED panels off",
+            "action": "LED Switch off",
             "detail": "Peak tariff avoidance",
             "role": "Farm Operations",
         })
@@ -202,6 +250,9 @@ def render_today_actions(plan: dict[str, Any] | None) -> None:
     if plan is None:
         return
 
+    # Read VRP result shared by Logistics page
+    vrp_result = st.session_state.get("vrp_result")
+
     # ── Header ──────────────────────────────────────────────────────────────
     greeting = _greeting()
     now = datetime.now().strftime("%-I:%M%p").lower()
@@ -221,7 +272,7 @@ def render_today_actions(plan: dict[str, Any] | None) -> None:
 
         # ── Priority tasks ──────────────────────────────────────────────────
         priority_tasks = _build_priority_tasks(plan)
-        routine_tasks = _build_routine_tasks(plan)
+        routine_tasks = _build_routine_tasks(plan, vrp_result=vrp_result)
 
         st.markdown("**📋 Today's Actions**")
 
@@ -240,7 +291,7 @@ def render_today_actions(plan: dict[str, Any] | None) -> None:
                         st.checkbox(
                             f"**{task['action']}** — {task['rack']} · {task['crop']}",
                             value=False,
-                            key=f"priority_{task['rack']}_{task['action']}",
+                            key=f"priority_task_{task['rack']}",
                         )
                     with col_src:
                         st.caption(f"🔬 {task['diagnosis']}")
@@ -255,9 +306,53 @@ def render_today_actions(plan: dict[str, Any] | None) -> None:
                 action = task["action"]
                 detail = task["detail"]
                 role = task.get("role", "")
+                is_priority = task.get("is_priority", False)
+                is_delivery = task.get("is_delivery", False)
+                vrp = task.get("vrp_result")
+                prefix = "⚠️ " if is_priority else "□ "
+                badge = "⚠️ Priority" if is_priority else ""
                 role_badge = f"[{role}]" if role else ""
-                st.checkbox(
-                    f"□ **{time_str}** — {action} {role_badge} ({detail})",
-                    value=False,
-                    key=f"routine_{time_str}_{action[:20]}",
-                )
+                label = f"{prefix}**{time_str}** — {action} {role_badge} ({detail}) {badge}"
+                task_key = task.get("rack_id", "")
+                key_str = f"routine_{time_str}_{action[:20]}_{task_key}" if task_key else f"routine_{time_str}_{action[:20]}"
+
+                if is_delivery and vrp:
+                    # Expanded delivery route card — synced with Logistics page
+                    with st.container(border=True):
+                        col_act, col_info2 = st.columns([3, 1])
+                        with col_act:
+                            st.checkbox(
+                                f"**{time_str}** — {action}",
+                                value=False,
+                                key=key_str,
+                            )
+                        with col_info2:
+                            total_km = vrp.get("total_km", 0)
+                            total_cost = vrp.get("total_cost_sgd", 0)
+                            st.caption(f"🚚 {total_km:.1f}km · ${total_cost:.0f}")
+                        # Show each route inline
+                        customers_df = None
+                        try:
+                            from greenloop.data.loader import load_customers
+                            customers_df = load_customers()
+                        except Exception:
+                            pass
+                        route_cols = st.columns(len(vrp.get("routes", [])))
+                        for ri, route in enumerate(vrp.get("routes", [])):
+                            if not route:
+                                continue
+                            with route_cols[ri] if len(vrp["routes"]) <= 4 else st:
+                                st.markdown(f"**Route {ri+1}**")
+                                for cid in route:
+                                    name = cid
+                                    if customers_df is not None:
+                                        row = customers_df[customers_df["customer_id"] == cid]
+                                        if not row.empty:
+                                            name = row["name"].values[0]
+                                    st.markdown(f"  → {name}")
+                else:
+                    st.checkbox(
+                        label,
+                        value=False,
+                        key=key_str,
+                    )

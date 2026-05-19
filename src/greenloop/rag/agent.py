@@ -14,32 +14,62 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Demo-mode cached answers for 4 priority questions
+# Demo-mode cached answers — keyed by keywords, matched via substring
 # ---------------------------------------------------------------------------
 _DEMO_ANSWERS: dict[str, str] = {
-    "what crops do you grow": (
-        "GreenLoop grows 12 varieties of leafy greens and herbs including spinach, kale, "
-        "arugula, lettuce, kai lan, basil, cilantro, mint, choy sum, baby bok choy, "
-        "watercress, and Swiss chard. All crops are hydroponically grown year-round with "
-        "zero pesticides."
+    # Crops
+    "crops": (
+        "GreenLoop grows 12 varieties of leafy greens and herbs: spinach, kale, arugula, "
+        "lettuce, kai lan, basil, cilantro, mint, choy sum, baby bok choy, watercress, and Swiss chard. "
+        "All crops are hydroponically grown year-round with zero pesticides in our Jurong farm."
     ),
-    "how much water do you save": (
-        "GreenLoop uses 95% less water than conventional farming — approximately 2 litres "
-        "per kg of produce compared to 20 litres for soil farming. Our closed-loop NFT "
-        "system recirculates nutrient solution with a 98.2% water recycle rate, and we "
-        "supplement losses with collected rainwater."
+    # Water savings
+    "water": (
+        "GreenLoop uses 95% less water than conventional farming — approximately 2 litres per kg "
+        "of produce vs. 20 litres for soil farming. Our closed-loop NFT system recirculates "
+        "nutrient solution with a 98.2% water recycle rate, supplemented by collected rainwater."
     ),
-    "do you use pesticides": (
-        "No — GreenLoop uses zero pesticides, herbicides, or synthetic chemicals. We control "
-        "pests using Integrated Pest Management (IPM) with beneficial insects including "
-        "predatory mites and lacewings. Our produce has no pesticide residue and is "
-        "SS 590:2018 HACCP-certified for food safety."
+    # Pesticides
+    "pesticide": (
+        "No pesticides, herbicides, or synthetic chemicals — ever. GreenLoop uses Integrated "
+        "Pest Management (IPM) with beneficial insects (predatory mites, lacewings). "
+        "Produce has zero pesticide residue and is SS 590:2018 HACCP-certified."
     ),
-    "where are you located": (
-        "GreenLoop is located 15km from Singapore's CBD in the Jurong Innovation District. "
-        "Our farm spans 500 m² across 3 vertical layers, enabling us to deliver produce "
-        "to restaurants within 2 hours of harvest. We deliver throughout mainland Singapore, "
-        "with morning slots (6am-9am) for Jurong, Clementi, Bukit Merah, and CBD areas."
+    # Location / farm address
+    "located": (
+        "GreenLoop is 15km from Singapore's CBD in Jurong Innovation District. "
+        "Our farm spans 500 m² across 3 vertical layers, delivering to restaurants "
+        "within 2 hours of harvest. Morning slots cover Jurong, Clementi, Bukit Merah, and CBD."
+    ),
+    # Sustainability
+    "sustainab": (
+        "GreenLoop is certified for environmental and food safety sustainability: "
+        "95% less water, 98% less land, 90% fewer food miles vs. imports, "
+        "zero pesticides, and HSA / SFA-approved food safety protocols."
+    ),
+    # Harvest
+    "harvest": (
+        "We harvest daily to fulfill morning delivery routes. Most crops are harvested "
+        "between 5–7am, packed by 8am, and delivered to restaurants by 9–10am. "
+        "This 2-hour farm-to-table model ensures maximum freshness and shelf life."
+    ),
+    # LED / energy
+    "led": (
+        "Our LED grow lights run on a tariff-optimised schedule shifting usage to off-peak "
+        "hours (9pm–7am). This reduces electricity cost by 15–25% versus constant operation "
+        "and aligns with Singapore's EMA peak pricing periods."
+    ),
+    # Revenue / profit / financials
+    "revenue": (
+        "GreenLoop's unit economics show: revenue of ~$8–12/kg produce, operating margin "
+        "of 25–35% in normal tariff conditions, and payback period of ~3 years for the "
+        "vertical farm infrastructure."
+    ),
+    # Delivery / logistics
+    "deliver": (
+        "Deliveries use a VRP-optimised routing system with 3 refrigerated trucks covering "
+        "10–15 restaurant stops per morning route. All vehicles are electric, reducing "
+        "last-mile emissions to near zero."
     ),
 }
 
@@ -283,9 +313,11 @@ class RAGAgent:
 
         if answer_text is None:
             answer_text = (
-                "I'm running in demo mode. I can answer questions about GreenLoop's "
-                "crops, water savings, pesticide-free growing, and farm location. "
-                "Configure your LLM API key in .env to unlock full RAG responses."
+                "I'm in demo mode (no LLM API key configured). I can answer questions about: "
+                "crops & varieties · water savings · pesticides · location & delivery areas · "
+                "sustainability certifications · harvest schedule · LED energy schedule · "
+                "unit economics & revenue. "
+                "Configure OPENAI_API_KEY (or ANTHROPIC_API_KEY) in .env to unlock full RAG responses."
             )
 
         return RAGAnswer(

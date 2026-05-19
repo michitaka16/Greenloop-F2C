@@ -222,6 +222,17 @@ with diag_col:
 
 st.write("")
 
+# Quick actions
+qa_col1, qa_col2 = st.columns(2)
+with qa_col1:
+    if st.button("💬  Ask AI about this crop", type="primary", use_container_width=True):
+        st.switch_page("pages/3_💬_Chat.py")
+with qa_col2:
+    if st.button("📅  View full schedule", type="secondary", use_container_width=True):
+        st.switch_page("pages/4_📅_Schedule.py")
+
+st.write("")
+
 # ───────────────────────────────────────────
 # Sensor readings strip
 # ───────────────────────────────────────────

@@ -35,8 +35,11 @@ if "nft_minting" not in st.session_state:
 if "nft_minted" not in st.session_state:
     st.session_state.nft_minted = False
 
-# ── Celebration confetti on load ─────────────────
-st.markdown(confetti_html(), unsafe_allow_html=True)
+# ── Celebration confetti on load (only if user has history) ─────────────────
+has_harvest = SARAH["total_kg_grown"] > 0
+has_nft = len(MINTED_NFTS) > 0
+if has_harvest or has_nft:
+    st.markdown(confetti_html(), unsafe_allow_html=True)
 
 st.markdown(
     f"<h1 style='font-size:2.2rem;font-weight:800;color:{INK};margin:0;'>🎉 Celebration!</h1>"

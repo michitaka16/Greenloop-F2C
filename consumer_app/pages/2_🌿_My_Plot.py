@@ -55,10 +55,18 @@ if st.session_state.active_alerts:
     st.write("")
 
 # ───────────────────────────────────────────
-# Greeting
+# Greeting (time-based)
 # ───────────────────────────────────────────
+import datetime
+hour = datetime.datetime.now().hour
+if hour < 12:
+    greet = "Good morning"
+elif hour < 17:
+    greet = "Good afternoon"
+else:
+    greet = "Good evening"
 st.markdown(
-    f"<p style='color:{MUTED};margin:0;'>Good morning, {SARAH['name'].split()[0]}.</p>"
+    f"<p style='color:{MUTED};margin:0;'>{greet}, {SARAH['name'].split()[0]}.</p>"
     f"<h1 style='font-size:2.2rem;font-weight:800;color:{INK};margin:0.25rem 0 1.5rem 0;'>"
     f"Your kale is <span style='color:{KALE};'>{STATUS['maturity']}% ready</span>.</h1>",
     unsafe_allow_html=True,
@@ -131,7 +139,7 @@ for col, (emoji, label, value, sub) in zip(stat_cols, stats_data):
 
 # CTA buttons
 st.write("")
-btn_col1, btn_col2, btn_col3, btn_col4, _ = st.columns([1, 1, 1, 1, 2])
+btn_col1, btn_col2, btn_col3, btn_col4, btn_col5, _ = st.columns([1, 1, 1, 1, 1, 2])
 with btn_col1:
     if st.button("💬  Ask your kale", type="primary", use_container_width=True):
         st.switch_page("pages/3_💬_Chat.py")
@@ -144,6 +152,10 @@ with btn_col3:
 with btn_col4:
     if st.button("🎉  Share & NFT", type="secondary", use_container_width=True):
         st.switch_page("pages/7_🎉_Celebration.py")
+with btn_col5:
+    has_alerts = len(st.session_state.active_alerts) > 0
+    if st.button(f"🔔  Alerts{' (' + str(len(st.session_state.active_alerts)) + ')' if has_alerts else ''}", type="secondary" if not has_alerts else "primary", use_container_width=True):
+        st.switch_page("pages/9_🔔_Alerts.py")
 
 # ────────────────────────────────────────────
 # 📊 My Portfolio — ESG + Growth Chart
@@ -190,8 +202,6 @@ with asset_col3:
         f"<p style='font-size:0.65rem;color:{MUTED};margin:0;'>vs conventional farming</p></div>",
         unsafe_allow_html=True,
     )
-
-st.markdown('<hr class="kale-hr"/>', unsafe_allow_html=True)
 
 st.markdown('<hr class="kale-hr"/>', unsafe_allow_html=True)
 
@@ -468,3 +478,25 @@ with st.sidebar:
         """,
         unsafe_allow_html=True,
     )
+    st.markdown("---")
+    # Alert badge
+    active_alert_count = len(st.session_state.active_alerts)
+    alert_bg = "#FEE2E2" if active_alert_count > 0 else CREAM
+    alert_color = "#DC2626" if active_alert_count > 0 else KALE
+    alert_label = f"{active_alert_count} active" if active_alert_count > 0 else "All clear"
+    st.markdown(
+        f"""
+        <div style='padding:0.5rem 1rem;background:{alert_bg};border-radius:12px;'>
+          <p style='margin:0;font-size:0.65rem;font-weight:700;letter-spacing:0.15em;color:{MUTED};'>
+              ALERTS
+          </p>
+          <p style='margin:0.2rem 0;font-weight:800;color:{alert_color};font-size:1.1rem;'>
+              {active_alert_count} active
+          </p>
+          <p style='margin:0;font-size:0.7rem;color:{MUTED};'>{alert_label}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("🔔  View Alerts", use_container_width=True, type="secondary"):
+        st.switch_page("pages/9_🔔_Alerts.py")

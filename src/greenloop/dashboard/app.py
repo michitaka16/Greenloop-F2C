@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -66,6 +67,7 @@ from greenloop.layer1b.simulation import (  # noqa: E402
     diagnose_all_racks_simulated,
     diagnose_batch,
     filename_to_rack_id,
+    mock_diagnose,
     mock_diagnose_from_image,
     RACK_SCENARIOS,
 )
@@ -108,31 +110,96 @@ from greenloop.rag.hitl import (  # noqa: E402
 # ---------------------------------------------------------------------------
 # v6.2 Integration Platform helpers
 # ---------------------------------------------------------------------------
-def _get_today_avg_electricity_rate() -> tuple[float, str]:
-    """
-    Return (rate_sgd_per_kwh, source_label) for today's representative electricity rate.
-    Uses the most recent row from the live EMA loader. Falls back to a sensible default.
-    """
-    try:
-        from greenloop.data.ema import load_live_electricity
 
-        df = load_live_electricity()
-        if df is not None and len(df) > 0 and "tariff_rate_sgd_per_kwh" in df.columns:
-            rate = float(df["tariff_rate_sgd_per_kwh"].iloc[-1])
+
+def _get_live_electricity_df():
+    """Load + cache live EMA electricity data in session_state (one API call per session)."""
+    if "live_electricity_df" not in st.session_state:
+        try:
+            from greenloop.data.ema import load_live_electricity
+
+            df = load_live_electricity(days=7)
+            st.session_state["live_electricity_df"] = df
+        except Exception:
+            st.session_state["live_electricity_df"] = None
+    return st.session_state.get("live_electricity_df")
+
+
+def _get_avg_electricity_rate_for_date(selected_date: str) -> tuple[float, str]:
+    """
+    Return (rate_sgd_per_kwh, source_label) for the given date's representative rate.
+    Uses the cached live EMA loader. Falls back to a sensible default.
+    """
+    df = _get_live_electricity_df()
+    if df is not None and len(df) > 0 and "tariff_rate_sgd_per_kwh" in df.columns:
+        day_df = df[df["date"] == selected_date]
+        if len(day_df) > 0:
+            rate = float(day_df["tariff_rate_sgd_per_kwh"].iloc[-1])
             return rate, "EMA / data.gov.sg"
-    except Exception:
-        pass
+        # Date not in live data — use last available
+        rate = float(df["tariff_rate_sgd_per_kwh"].iloc[-1])
+        return rate, "EMA / data.gov.sg (lag)"
     return 0.29, "Fallback (CSV)"
+
+
+def _get_today_shopee_orders() -> tuple[float, str]:
+    """Return (total_kg, source_label) for the latest available Shopee orders. Cached in session."""
+    if "shopee_orders_cache" not in st.session_state:
+        try:
+            from greenloop.data.loader import load_orders
+            df = load_orders()
+            # Use the latest available date as proxy for today
+            latest_date = df["date"].max()
+            latest_df = df[df["date"] == latest_date]
+            total_kg = float(latest_df["kg"].sum())
+            date_str = pd.Timestamp(latest_date).strftime("%d %b %Y")
+            st.session_state["shopee_orders_cache"] = (total_kg, f"Shopee / RedMart / F&B · {date_str}")
+        except Exception:
+            st.session_state["shopee_orders_cache"] = (0.0, "Load error")
+    return st.session_state.get("shopee_orders_cache", (0.0, "Not loaded"))
+
+
+def _get_shopee_crop_breakdown() -> tuple[pd.DataFrame, str]:
+    """Return (crop_breakdown_df, date_str) for today's orders chart. Cached in session."""
+    if "shopee_crop_cache" not in st.session_state:
+        try:
+            from greenloop.data.loader import load_orders
+            df = load_orders()
+            latest_date = df["date"].max()
+            latest_df = df[df["date"] == latest_date]
+            breakdown = (
+                latest_df.groupby("crop_id")["kg"]
+                .sum()
+                .sort_values(ascending=False)
+                .reset_index()
+            )
+            breakdown.columns = ["crop", "kg"]
+            date_str = pd.Timestamp(latest_date).strftime("%d %b %Y")
+            st.session_state["shopee_crop_cache"] = (breakdown, date_str)
+        except Exception:
+            st.session_state["shopee_crop_cache"] = (pd.DataFrame(columns=["crop", "kg"]), "N/A")
+    return st.session_state.get("shopee_crop_cache", (pd.DataFrame(columns=["crop", "kg"]), "N/A"))
 
 
 def _get_today_staff_summary() -> tuple[int, int, str]:
     """
-    Return (on_duty_count, total_count, source_label) using availability column.
-    Phase 1: read availability from staff.csv directly. Phase 2: Calendar API.
+    Return (on_duty_count, total_count, source_label) for staff availability.
+    Uses sidebar slider/override values if available (set in session_state),
+    otherwise falls back to staff.csv availability column.
     """
+    # Priority 1: Manager override
+    if st.session_state.get("override_active") and st.session_state.get("override_staff"):
+        on_duty = int(st.session_state["override_staff"])
+        total = on_duty  # override implies full control
+        return on_duty, total, "Manager override"
+    # Priority 2: Sidebar sliders (stored after sidebar renders)
+    if "effective_headcount" in st.session_state:
+        total = int(st.session_state.get("total_staff", 8))
+        on_duty = int(st.session_state["effective_headcount"])
+        return on_duty, total, "Sidebar sliders"
+    # Fallback: read from staff.csv
     try:
         from greenloop.data.loader import load_staff
-
         staff_df = load_staff()
         total = len(staff_df)
         if "availability" in staff_df.columns:
@@ -141,7 +208,7 @@ def _get_today_staff_summary() -> tuple[int, int, str]:
             if on_duty == 0:
                 on_duty = total
             return on_duty, total, "staff.csv (availability)"
-        return total, total, "staff.csv (no availability col)"
+        return total, total, "staff.csv"
     except Exception:
         return 5, 5, "Fallback"
 
@@ -276,44 +343,84 @@ def main():
     with col_farm:
         st.info("🏭 Jurong West Farm")
 
-    st.divider()
+    # ── Sidebar: Farm AI ─────────────────────────────────────────────────
+    st.sidebar.header("Farm AI")
+    # ⚡ Electricity: date selector + 24h chart combined
+    st.sidebar.subheader("⚡ Electricity Tariff")
+    selected_date = st.sidebar.selectbox(
+        "Select date",
+        options=available_days,
+        index=len(available_days) - 1,
+        format_func=lambda d: d.strftime("%d %b %Y") if hasattr(d, "strftime") else str(d),
+    )
+    electricity = electricity_df[electricity_df["date"] == selected_date].copy()
+    _render_electricity_sidebar(electricity_df, selected_date, electricity)
 
-    # ── v6.2 Autonomy Mode Status Strip ────────────────────────────────
-    _gate = st.session_state.get("rl_gate")
-    _mode_label = _gate.mode_label if _gate is not None else "Advisory"
-    _typhoon_on = bool(st.session_state.get("typhoon_mode") or st.session_state.get("typhoon_active"))
-    _override_on = bool(st.session_state.get("override_active"))
-    _degraded = _typhoon_on or _override_on
+    # ── HITL: Optimization mode ──
+    # ── HITL: Manual constraints ──
+    with st.sidebar.expander("🔧 Override", expanded=False):
+        st.markdown("**Exclude racks today:**")
+        excluded_racks: list[int] = []
+        for tier in range(10):
+            crop = None
+            if forecast is not None:
+                # Try to get current crop from last plan if available
+                crop = None
+            if st.checkbox(f"Rack {tier}", value=False, key=f"exclude_rack_{tier}"):
+                excluded_racks.append(tier)
 
-    _ac1, _ac2, _ac3 = st.columns([1, 2, 2])
-    with _ac1:
-        st.markdown("**🛡️ Autopilot Mode**")
-    with _ac2:
-        if _degraded:
-            st.warning(f"**Advisory** ← Auto-degraded")
-        elif _mode_label == "Autonomous":
-            st.success(f"🤖 **{_mode_label}** — AI runs operations")
-        elif _mode_label == "Advisory":
-            st.info(f"🤝 **{_mode_label}** — AI proposes, human can override")
+        st.markdown("**Staff unavailable:**")
+        unavailable_shifts: list[str] = []
+        for shift in ["morning", "afternoon", "night"]:
+            if st.checkbox(f"No {shift.capitalize()} shift", value=False, key=f"no_shift_{shift}"):
+                unavailable_shifts.append(shift)
+
+        if st.button("Apply override", use_container_width=True):
+            validation = validate_constraints(excluded_racks, unavailable_shifts, forecast, crops)
+            if not validation:
+                st.success("Constraints validated — re-solving...")
+                st.session_state["_hitl_excluded_racks"] = excluded_racks
+                st.session_state["_hitl_unavailable_shifts"] = unavailable_shifts
+            elif validation.severity == "error":
+                st.error(validation.reason)
+            else:
+                st.warning(validation.reason if validation.reason else "Tight but feasible.")
+                st.session_state["_hitl_excluded_racks"] = excluded_racks
+                st.session_state["_hitl_unavailable_shifts"] = unavailable_shifts
         else:
-            st.info(f"👤 **{_mode_label}** — Human approves every action")
-    with _ac3:
-        if _degraded:
-            _why = []
-            if _typhoon_on: _why.append("Typhoon active")
-            if _override_on: _why.append("Manager override")
-            st.caption(f"⚠️ Reduced to Advisory: {' + '.join(_why)}")
-        else:
-            st.caption("ℹ️ Change mode in 'RL Control' panel below.")
+            excluded_racks = st.session_state.get("_hitl_excluded_racks", [])
+            unavailable_shifts = st.session_state.get("_hitl_unavailable_shifts", [])
 
-    st.divider()
+    # ── Sidebar: Available Staff ──────────────────────────────────────────
+    st.sidebar.divider()
+    st.sidebar.subheader("👷 Available Staff")
+    _farm_ops = staff[staff["role"] == "Farm Operations"]
+    _logistics = staff[staff["role"] == "Logistics"]
+    role_counts: dict[str, int] = {}
+    if len(_farm_ops) > 0:
+        available = st.sidebar.slider("Farm Operations", 0, len(_farm_ops), len(_farm_ops), key="staff_farm_ops")
+        role_counts["Farm Operations"] = available
+    if len(_logistics) > 0:
+        available = st.sidebar.slider("Logistics", 0, len(_logistics), len(_logistics), key="staff_logistics")
+        role_counts["Logistics"] = available
+    st.sidebar.caption("Supervisor: 1 (fixed)")
+    role_counts["Supervisor"] = 1
+    headcount = sum(role_counts.values())
+    st.session_state["effective_headcount"] = headcount
+    st.session_state["total_staff"] = len(staff)
+
+    # ── Sidebar: Design decisions (Dimension A evidence for VC pitch) ──
+    render_design_decisions_panel()
 
     # ── v6.2 Integration Platform — Auto-Fetched Cards ─────────────────
+    # (Moved after sidebar so staff slider values are available via session_state)
     st.markdown("##### 📡 Integration Platform — Auto-Fetched Data")
     st.caption("Phase 1 MVP: 2 live integrations (EMA Energy, Staff Calendar). Phase 2: full 6-API stack.")
 
-    rate, rate_source = _get_today_avg_electricity_rate()
+    _today_sg = date.today().isoformat()
+    rate, rate_source = _get_avg_electricity_rate_for_date(_today_sg)
     on_duty, total_staff, staff_source = _get_today_staff_summary()
+    shopee_kg, shopee_source = _get_today_shopee_orders()
 
     cards_col1, cards_col2, cards_col3, cards_col4 = st.columns(4)
 
@@ -324,16 +431,16 @@ def main():
             delta=f"✓ Live: {rate_source}",
             delta_color="off",
         )
-        st.caption("Auto-fetched at 06:00 SGT")
+        st.caption(f"Live · {date.today().strftime('%d %b %Y')} · {rate_source}")
 
     with cards_col2:
         st.metric(
             label="🛒 Shopee Orders",
-            value="100 kg",
-            delta="Live + RedMart + F&B",
+            value=f"{shopee_kg:.1f} kg",
+            delta=f"✓ {shopee_source}",
             delta_color="off",
         )
-        st.caption("Mock data — Shopee Open Platform Phase 2")
+        st.caption("Live")
 
     with cards_col3:
         st.metric(
@@ -342,7 +449,7 @@ def main():
             delta=f"✓ {staff_source}",
             delta_color="off",
         )
-        st.caption("From staff.csv — Google Calendar Phase 2")
+        st.caption("From sidebar sliders")
 
     with cards_col4:
         st.metric(
@@ -352,6 +459,37 @@ def main():
             delta_color="off",
         )
         st.caption("Mock data — NEA API Phase 2")
+
+    # ── Shopee Orders Crop Breakdown ───────────────────────────────────
+    crop_df, crop_date_str = _get_shopee_crop_breakdown()
+    if len(crop_df) > 0:
+        crop_colors_map = {
+            "kai_lan": "#1abc9c",
+            "spinach": "#3498db",
+            "lettuce": "#2ecc71",
+            "arugula": "#f1c40f",
+            "chye_sim": "#e67e22",
+        }
+        crop_df["color"] = crop_df["crop"].map(
+            lambda c: crop_colors_map.get(c, "#95a5a6")
+        )
+        fig_crop = px.bar(
+            crop_df,
+            x="crop",
+            y="kg",
+            color="color",
+            color_discrete_map="identity",
+            title=f"📦 Today's Orders by Crop — {crop_date_str}",
+            labels={"kg": "kg", "crop": ""},
+            text="kg",
+        )
+        fig_crop.update_layout(
+            showlegend=False,
+            xaxis_tickangle=-30,
+            height=200,
+            margin=dict(l=20, r=20, t=40, b=20),
+        )
+        st.plotly_chart(fig_crop, use_container_width=True)
 
     # Manager override (collapsed by default)
     with st.expander("✏️ Manager Override (when auto-fetched values need adjustment)"):
@@ -405,130 +543,6 @@ def main():
 
     st.divider()
 
-    # ── v6.2 NEA Typhoon Quick Trigger (Promo Button) ──────────────────
-    typhoon_promo_col1, typhoon_promo_col2 = st.columns([1, 3])
-    with typhoon_promo_col1:
-        if not (st.session_state.get("typhoon_mode") or st.session_state.get("typhoon_active")):
-            if st.button(
-                "⚡ Simulate NEA Typhoon Alert",
-                type="primary",
-                use_container_width=True,
-                key="typhoon_promo_trigger",
-                help="Triggers re-optimization with typhoon constraints. Full comparison shown in Scenario Testing section below.",
-            ):
-                st.session_state["typhoon_mode"] = True
-                st.session_state["typhoon_active"] = True
-                st.session_state["typhoon_needs_recompute"] = True
-                st.rerun()
-        else:
-            if st.button(
-                "🔄 Clear Typhoon Mode",
-                use_container_width=True,
-                key="typhoon_promo_clear",
-            ):
-                for k in ["typhoon_active", "typhoon_mode", "typhoon_needs_recompute",
-                          "typhoon_plan_cache", "typhoon_elapsed_ms", "typhoon_error",
-                          "typhoon_error_constraint"]:
-                    if k in st.session_state:
-                        del st.session_state[k]
-                st.rerun()
-
-    with typhoon_promo_col2:
-        if st.session_state.get("typhoon_mode") or st.session_state.get("typhoon_active"):
-            st.error("⚡ Typhoon Mode Active — Scroll down to 'Scenario Testing' for detailed re-optimization comparison.")
-        else:
-            st.info("💡 Click left button to simulate a NEA typhoon alert (or use the detailed scenario tester below).")
-
-    st.divider()
-
-    # ── Sidebar: Farm AI ─────────────────────────────────────────────────
-    st.sidebar.header("Farm AI")
-    # ⚡ Electricity: date selector + 24h chart combined
-    st.sidebar.subheader("⚡ Electricity Tariff")
-    selected_date = st.sidebar.selectbox(
-        "Select date",
-        options=available_days,
-        index=len(available_days) - 1,
-        format_func=lambda d: d.strftime("%d %b %Y") if hasattr(d, "strftime") else str(d),
-    )
-    electricity = electricity_df[electricity_df["date"] == selected_date].copy()
-    _render_electricity_sidebar(electricity_df, selected_date, electricity)
-
-    # ── HITL: Optimization mode ──
-    st.sidebar.divider()
-    st.sidebar.subheader("🎯 Optimization Mode")
-    mode = st.sidebar.segmented_control(
-        "What to prioritise",
-        options=list(MODE_LABELS.keys()),
-        default="balanced",
-        format_func=lambda k: {
-            "profit": "💰 Revenue",
-            "sustainability": "🌿 Sustainable",
-            "balanced": "⚖️ Balanced",
-        }.get(k, k),
-    )
-    mode_label = MODE_LABELS.get(mode, MODE_LABELS["balanced"])
-    st.caption(
-        {
-            "profit": "Maximize harvest revenue — ignores energy cost",
-            "sustainability": "Minimise electricity & waste — lower revenue OK",
-            "balanced": "Trade-off between revenue and sustainability",
-        }.get(mode, "")
-    )
-
-    # ── HITL: Manual constraints ──
-    with st.sidebar.expander("🔧 Override", expanded=False):
-        st.markdown("**Exclude racks today:**")
-        excluded_racks: list[int] = []
-        for tier in range(10):
-            crop = None
-            if forecast is not None:
-                # Try to get current crop from last plan if available
-                crop = None
-            if st.checkbox(f"Rack {tier}", value=False, key=f"exclude_rack_{tier}"):
-                excluded_racks.append(tier)
-
-        st.markdown("**Staff unavailable:**")
-        unavailable_shifts: list[str] = []
-        for shift in ["morning", "afternoon", "night"]:
-            if st.checkbox(f"No {shift.capitalize()} shift", value=False, key=f"no_shift_{shift}"):
-                unavailable_shifts.append(shift)
-
-        if st.button("Apply override", use_container_width=True):
-            validation = validate_constraints(excluded_racks, unavailable_shifts, forecast, crops)
-            if not validation:
-                st.success("Constraints validated — re-solving...")
-                st.session_state["_hitl_excluded_racks"] = excluded_racks
-                st.session_state["_hitl_unavailable_shifts"] = unavailable_shifts
-            elif validation.severity == "error":
-                st.error(validation.reason)
-            else:
-                st.warning(validation.reason if validation.reason else "Tight but feasible.")
-                st.session_state["_hitl_excluded_racks"] = excluded_racks
-                st.session_state["_hitl_unavailable_shifts"] = unavailable_shifts
-        else:
-            excluded_racks = st.session_state.get("_hitl_excluded_racks", [])
-            unavailable_shifts = st.session_state.get("_hitl_unavailable_shifts", [])
-
-    # ── Sidebar: Available Staff ──────────────────────────────────────────
-    st.sidebar.divider()
-    st.sidebar.subheader("👷 Available Staff")
-    _farm_ops = staff[staff["role"] == "Farm Operations"]
-    _logistics = staff[staff["role"] == "Logistics"]
-    role_counts: dict[str, int] = {}
-    if len(_farm_ops) > 0:
-        available = st.sidebar.slider("Farm Operations", 0, len(_farm_ops), len(_farm_ops), key="staff_farm_ops")
-        role_counts["Farm Operations"] = available
-    if len(_logistics) > 0:
-        available = st.sidebar.slider("Logistics", 0, len(_logistics), len(_logistics), key="staff_logistics")
-        role_counts["Logistics"] = available
-    st.sidebar.caption("Supervisor: 1 (fixed)")
-    role_counts["Supervisor"] = 1
-    headcount = sum(role_counts.values())
-
-    # ── Sidebar: Design decisions (Dimension A evidence for VC pitch) ──
-    render_design_decisions_panel()
-
     # ── Layer 2: Optimize ──
     # Merge uploaded photo diagnoses into the simulation (photo takes priority per rack).
     cv_overrides: dict = st.session_state.get("rack_diagnoses", {})
@@ -538,7 +552,7 @@ def main():
         electricity,
         staff,
         headcount,
-        mode,
+        st.session_state.get("opt_mode", "balanced"),
         excluded_racks,
         unavailable_shifts,
         cv_diagnosis_overrides=cv_overrides if cv_overrides else None,
@@ -549,28 +563,28 @@ def main():
         from greenloop.data.shared_data import save_farm_output
         save_farm_output(plan, forecast)
 
+    # ── Sidebar: Farm Environment 24h slider ────────────────────────────
+    _render_environment_sidebar(plan, electricity_df)
+
     # ── Today's Actions — farm-manager task list ────────────────────────────
     render_today_actions(plan)
 
     # ── Transfer Learning diagnosis (Layer 1b) — above the fold ──
-    _render_cv_diagnosis(plan)
-
-    # ── Top KPI strip — most VC-relevant numbers above the fold ──
-    _render_kpi_strip(plan)
+    _render_cv_diagnosis(plan, electricity_df)
 
     # ── Optional AI narrative (provider-agnostic; any OpenAI-compatible endpoint) ──
     _render_ai_explainer(forecast, plan)
 
-    # ── Layout: plan first, then forecast (horizontal) ──
-    if plan:
-        _render_plan(plan)
-    else:
-        st.warning("No feasible plan. Try increasing staff or relaxing constraints.")
+    # ── Forecast: Demand & Rack Assignments (Layer 1 → 2) ──
+    _render_forecast_horizontal(forecast, plan)
 
     st.divider()
 
-    # Forecast rendered horizontally — wide cards in a single row
-    _render_forecast_horizontal(forecast, plan)
+    # ── Layer 2: Optimal Plan ──
+    if plan:
+        _render_plan(plan, electricity_df)
+    else:
+        st.warning("No feasible plan. Try increasing staff or relaxing constraints.")
 
     st.divider()
 
@@ -584,7 +598,9 @@ def main():
         _render_rl_control()
 
     with bot_right:
-        _render_scenario_testing(forecast, crops, electricity, staff, headcount, plan, mode, excluded_racks, unavailable_shifts)
+        _render_scenario_testing(forecast, crops, electricity, staff, headcount, plan, st.session_state.get("opt_mode", "balanced"), excluded_racks, unavailable_shifts)
+
+    st.divider()
 
     st.divider()
 
@@ -602,35 +618,59 @@ def _render_media_ai_chat():
     """Media AI chatbot panel with HITL controls."""
     st.subheader("Media AI Chatbot (Layer 5)")
 
-    # Persistent RAG agent and session state
-    if "rag_agent" not in st.session_state:
-        st.session_state.rag_agent = RAGAgent()
-        st.session_state.rag_history: list[dict] = []
-        st.session_state.rag_session_id = datetime.now().strftime("%Y%m%d%H%M%S")
-        st.session_state.rag_tone = Tone.NEUTRAL
-        st.session_state.rag_last_answer = ""
+    # Persistent RAG agent and session state — init with error guard
+    try:
+        if "rag_agent" not in st.session_state:
+            st.session_state.rag_agent = RAGAgent()
+            st.session_state.rag_history: list[dict] = []
+            st.session_state.rag_session_id = datetime.now().strftime("%Y%m%d%H%M%S")
+            st.session_state.rag_tone = Tone.NEUTRAL
+            st.session_state.rag_last_answer = ""
 
-    agent = st.session_state.rag_agent
-    history = st.session_state.rag_history
+        agent = st.session_state.rag_agent
+        history = st.session_state.rag_history
+        agent_ready = True
+        demo_mode = agent._is_demo_mode()
+    except Exception as exc:
+        st.error(f"Media AI failed to load: {exc}")
+        agent_ready = False
+        demo_mode = False
+        history = []
+
+    # Status bar
+    if agent_ready:
+        mode_label = "Demo mode (no LLM API key)" if demo_mode else "Live RAG + LLM"
+        st.caption(f"🔗 Media AI · {mode_label} · Try: 'what crops do you grow', 'water savings', 'pesticides', 'location'")
 
     # Tone selector
     tone_keys = list(Tone)
     tone_labels = [TONE_LABELS[k] for k in tone_keys]
-    current_idx = tone_keys.index(st.session_state.rag_tone)
+    current_idx = 1
+    if agent_ready:
+        try:
+            current_idx = tone_keys.index(st.session_state.rag_tone)
+        except ValueError:
+            current_idx = 1  # default to Neutral
+
     selected_tone_label = st.radio(
         "Response tone",
         options=tone_labels,
         index=current_idx,
         horizontal=True,
         help="Sales: enthusiastic, ROI-focused. Technical: precise metrics. Neutral: balanced.",
+        key="rag_tone_radio",
+        disabled=not agent_ready,
     )
-    new_tone = Tone([k for k, v in TONE_LABELS.items() if v == selected_tone_label][0])
-    if new_tone != st.session_state.rag_tone:
-        st.session_state.rag_tone = new_tone
+    if agent_ready:
+        new_tone = Tone([k for k, v in TONE_LABELS.items() if v == selected_tone_label][0])
+        if new_tone != st.session_state.rag_tone:
+            st.session_state.rag_tone = new_tone
 
     # Chat history
     chat_container = st.container()
     with chat_container:
+        if not agent_ready:
+            st.warning("Media AI failed to initialize. Check your API keys in .env")
         for msg in history:
             if msg["role"] == "user":
                 st.chat_message("user").write(msg["content"])
@@ -677,23 +717,17 @@ def _render_media_ai_chat():
                 st.warning("Incorrect password.")
 
     # Chat input
-    if question := st.chat_input("Ask about GreenLoop Farm..."):
+    if agent_ready and (question := st.chat_input("Ask about GreenLoop Farm...")):
         # Add to history
         st.session_state.rag_history.append({"role": "user", "content": question})
         st.session_state["_last_question"] = question
         st.chat_message("user").write(question)
 
         # Get answer
+        answer_text = "Sorry, I encountered an error generating a response."
         try:
-            # Apply tone modifier
-            base_system = (
-                "You are a helpful assistant for GreenLoop Farm — a hydroponic vertical farm in Singapore. "
-                "Answer questions using ONLY the provided context. "
-                "If the answer is not in the context, say you don't know. "
-                "Be concise, factual, and mention specific numbers when available."
-            )
             tone = st.session_state.rag_tone
-            system_prompt = get_system_prompt(tone, base_system)
+            system_prompt = get_system_prompt(tone, "You are a helpful assistant for GreenLoop Farm.")
 
             # Call RAG agent (uses demo-mode answers if no LLM API key)
             answer_obj = agent.ask(question)
@@ -771,6 +805,7 @@ def _log_feedback_for_message(msg_id: int, rating: str) -> None:
 # ---------------------------------------------------------------------------
 # Layer 2 solver
 # ---------------------------------------------------------------------------
+@st.cache_data(ttl=300, show_spinner=False)
 def _solve_plan(
     forecast,
     crops,
@@ -846,6 +881,16 @@ def _render_forecast_horizontal(forecast, plan):
     }
 
     rack_layout = plan.get("rack_layout", {}) if plan else {}
+
+    # ── Colour legend ──────────────────────────────────────────────────
+    st.caption(
+        "**Colour guide:** "
+        "Border colour = crop variety · "
+        "🔴 High = top 25% demand · "
+        "🟡 Medium = mid 50% · "
+        "🟢 Low = bottom 25% · "
+        "Range = 90% CI (lower – upper)"
+    )
 
     # ── Build rack rows ─────────────────────────────────────────────────
     rack_rows = []
@@ -946,6 +991,70 @@ def _render_forecast_horizontal(forecast, plan):
     )
     st.plotly_chart(fig, use_container_width=True)
 
+    # ── Rack Rebalancing Proposal ────────────────────────────────────────
+    if not rack_rows or not plan:
+        return
+
+    cv_details = (
+        plan.get("cv_diagnosis_summary", {})
+        .get("details", {})
+    )
+    rack_layout = plan.get("rack_layout", {})
+
+    priority_rank = {"High": 3, "Medium": 2, "Low": 1}
+
+    # Compute mismatch score: high-demand crop on low-priority tier
+    swap_proposals = []
+    for r in rack_rows:
+        tier_num = int(r["Rack"].replace("Rack ", ""))
+        demand_rank = priority_rank.get(r["Priority"], 2)
+        # Tiers 0-4 = upper (better), 5-9 = lower
+        rack_rank = 2 if tier_num <= 4 else 1  # upper=2, lower=1
+        mismatch = demand_rank - rack_rank  # positive = high demand on lower rack
+        crop_id = r["_crop_id"]
+
+        # Skip if harvest_ready or has nutrition issue — don't move those
+        diag = cv_details.get(f"tier_{tier_num}", {})
+        growth_stage = diag.get("growth_stage", "")
+        nutrition = diag.get("nutrition_status", "normal")
+        is_locked = growth_stage == "harvest_ready" or nutrition in ("nitrogen_low", "water_stress")
+
+        swap_proposals.append({
+            **r,
+            "tier_num": tier_num,
+            "demand_rank": demand_rank,
+            "rack_rank": rack_rank,
+            "mismatch": mismatch,
+            "is_locked": is_locked,
+            "_crop_id": crop_id,
+        })
+
+    # Sort by mismatch descending — worst mismatches first
+    swap_proposals.sort(key=lambda x: x["mismatch"], reverse=True)
+
+    # Build suggested swaps: high-demand on lower rack ↔ low-demand on upper rack
+    upper_low_demand = [p for p in swap_proposals if p["rack_rank"] == 2 and p["demand_rank"] == 1 and not p["is_locked"]]
+    lower_high_demand = [p for p in swap_proposals if p["rack_rank"] == 1 and p["demand_rank"] >= 2 and not p["is_locked"]]
+
+    proposals = []
+    for low in upper_low_demand[:3]:
+        for high in lower_high_demand[:3]:
+            proposals.append({
+                "from": f"Rack {low['tier_num']} → {low['Crop']} (Low demand, upper tier — move down)",
+                "to": f"Rack {high['tier_num']} → {high['Crop']} (High demand, lower tier — move up)",
+            })
+            break
+
+    if proposals:
+        st.markdown("**Rack Rebalancing Proposal** 💱")
+        st.caption("High-demand crops on lower racks should swap with low-demand crops on upper racks. Locked racks (harvest-ready / nutrition issues) are excluded.")
+        for p in proposals[:4]:
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                st.info(f"⬇️ {p['from']}")
+            with col2:
+                st.success(f"⬆️ {p['to']}")
+
 
 # ---------------------------------------------------------------------------
 # Transfer Learning diagnosis (Layer 1b)
@@ -964,13 +1073,67 @@ _CROP_NAMES = {
 }
 
 
-def _render_cv_diagnosis(plan):
+def _render_cv_diagnosis(plan, electricity_df):
     """Render the Transfer Learning diagnosis panel as a 10-rack grid.
 
     Each rack is a persistent card showing crop, image thumbnail, and diagnosis.
     State is held in session_state so uploads survive reruns.
     """
-    st.subheader("Crop Health & Growth Diagnosis (Transfer Learning)")
+    st.subheader("🌡️ Farm Environment & Crop Health")
+
+    # ── Temperature & Humidity Control (tariff-aware) ─────────────────────────
+    PEAK_HOURS = set(range(8, 22))  # 8am–10pm peak tariff
+
+    # Determine which date to use for tariff
+    if plan and plan.get("plan_date"):
+        selected_env_date = plan["plan_date"]
+    else:
+        selected_env_date = date.today().isoformat()
+
+    env_elec = electricity_df[electricity_df["date"] == selected_env_date] if electricity_df is not None else None
+
+    # MILP optimal temp from plan
+    opt_temp = plan.get("room_temp_target_c") if plan else None
+
+    # Compute tariff-aware 24h temp/humidity schedule
+    temp_schedule: list[float] = []
+    humidity_schedule: list[float] = []
+    if env_elec is not None and len(env_elec) > 0:
+        for hour in range(24):
+            row = env_elec[env_elec["hour"] == hour]
+            tariff = float(row["tariff_rate_sgd_per_kwh"].iloc[0]) if len(row) > 0 else 0.20
+            avg_tariff = env_elec["tariff_rate_sgd_per_kwh"].mean()
+            if tariff > avg_tariff * 1.2:
+                # High tariff → raise temp to reduce compressor load, raise humidity
+                temp_schedule.append(opt_temp + 2 if opt_temp else 24)
+                humidity_schedule.append(75)
+            elif tariff < avg_tariff * 0.8:
+                # Low tariff → optimal growing conditions
+                temp_schedule.append(opt_temp - 1 if opt_temp else 21)
+                humidity_schedule.append(65)
+            else:
+                temp_schedule.append(opt_temp if opt_temp else 22)
+                humidity_schedule.append(70)
+    else:
+        # Fallback: use MILP temp only
+        for _ in range(24):
+            temp_schedule.append(opt_temp if opt_temp else 22)
+            humidity_schedule.append(70)
+
+    current_hour = datetime.now().hour
+    current_temp = temp_schedule[current_hour] if temp_schedule else (opt_temp or 22)
+    current_humidity = humidity_schedule[current_hour] if humidity_schedule else 70
+
+    # ── Current state (always visible) ─────────────────────────────────────
+    now_col1, now_col2, now_col3, now_col4 = st.columns(4)
+    hour_elec_now = env_elec[env_elec["hour"] == current_hour] if env_elec is not None and len(env_elec) > 0 else None
+    tariff_now = float(hour_elec_now["tariff_rate_sgd_per_kwh"].iloc[0]) if hour_elec_now is not None and len(hour_elec_now) > 0 else None
+    avg_tariff_now = env_elec["tariff_rate_sgd_per_kwh"].mean() if env_elec is not None and len(env_elec) > 0 else 0.20
+    tariff_status = "🔴 Peak" if current_hour in PEAK_HOURS else "🟢 Off-peak"
+    now_col1.metric("🌡️ Temperature", f"{current_temp:.0f}°C", "Current now")
+    now_col2.metric("💧 Humidity", f"{current_humidity:.0f}%", "Current now")
+    now_col3.metric("⚡ Tariff", f"SGD {tariff_now:.4f}/kWh" if tariff_now else "N/A", tariff_status)
+    now_col4.metric("🕐 Hour", f"{current_hour:02d}:00", "Now")
 
     # ── Phase context ────────────────────────────────────────────────────────
     st.info(
@@ -1055,6 +1218,66 @@ def _render_cv_diagnosis(plan):
     )
 
 
+def _render_environment_sidebar(plan, electricity_df) -> None:
+    """Render temperature & humidity 24h slider in the sidebar."""
+    PEAK_HOURS = set(range(8, 22))
+
+    if plan and plan.get("plan_date"):
+        selected_env_date = plan["plan_date"]
+    else:
+        selected_env_date = date.today().isoformat()
+
+    env_elec = electricity_df[electricity_df["date"] == selected_env_date] if electricity_df is not None else None
+    opt_temp = plan.get("room_temp_target_c") if plan else None
+
+    # Compute tariff-aware schedule
+    temp_schedule: list[float] = []
+    humidity_schedule: list[float] = []
+    if env_elec is not None and len(env_elec) > 0:
+        avg_tariff = env_elec["tariff_rate_sgd_per_kwh"].mean()
+        for hour in range(24):
+            row = env_elec[env_elec["hour"] == hour]
+            tariff = float(row["tariff_rate_sgd_per_kwh"].iloc[0]) if len(row) > 0 else avg_tariff
+            if tariff > avg_tariff * 1.2:
+                temp_schedule.append(opt_temp + 2 if opt_temp else 24)
+                humidity_schedule.append(75)
+            elif tariff < avg_tariff * 0.8:
+                temp_schedule.append(opt_temp - 1 if opt_temp else 21)
+                humidity_schedule.append(65)
+            else:
+                temp_schedule.append(opt_temp if opt_temp else 22)
+                humidity_schedule.append(70)
+    else:
+        for _ in range(24):
+            temp_schedule.append(opt_temp if opt_temp else 22)
+            humidity_schedule.append(70)
+
+    current_hour = datetime.now().hour
+
+    st.sidebar.divider()
+    st.sidebar.subheader("🌡️ Farm Environment")
+
+    # 24h slider in sidebar
+    selected_hour = st.sidebar.slider(
+        "Explore 24h transition",
+        0, 23, current_hour,
+    )
+    display_temp = temp_schedule[selected_hour]
+    display_humidity = humidity_schedule[selected_hour]
+    hour_elec = env_elec[env_elec["hour"] == selected_hour] if env_elec is not None and len(env_elec) > 0 else None
+    hour_tariff = float(hour_elec["tariff_rate_sgd_per_kwh"].iloc[0]) if hour_elec is not None and len(hour_elec) > 0 else None
+
+    c1, c2 = st.sidebar.columns(2)
+    c1.metric("🌡️ Temp", f"{display_temp:.0f}°C")
+    c2.metric("💧 Humid", f"{display_humidity:.0f}%")
+    c3, c4 = st.sidebar.columns(2)
+    c3.metric("⚡ Tariff", f"{hour_tariff:.3f}" if hour_tariff else "N/A", "Peak" if selected_hour in PEAK_HOURS else "Off-peak")
+    c4.metric("🕐 Time", f"{selected_hour:02d}:00")
+
+    avg_t = env_elec["tariff_rate_sgd_per_kwh"].mean() if env_elec is not None and len(env_elec) > 0 else 0.20
+    st.sidebar.caption(f"Avg tariff SGD {avg_t:.4f}/kWh · Band: 🔴>{avg_t*1.2:.3f} 🟢<{avg_t*0.8:.3f}")
+
+
 def _render_rack_card(rack_num: int, rack_layout: dict[str, str]) -> None:
     """Render a single rack card in the grid."""
     rack_id = f"tier_{rack_num}"
@@ -1083,6 +1306,8 @@ def _render_rack_card(rack_num: int, rack_layout: dict[str, str]) -> None:
                 # Auto-diagnose on upload
                 diag_result = mock_diagnose_from_image(img_bytes, rack_id)
                 st.session_state.rack_diagnoses[rack_num] = diag_result
+                # Clear plan cache so today's actions reflect new diagnosis immediately
+                st.cache_data.clear()
                 st.rerun()
 
         # Row 3: Diagnosis badge
@@ -1119,7 +1344,12 @@ _DEMO_RACK_ASSIGNMENTS = [
 
 
 def _load_demo_images(rack_layout: dict[str, str]) -> None:
-    """Populate all 10 racks with preset demo images and run diagnoses."""
+    """Populate all 10 racks with preset demo images and use RACK_SCENARIOS for diagnoses.
+
+    Demo images are stored for display purposes only. Diagnoses come from
+    RACK_SCENARIOS so each rack shows its intended scenario (harvest_ready,
+    mid, early, nitrogen_low, water_stress, etc.).
+    """
     # demo_images lives at repo-root/data/demo_images (not src/data/)
     demo_dir = Path(__file__).resolve().parents[3] / "data" / "demo_images"
 
@@ -1133,7 +1363,8 @@ def _load_demo_images(rack_layout: dict[str, str]) -> None:
         img_bytes = img_path.read_bytes()
         rack_id = f"tier_{rack_num}"
         images[rack_num] = img_bytes
-        diagnoses[rack_num] = mock_diagnose_from_image(img_bytes, rack_id)
+        # Use RACK_SCENARIOS (correct demo scenarios), not image-hash-based random
+        diagnoses[rack_num] = mock_diagnose(rack_id)
 
     st.session_state.rack_images = images
     st.session_state.rack_diagnoses = diagnoses
@@ -1184,13 +1415,24 @@ def _render_ai_explainer(forecast, plan):
             st.caption(f"Refreshes in 5 min")
 
 
+
 def _render_electricity_sidebar(electricity_df, selected_date, electricity):
-    """Render the electricity date selector + 24h tariff chart in the sidebar."""
+    """Render the electricity date selector + 24h tariff chart in the sidebar.
+
+    Uses live EMA data (via session_state cache) when available, falls back to CSV.
+    """
     st.sidebar.divider()
     st.sidebar.subheader("⚡ Electricity Tariff")
 
-    # ── 24h tariff chart ──────────────────────────────────────────────────
-    elec = electricity.sort_values("hour").reset_index(drop=True)
+    # ── Use live EMA data if available, otherwise CSV ───────────────────
+    live_df = _get_live_electricity_df()
+    if live_df is not None and selected_date in live_df["date"].values:
+        elec = live_df[live_df["date"] == selected_date].sort_values("hour").reset_index(drop=True)
+        _source = "EMA / data.gov.sg"
+    else:
+        elec = electricity.sort_values("hour").reset_index(drop=True)
+        _source = "CSV fallback"
+
     peak_hours = set(range(8, 22))  # 8am–10pm
 
     fig = go.Figure()
@@ -1225,7 +1467,7 @@ def _render_electricity_sidebar(electricity_df, selected_date, electricity):
     off_peak = elec[~elec["hour"].isin(peak_hours)]["tariff_rate_sgd_per_kwh"].mean()
     peak_rate = elec[elec["hour"].isin(peak_hours)]["tariff_rate_sgd_per_kwh"].mean()
     st.sidebar.caption(
-        f"Avg **${avg_rate:.3f}** · Off-peak **${off_peak:.2f}** · Peak **${peak_rate:.2f}**"
+        f"Avg **${avg_rate:.3f}** · Off-peak **${off_peak:.2f}** · Peak **${peak_rate:.2f}** · {_source}"
     )
 
 
@@ -1298,50 +1540,51 @@ def _render_kpi_strip(plan):
 # ---------------------------------------------------------------------------
 # Plan display
 # ---------------------------------------------------------------------------
-def _render_plan(plan):
-    st.subheader("Today's Optimal Plan (Layer 2)")
+def _render_plan(plan, electricity_df=None, mode_label: str = "Balanced"):
 
-    # Metrics row
-    m1, m2, m3, m4 = st.columns(4)
+    # ── Optimization Mode (inside plan section) ─────────────────────────────
+    if "opt_mode" not in st.session_state:
+        st.session_state.opt_mode = "balanced"
+
+    mode = st.session_state.opt_mode
+    opt_icon = {"profit": "💰", "sustainability": "🌿", "balanced": "⚖️"}.get(mode, "⚖️")
+
+    col_mode, col_btn = st.columns([4, 1])
+    with col_mode:
+        mode = st.segmented_control(
+            "🎯 Optimisation mode",
+            options=list(MODE_LABELS.keys()),
+            default=st.session_state.opt_mode,
+            format_func=lambda k: {
+                "profit": "💰 Revenue",
+                "sustainability": "🌿 Sustainable",
+                "balanced": "⚖️ Balanced",
+            }.get(k, k),
+            key="opt_mode_ctrl",
+        )
+    with col_btn:
+        if st.button("🔄 Re-solve", use_container_width=True, help="Clear cache and re-run MILP"):
+            st.cache_data.clear()
+            st.rerun()
+    st.session_state.opt_mode = mode
+
+    preview = {
+        "profit":     {"crop": "High-value crops priority",  "led": "LED on anytime (cost not penalised)", "energy": "⚠️ Higher electricity bill", "trade": "Max revenue · more waste OK"},
+        "sustainability": {"crop": "All crops equal weight",  "led": "LED shifted to off-peak (21:00–07:00)", "energy": "✓ Minimised electricity cost", "trade": "Lower revenue · longer grow cycles OK"},
+        "balanced":  {"crop": "High-demand + high-margin mix", "led": "LED follows tariff schedule", "energy": "✓ Balanced electricity cost", "trade": "✓ Middle ground on all dimensions"},
+    }
+    p = preview[mode]
+    st.caption(f"Crop: {p['crop']}  ·  LED: {p['led']}  ·  Energy: {p['energy']}  ·  {p['trade']}")
+
+    mode_label = MODE_LABELS.get(mode, MODE_LABELS["balanced"])
+    mode_badge = {"Profit": "💰", "Sustainability": "🌿", "Balanced": "⚖️"}.get(mode_label, "⚖️")
+    st.subheader(f"Today's Optimal Plan (Layer 2) — {mode_badge} {mode_label} mode")
+
     cost = plan.get("cost_breakdown", {})
-    revenue = cost.get("revenue", 0)
-    total = plan.get("objective_value_sgd", 0)
-
-    # Compute profit CI band
-    band = None
-    if all(k in plan for k in ("rack_layout", "crop_prices", "crop_spoilage", "uncertainty_buffers")):
-        try:
-            from greenloop.data.loader import load_crops
-            crops_df = load_crops().set_index("crop_id")
-            forecast = {}
-            for cid, buf in plan.get("uncertainty_buffers", {}).items():
-                upper = buf.get("upper_ci", 0)
-                lower = buf.get("lower_ci", upper * 0.65)
-                forecast[cid] = {"predicted_kg": upper, "lower_ci": lower, "upper_ci": upper}
-            band = compute_profit_band(
-                forecast,
-                cost,
-                plan.get("crop_prices", {}),
-                plan.get("crop_spoilage", {}),
-                plan.get("rack_layout", {}),
-            )
-        except Exception:
-            band = None
-
-    half_width = round((band.profit_high - band.profit_low) / 2, 2) if band else None
-    delta_str = f"\u00b1 ${half_width:,.0f}" if half_width else None
-
-    m1.metric("Forecasted Revenue", f"${revenue:,.0f}")
-    m2.metric(
-        "Forecasted Profit",
-        f"${(band.profit_expected if band else total):,.0f}",
-        delta=delta_str,
-    )
-    m3.metric("Temp Target", f"{plan.get('room_temp_target_c', 22)}°C")
-    m4.metric("Solve Time", f"{plan.get('solve_time_ms', 0)}ms")
-
-    # LED Schedule chart
     led = plan.get("led_schedule", {})
+    room_temp = plan.get("room_temp_target_c", 22)
+
+    # ── LED Schedule (24h) ─────────────────────────────────────────────────
     if led:
         fig_led = go.Figure()
         for tier_name, schedule in list(led.items())[:5]:  # Show top 5 tiers
@@ -1357,13 +1600,91 @@ def _render_plan(plan):
             title="LED Schedule (24h)",
             xaxis_title="Hour",
             yaxis_title="On/Off",
-            height=220,
+            height=200,
             margin=dict(l=20, r=20, t=40, b=20),
             barmode="group",
             showlegend=True,
             legend=dict(font=dict(size=9)),
         )
-        st.plotly_chart(fig_led, width="stretch")
+        st.plotly_chart(fig_led, use_container_width=True)
+
+    # ── Environment Schedule (24h, tariff-aware) ──────────────────────────
+    # Build tariff-aware 24h temp & humidity schedule
+    elec_col = electricity_df
+    temp_schedule: list[float] = []
+    humidity_schedule: list[float] = []
+    if elec_col is not None and len(elec_col) > 0:
+        avg_tariff = elec_col["tariff_rate_sgd_per_kwh"].mean()
+        for hour in range(24):
+            row = elec_col[elec_col["hour"] == hour]
+            tariff = float(row["tariff_rate_sgd_per_kwh"].iloc[0]) if len(row) > 0 else 0.20
+            if tariff > avg_tariff * 1.2:
+                temp_schedule.append(room_temp + 2)
+                humidity_schedule.append(75)
+            elif tariff < avg_tariff * 0.8:
+                temp_schedule.append(room_temp - 1)
+                humidity_schedule.append(65)
+            else:
+                temp_schedule.append(room_temp)
+                humidity_schedule.append(70)
+    else:
+        for _ in range(24):
+            temp_schedule.append(room_temp)
+            humidity_schedule.append(70)
+
+    # Color bars by tariff band
+    PEAK_HOURS = {17, 18, 19, 20, 21}
+    peak_colors = ["rgba(255,80,80,0.5)" if h in PEAK_HOURS else "rgba(80,200,120,0.4)" for h in range(24)]
+
+    fig_env = go.Figure()
+    # Temperature line
+    fig_env.add_trace(go.Scatter(
+        x=list(range(24)),
+        y=temp_schedule,
+        mode="lines+markers",
+        name="Temperature (°C)",
+        line=dict(color="#e74c3c", width=2),
+        marker=dict(size=6),
+        yaxis="y1",
+    ))
+    # Humidity line
+    fig_env.add_trace(go.Scatter(
+        x=list(range(24)),
+        y=humidity_schedule,
+        mode="lines+markers",
+        name="Humidity (%)",
+        line=dict(color="#3498db", width=2, dash="dot"),
+        marker=dict(size=6),
+        yaxis="y2",
+    ))
+    # Tariff band background shading
+    for h in range(24):
+        color = "rgba(255,100,100,0.15)" if h in PEAK_HOURS else "rgba(80,200,120,0.08)"
+        label = "Peak" if h in PEAK_HOURS else "Off-peak"
+        fig_env.add_vrect(
+            x0=h - 0.5, x1=h + 0.5,
+            fillcolor=color, layer="below", line_width=0,
+            annotation_text=label if h == 17 else None,
+            annotation_position="top left",
+        )
+    fig_env.update_layout(
+        title="Environment Schedule (24h) — tariff-aware",
+        xaxis=dict(title="Hour", tickmode="linear", tick0=0, dtick=2),
+        yaxis=dict(title="Temperature (°C)", side="left", range=[14, 32]),
+        yaxis2=dict(title="Humidity (%)", side="right", overlaying="y", range=[40, 90]),
+        height=200,
+        margin=dict(l=20, r=60, t=40, b=20),
+        showlegend=True,
+        legend=dict(orientation="h", y=-0.2),
+    )
+    st.plotly_chart(fig_env, use_container_width=True)
+
+    st.caption(
+        f"🔴 Peak tariff (17–21h): temp +2°C to reduce compressor load · "
+        f"🟢 Off-peak (0–7h): optimal growing temp · "
+        f"Solve time: {plan.get('solve_time_ms', 0):.1f}ms · "
+        f"Energy: ${cost.get('electricity', 0):,.0f} · Labour: ${cost.get('labour', 0):,.0f}"
+    )
 
     # Staff shifts
     shifts = plan.get("staff_shifts", [])
@@ -1545,6 +1866,32 @@ def _render_rl_control():
         st.session_state.rl_current_obs = obs
         st.rerun()
 
+    # ── v6.2 Autonomy Mode Status Strip ────────────────────────────────
+    _typhoon_on = bool(st.session_state.get("typhoon_mode") or st.session_state.get("typhoon_active"))
+    _override_on = bool(st.session_state.get("override_active"))
+    _degraded = _typhoon_on or _override_on
+
+    _ac1, _ac2, _ac3 = st.columns([1, 2, 2])
+    with _ac1:
+        st.markdown("**🛡️ Autopilot Mode**")
+    with _ac2:
+        if _degraded:
+            st.warning(f"**Advisory** ← Auto-degraded")
+        elif gate.get_mode() == AutonomyMode.AUTONOMOUS:
+            st.success(f"🤖 **{gate.mode_label}** — AI runs operations")
+        elif gate.get_mode() == AutonomyMode.ADVISORY:
+            st.info(f"🤝 **{gate.mode_label}** — AI proposes, human can override")
+        else:
+            st.info(f"👤 **{gate.mode_label}** — Human approves every action")
+    with _ac3:
+        if _degraded:
+            _why = []
+            if _typhoon_on: _why.append("Typhoon active")
+            if _override_on: _why.append("Manager override")
+            st.caption(f"⚠️ Reduced to Advisory: {' + '.join(_why)}")
+        else:
+            st.caption("ℹ️ Change mode with the radio above.")
+
     # Show pending proposed action in Manual mode
     if gate.get_mode() == AutonomyMode.MANUAL and gate.has_pending:
         pending_info = gate.pending_info
@@ -1679,6 +2026,38 @@ def _render_scenario_testing(
 ):
     st.subheader("Scenario Testing")
 
+    # v6.2: Activate / Clear Typhoon Scenario
+    typhoon_col1, typhoon_col2 = st.columns([1, 3])
+    with typhoon_col1:
+        if not st.session_state.get("typhoon_active"):
+            if st.button(
+                "⚡ Activate Typhoon Scenario",
+                type="primary",
+                use_container_width=True,
+                key="scenario_typhoon_trigger",
+            ):
+                st.session_state["typhoon_mode"] = True
+                st.session_state["typhoon_active"] = True
+                st.session_state["typhoon_needs_recompute"] = True
+                st.rerun()
+        else:
+            if st.button(
+                "🔄 Clear Typhoon Scenario",
+                use_container_width=True,
+                key="scenario_typhoon_clear",
+            ):
+                for k in ["typhoon_active", "typhoon_mode", "typhoon_needs_recompute",
+                          "typhoon_plan_cache", "typhoon_elapsed_ms", "typhoon_error",
+                          "typhoon_error_constraint"]:
+                    if k in st.session_state:
+                        del st.session_state[k]
+                st.rerun()
+    with typhoon_col2:
+        if st.session_state.get("typhoon_active"):
+            st.error("⚡ Typhoon Scenario Active — Re-optimization running below.")
+        else:
+            st.info("💡 Activate a typhoon scenario to test AI response.")
+
     # v6.2: Red alert banner when typhoon is active
     if st.session_state.get("typhoon_active"):
         st.error(
@@ -1706,15 +2085,6 @@ def _render_scenario_testing(
             """,
             unsafe_allow_html=True,
         )
-
-        if st.button("Clear Typhoon Scenario"):
-            for k in ["typhoon_active", "typhoon_mode", "typhoon_needs_recompute",
-                      "typhoon_plan_cache", "typhoon_elapsed_ms", "typhoon_error",
-                      "typhoon_error_constraint"]:
-                if k in st.session_state:
-                    del st.session_state[k]
-            st.rerun()
-        st.divider()
 
     # v6.2: Re-optimization triggered by button OR top-level promo;
     # result cached in session_state to avoid re-running on every Streamlit rerun.

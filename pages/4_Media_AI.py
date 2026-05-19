@@ -81,18 +81,7 @@ def render_chat_message(role: str, content: str, metadata: dict | None = None):
         with st.chat_message("assistant"):
             st.markdown(content)
             if metadata:
-                # Sources
-                if metadata.get("sources"):
-                    sources = metadata["sources"]
-                    if sources and sources != ["demo_cache"]:
-                        st.caption(
-                            "\u2699 **Sources:** " + ", ".join(sources)
-                        )
-                    elif sources == ["demo_cache"]:
-                        st.caption(
-                            "\U0001f3b2 **Demo mode** — configure LLM API key for full RAG"
-                        )
-                # Latency
+                # Latency + freshness
                 latency_ms = metadata.get("latency_ms", 0)
                 color = latency_color(latency_ms)
                 freshness = metadata.get("freshness")
@@ -217,11 +206,10 @@ with st.sidebar:
         "\U0001f96a Food miles & carbon footprint",
     ]
     for topic in topics:
+        label = topic.replace("\U0001f331 ", "").replace("\U0001f4a7 ", "").replace("\U0001f9f1 ", "").replace("\U0001f4cd ", "").replace("\U0001f4b0 ", "").replace("\U0001f96a ", "")
         if st.button(topic, use_container_width=True, key=f"topic_{topic[:10]}"):
-            st.session_state.chat_history.append(
-                {"role": "user", "content": topic.replace("\U0001f331 ", "").replace("\U0001f4a7 ", "").replace("\U0001f9f1 ", "").replace("\U0001f4cd ", "").replace("\U0001f4b0 ", "").replace("\U0001f96a ", "")}
-            )
-            st.rerun()
+            st.session_state.chat_history.append({"role": "user", "content": label})
+            # Natural re-render — no st.rerun() needed
 
     st.divider()
     st.markdown("### About")
@@ -290,12 +278,10 @@ if st.session_state.chat_history:
             # Show assistant response
             render_chat_message("assistant", result.text, metadata)
 
-            # Show demo mode banner if applicable
+            # Show demo mode hint if applicable
             if result.from_cache:
-                st.info(
-                    "\U0001f3b2 **Demo mode** — responses are cached samples. "
-                    "Configure `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` in `.env` "
-                    "to enable full RAG with live retrieval."
+                st.caption(
+                    "\U0001f3b2 Demo mode — configure `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in `.env` for full RAG."
                 )
 
 # ── Failure indicators ────────────────────────────────────────────────────

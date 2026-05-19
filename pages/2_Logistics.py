@@ -154,6 +154,31 @@ if is_typhoon:
 st.title("🚚 Last-Mile Delivery Routing")
 st.caption(f"Depot: Jurong Innovation District ({DEPOT_LAT}, {DEPOT_LNG})")
 
+# Load customers early (needed for delivery schedule + solve)
+customers_df = load_customers()
+
+# ── Today's Delivery Schedule (shared with Farm OS task list) ─────────────────
+vrp_cached = st.session_state.get("vrp_result")
+if vrp_cached:
+    st.subheader("📦 Today's Delivery Schedule")
+    n_routes = len([r for r in vrp_cached.get("routes", []) if r])
+    route_cols = st.columns(max(n_routes, 1))
+    total_stops = 0
+    for ri, route in enumerate(vrp_cached.get("routes", [])):
+        if not route:
+            continue
+        total_stops += len(route)
+        with route_cols[ri % max(n_routes, 1)]:
+            st.markdown(f"**Route {ri+1}** — {len(route)} stops")
+            for cid in route:
+                row = customers_df[customers_df["customer_id"] == cid]
+                name = row["name"].values[0] if not row.empty else cid
+                st.markdown(f"→ {name}")
+    km = vrp_cached.get("total_km", 0)
+    cost = vrp_cached.get("total_cost_sgd", 0)
+    st.caption(f"🚚 {total_stops} deliveries · {km:.1f}km · ${cost:.0f} · Solved in {vrp_cached.get('solve_time_ms', 0):.0f}ms")
+    st.divider()
+
 # ── Today's Harvest (from Farm AI) ──────────────────────────────────────────
 farm = load_farm_output()
 if farm:
@@ -236,8 +261,6 @@ else:
     st.info("🌾 Run **Farm AI** first to see today's harvest data here.")
 
 # ── Solve ────────────────────────────────────────────────────────────────────
-customers_df = load_customers()
-
 solve_clicked = st.button("🚚 Solve VRP", type="primary")
 
 if solve_clicked or "vrp_result" in st.session_state:

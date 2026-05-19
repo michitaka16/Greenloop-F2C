@@ -1,16 +1,16 @@
 {
-  "plan_date": "2026-05-05",
+  "plan_date": "2026-05-17",
   "rack_layout": {
     "tier_0": "kai_lan",
     "tier_1": "arugula",
-    "tier_2": "mint",
-    "tier_3": "coriander",
-    "tier_4": "mint",
+    "tier_2": "coriander",
+    "tier_3": "kai_lan",
+    "tier_4": "coriander",
     "tier_5": "arugula",
-    "tier_6": "coriander",
-    "tier_7": "coriander",
+    "tier_6": "arugula",
+    "tier_7": "kai_lan",
     "tier_8": "mint",
-    "tier_9": "arugula"
+    "tier_9": "mint"
   },
   "forecast": {
     "arugula": {
@@ -89,9 +89,9 @@
       0,
       0,
       0,
+      0,
+      0,
       1,
-      0,
-      0,
       0,
       0,
       0,
@@ -164,11 +164,11 @@
       1,
       0,
       0,
+      1,
       0,
       0,
       0,
-      0,
-      0,
+      1,
       0,
       0,
       0,
@@ -232,7 +232,7 @@
       1
     ],
     "tier_6": [
-      1,
+      0,
       1,
       1,
       1,
@@ -271,8 +271,8 @@
       0,
       0,
       0,
-      0,
-      0,
+      1,
+      1,
       0,
       0,
       0,
@@ -310,7 +310,7 @@
       1
     ],
     "tier_9": [
-      0,
+      1,
       1,
       1,
       1,
@@ -532,12 +532,12 @@
     }
   },
   "cost_breakdown": {
-    "revenue": 0.0,
-    "electricity": 9.15,
+    "revenue": 493.74,
+    "electricity": 9.99,
     "labour": -107.52,
-    "waste_penalty": -0.0,
+    "waste_penalty": -30.69,
     "nutrient_adjustment": 0.3
   },
-  "objective_value_sgd": -125.0,
-  "solve_time_ms": 82.0
+  "objective_value_sgd": 337.21,
+  "solve_time_ms": 541.6
 }

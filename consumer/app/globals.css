@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand — Kale */
+  --kale: #2D5016;
+  --leaf: #7BA05B;
+  --lime: #C7E66B;
+  --coral: #E07856;
+
+  /* Neutrals */
+  --bg: #FFFFFF;
+  --paper: #FAF7F0;
+  --cream: #F8F4EC;
+  --ink: #1A1A1A;
+  --muted: #6B7280;
+  --hairline: #E5E1D8;
+
+  --background: var(--bg);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-kale: var(--kale);
+  --color-leaf: var(--leaf);
+  --color-lime: var(--lime);
+  --color-coral: var(--coral);
+  --color-paper: var(--paper);
+  --color-cream: var(--cream);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-hairline: var(--hairline);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--kale);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+html { scroll-behavior: smooth; }

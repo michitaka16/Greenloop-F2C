@@ -122,15 +122,18 @@ for msg in st.session_state.chat_history:
                     st.markdown(recipe_card_html(recipe), unsafe_allow_html=True)
     st.write("")
 
-# Suggested questions (only if conversation is short)
-if len(st.session_state.chat_history) <= 2:
+# Suggested questions (only if conversation has 0–1 user messages)
+user_msg_count = sum(1 for m in st.session_state.chat_history if m["role"] == "user")
+if user_msg_count <= 1:
     st.markdown(
         f"<p style='font-size:0.65rem;font-weight:700;letter-spacing:0.2em;"
         f"text-transform:uppercase;color:{MUTED};margin-top:1rem;'>✨ Try asking</p>",
         unsafe_allow_html=True,
     )
     sq_cols = st.columns(min(3, len(SUGGESTED_QUESTIONS)))
-    for i, q in enumerate(SUGGESTED_QUESTIONS[:3]):
+    for i, q in enumerate(SUGGESTED_QUESTIONS):
+        if i >= 3:
+            break
         with sq_cols[i]:
             if st.button(q, key=f"sq_{i}", use_container_width=True, type="secondary"):
                 st.session_state.chat_history.append({"role": "user", "content": q, "citations": []})
@@ -139,6 +142,7 @@ if len(st.session_state.chat_history) <= 2:
                     "role": "kale",
                     "content": response["text"],
                     "citations": response["citations"],
+                    "recipes": response.get("recipes"),
                 })
                 st.rerun()
 
@@ -152,6 +156,7 @@ if user_input:
         "role": "kale",
         "content": response["text"],
         "citations": response["citations"],
+        "recipes": response.get("recipes"),
     })
     st.rerun()
 
