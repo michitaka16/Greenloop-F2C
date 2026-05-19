@@ -1,6 +1,6 @@
 """lib — Adopt a Kale shared library."""
 
-from consumer_app.lib.styles import (
+from lib.styles import (
     inject_css,
     inject_gamification_css,
     brand_header,
@@ -32,7 +32,7 @@ from consumer_app.lib.styles import (
     donation_receipt_html,
 )
 
-from consumer_app.lib.mock_data import (
+from lib.mock_data import (
     SARAH,
     CROPS,
     STATUS,
@@ -57,6 +57,6 @@ from consumer_app.lib.mock_data import (
 )
 
 # Production clients (lazy imports — only when used)
-# from consumer_app.lib.llm_client import RAGClient
-# from consumer_app.lib.sensor_client import get_latest_readings, get_weather_note
-# from consumer_app.lib.weather_client import get_weather_condition, get_weather_note, get_weather_delivery_warning
+# from lib.llm_client import RAGClient
+# from lib.sensor_client import get_latest_readings, get_weather_note
+# from lib.weather_client import get_weather_condition, get_weather_note, get_weather_delivery_warning
