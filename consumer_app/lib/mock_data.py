@@ -691,6 +691,126 @@ def get_cluster_pairing_for_crops(crops: list, cluster_id: int = 0) -> list:
     return results[:2]
 
 # ────────────────────────────────────────────
+# Omakase / Marriage Suggestions
+# (Restaurant-quality pairing narratives, not just ingredient combos)
+# ────────────────────────────────────────────
+MARRYAGE_SUGGESTIONS = [
+    {
+        "id": "kale-wagyu",
+        "crops": ["Curly Kale"],
+        "emoji": "🥩",
+        "title": "Kale + Premium Wagyu",
+        "restaurant": "Ikyu Tokyo-style Beef Dining, MBS",
+        "pairing_score": 97,
+        "marryage": (
+            "This week's kale has an unusually high glucosinolate content — the compound "
+            "that gives it that peppery bite. Japanese beef fat dissolves it perfectly, "
+            "creating the same contrast that makes wasabi so effective against rich fish. "
+            "Sear the wagyu at high heat, let the kale wilt in 30 seconds, and eat them together."
+        ),
+        "wine": "Slightly chilled Junmai Ginjo, or a crisp Albariño",
+        "occasion": "Weekend treat",
+    },
+    {
+        "id": "basil-salmon",
+        "crops": ["Thai Basil"],
+        "emoji": "🐟",
+        "title": "Thai Basil + King Salmon",
+        "restaurant": "Walaku, Gillman Barracks",
+        "pairing_score": 95,
+        "marryage": (
+            "Thai basil's eugenol content — the same compound in holy basil — cuts through "
+            "the omega-3 richness of king salmon the same way ponzu cuts through fatty tuna. "
+            "Light sear on the salmon, finish with torn basil leaves and a squeeze of yuzu. "
+            "The aromatics bloom against the heat."
+        ),
+        "wine": "Riesling Feinherb or chilled Asahi Super Dry",
+        "occasion": "Friday dinner",
+    },
+    {
+        "id": "kale-eggplant",
+        "crops": ["Curly Kale"],
+        "emoji": "🍆",
+        "title": "Kale + Miso Glazed Eggplant",
+        "restaurant": "Plowers, Tiong Bahru",
+        "pairing_score": 91,
+        "marryage": (
+            "The sweetness of miso-glazed eggplant meets the mineral, slightly bitter edge "
+            "of mature kale. The contrast in texture — silky eggplant against the kale's "
+            "crisp bite — makes every mouthful interesting. Add a soft-poached egg on top."
+        ),
+        "wine": "Amabuki Pumpkin Junmai",
+        "occasion": "Mid-week comfort",
+    },
+    {
+        "id": "mixed-buddha",
+        "crops": ["Curly Kale", "Thai Basil"],
+        "emoji": "🥣",
+        "title": "Garden Buddha Bowl",
+        "restaurant": "Self-prep / Any weekend",
+        "pairing_score": 93,
+        "marryage": (
+            "A bowl that anchors the week's nutrition: quinoa base, raw kale massaged "
+            "with sesame, Thai basil added fresh after cooking to preserve aromatics, "
+            "roasted sweet potato, pickled radish, and a tahini-lemon dressing. "
+            "Every element supports the others. This is the bowl you'll crave."
+        ),
+        "wine": "Still water with lemon, or a light sparkling.",
+        "occasion": "Meal prep Sunday",
+    },
+]
+
+def get_marriage_suggestion_for_crops(crop_names: list) -> dict:
+    """Return the best omakase/marriage suggestion for the given crops."""
+    for m in MARRYAGE_SUGGESTIONS:
+        if any(c.lower() in " ".join(m["crops"]).lower() for c in crop_names):
+            return m
+    return MARRYAGE_SUGGESTIONS[3]  # fallback to buddha bowl
+
+def get_sarah_marriage_suggestion():
+    """Return Sarah's personalized marriage suggestion for this week's harvest."""
+    return get_marriage_suggestion_for_crops(["Curly Kale", "Thai Basil"])
+
+# ────────────────────────────────────────────
+# Skip-to-Donate Flow
+# ────────────────────────────────────────────
+DONATION_RECIPIENTS = {
+    "ntuc": {
+        "name": "NTUC Food Bank",
+        "emoji": "🏠",
+        "description": "Singapore's largest food redistribution charity",
+        "impact": "2 meals per kg of fresh produce",
+    },
+    "red_cross": {
+        "name": "Singapore Red Cross",
+        "emoji": "🩸",
+        "description": "Emergency food relief for vulnerable families",
+        "impact": "1 meal per S$2 donated value",
+    },
+    "senior_meals": {
+        "name": "AWWA Senior Nutrition",
+        "emoji": "👵",
+        "description": "Meals-on-wheels for elderly residents",
+        "impact": "3 meals per kg of fresh produce",
+    },
+}
+
+def get_donation_receipt(recipient_key: str, kg_donated: float = 2.1) -> dict:
+    """Generate a donation receipt for the skip-to-donate flow."""
+    import random
+    recipient = DONATION_RECIPIENTS.get(recipient_key, DONATION_RECIPIENTS["ntuc"])
+    return {
+        "receipt_id": f"DN-{2026}{random.randint(1000, 9999)}",
+        "recipient": recipient,
+        "kg_donated": kg_donated,
+        "meals_provided": round(kg_donated * 2.0),  # ~2 meals per kg
+        "co2_saved_kg": round(kg_donated * 2.2, 2),
+        "date": "May 2026",
+        "badge_earned": "🌍 ESG Guardian",
+        "badge_description": "Converted a skip into social impact",
+    }
+
+# ────────────────────────────────────────────
 # Crisis / Typhoon Alerts
 # ────────────────────────────────────────────
 ALERT_TEMPLATES = {

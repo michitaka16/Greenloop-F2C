@@ -712,3 +712,88 @@ def alert_toast_html(alert: dict) -> str:
     </div>
     """
 
+# ────────────────────────────────────────────
+def marriage_card_html(suggestion: dict) -> str:
+    """Restaurant-quality omakase / marriage suggestion card."""
+    return f"""
+    <div style="background:white;border:1px solid #E5E1D8;border-radius:20px;
+                padding:1.25rem;margin-bottom:0.75rem;
+                border-left:5px solid #C7E66B;">
+      <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:0.75rem;">
+        <div style="font-size:2.5rem;line-height:1;flex-shrink:0;">{suggestion.get("emoji","🍽️")}</div>
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.3rem;">
+            <p style="font-weight:800;color:#1a3a0f;margin:0;font-size:1.05rem;">{suggestion.get("title","")}</p>
+            <span style="background:#C7E66B;color:#1a3a0f;font-size:0.6rem;font-weight:700;
+                         padding:0.2rem 0.6rem;border-radius:999px;letter-spacing:0.1em;">
+              OMAKASE · {suggestion.get("pairing_score","")}% MATCH
+            </span>
+          </div>
+          <p style="color:#6B7280;font-size:0.7rem;margin:0;font-style:italic;">
+            {suggestion.get("restaurant","")}
+          </p>
+        </div>
+      </div>
+      <p style="color:#1A1A1A;font-size:0.82rem;line-height:1.6;margin:0 0 0.75rem 0;">
+        {suggestion.get("marryage","")}
+      </p>
+      <div style="background:#F8F4EC;border-radius:10px;padding:0.6rem 0.9rem;
+                  display:flex;align-items:center;gap:0.75rem;">
+        <span style="font-size:1rem;">🍷</span>
+        <div>
+          <p style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+                    color:#6B7280;margin:0;">Wine pairing</p>
+          <p style="font-size:0.8rem;color:#1A1A1A;margin:0.1rem 0 0 0;">{suggestion.get("wine","")}</p>
+        </div>
+        <div style="margin-left:auto;text-align:right;">
+          <p style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+                    color:#6B7280;margin:0;">Occasion</p>
+          <p style="font-size:0.8rem;color:#1A1A1A;margin:0.1rem 0 0 0;">{suggestion.get("occasion","")}</p>
+        </div>
+      </div>
+    </div>
+    """
+
+# ────────────────────────────────────────────
+def donation_receipt_html(receipt: dict) -> str:
+    """Stylized donation receipt shown after skip-to-donate conversion."""
+    r = receipt
+    return f"""
+    <div style="background:linear-gradient(135deg,#065F46,#047857);border-radius:20px;
+                padding:1.5rem;color:white;margin:1rem 0;">
+      <div style="text-align:center;margin-bottom:1.25rem;">
+        <p style="font-size:3rem;margin:0 0 0.5rem 0;">{r['recipient']['emoji']}</p>
+        <p style="font-size:0.65rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;
+                  color:rgba(255,255,255,0.7);margin:0;">Donation Confirmed</p>
+        <p style="font-weight:800;font-size:1.5rem;margin:0.25rem 0 0 0;">{r['recipient']['name']}</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.12);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;text-align:center;">
+          <div>
+            <p style="font-size:1.5rem;font-weight:800;margin:0;">{r['kg_donated']}kg</p>
+            <p style="font-size:0.65rem;color:rgba(255,255,255,0.7);margin:0.2rem 0 0 0;">Fresh produce</p>
+          </div>
+          <div>
+            <p style="font-size:1.5rem;font-weight:800;margin:0;">{r['meals_provided']}</p>
+            <p style="font-size:0.65rem;color:rgba(255,255,255,0.7);margin:0.2rem 0 0 0;">Meals provided</p>
+          </div>
+          <div>
+            <p style="font-size:1.5rem;font-weight:800;margin:0;">{r['co2_saved_kg']}kg</p>
+            <p style="font-size:0.65rem;color:rgba(255,255,255,0.7);margin:0.2rem 0 0 0;">CO2 saved</p>
+          </div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.12);border-radius:12px;padding:0.75rem;
+                  display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+        <span style="font-size:1.5rem;">{r['badge_earned']}</span>
+        <div>
+          <p style="font-weight:700;margin:0;font-size:0.85rem;">ESG Guardian Badge Earned!</p>
+          <p style="margin:0;font-size:0.7rem;color:rgba(255,255,255,0.7);">{r['badge_description']}</p>
+        </div>
+      </div>
+      <p style="text-align:center;font-size:0.7rem;color:rgba(255,255,255,0.5);margin:0;">
+        Receipt {r['receipt_id']} · {r['date']} · GreenLoop F2C
+      </p>
+    </div>
+    """
+

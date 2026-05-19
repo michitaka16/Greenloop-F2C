@@ -1,4 +1,4 @@
-"""Schedule — harvest calendar + pause/skip + recipe suggestions."""
+"""Schedule — harvest calendar + pause/skip + recipe + omakase suggestions."""
 
 import sys
 from pathlib import Path
@@ -8,11 +8,14 @@ import streamlit as st
 from lib.styles import (
     inject_css, inject_gamification_css, brand_header, pill,
     KALE, LEAF, LIME, CORAL, CREAM, HAIR, MUTED, INK, ASSETS, img_to_base64,
-    recipe_card_html, delivery_card_skip_html,
+    recipe_card_html, delivery_card_skip_html, marriage_card_html, donation_receipt_html,
 )
 from lib.mock_data import (
     UPCOMING_DELIVERIES, CROPS, SKIP_REASONS,
     RECIPES, get_recipe_for_crops,
+    get_marriage_suggestion_for_crops, get_sarah_marriage_suggestion,
+    DONATION_RECIPIENTS, get_donation_receipt,
+    SARAH_KMEANS_CLUSTER,
 )
 
 # Session state for skip flow
@@ -22,6 +25,12 @@ if "show_skip_panel" not in st.session_state:
     st.session_state.show_skip_panel = False
 if "skip_target" not in st.session_state:
     st.session_state.skip_target = None
+if "donation_receipt" not in st.session_state:
+    st.session_state.donation_receipt = None
+if "show_donation_panel" not in st.session_state:
+    st.session_state.show_donation_panel = False
+if "donation_reason" not in st.session_state:
+    st.session_state.donation_reason = None
 
 st.set_page_config(page_title="Schedule — Adopt a Kale", page_icon="📅", layout="wide")
 inject_css()
@@ -37,6 +46,27 @@ st.markdown(
 st.write("")
 
 # ────────────────────────────────────────────
+# 🍽️ This Week's Omakase — K-Means Marriage Suggestion
+# ────────────────────────────────────────────
+marriage = get_sarah_marriage_suggestion()
+st.markdown(
+    f"<p style='font-size:0.65rem;font-weight:700;letter-spacing:0.2em;"
+    f"text-transform:uppercase;color:#C7E66B;margin-bottom:0.75rem;'>"
+    f"🍽️ OMAKASE — THIS WEEK'S MARRIAGE SUGGESTION</p>",
+    unsafe_allow_html=True,
+)
+st.markdown(
+    f"<p style='color:{MUTED};font-size:0.85rem;margin-bottom:0.75rem;'>"
+    f"Based on your <strong style='color:{KALE};'>K-Means cluster</strong> "
+    f"(\"{SARAH_KMEANS_CLUSTER['label']}\", {SARAH_KMEANS_CLUSTER['size']} members like you) "
+    f"and this week's harvest data.</p>",
+    unsafe_allow_html=True,
+)
+st.markdown(marriage_card_html(marriage), unsafe_allow_html=True)
+
+st.markdown('<hr class="kale-hr"/>', unsafe_allow_html=True)
+
+# ────────────────────────────────────────────
 # 🍳 This Week's Recipes — shown above calendar
 # ────────────────────────────────────────────
 st.markdown(
@@ -46,7 +76,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Get crops from the next delivery
 next_crops = []
 for d in UPCOMING_DELIVERIES:
     for item in d["items"]:
@@ -71,25 +100,43 @@ st.markdown(
 st.markdown('<hr class="kale-hr"/>', unsafe_allow_html=True)
 
 # ────────────────────────────────────────────
+# 🎁 Donation Receipt (shown after skip-to-donate)
+# ────────────────────────────────────────────
+if st.session_state.donation_receipt:
+    st.markdown(
+        f"<p style='font-size:0.65rem;font-weight:700;letter-spacing:0.2em;"
+        f"text-transform:uppercase;color:#065F46;margin-bottom:0.5rem;'>"
+        f"💚 YOUR DONATION RECEIPT</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(donation_receipt_html(st.session_state.donation_receipt), unsafe_allow_html=True)
+    if st.button("✓ Done", use_container_width=True):
+        st.session_state.donation_receipt = None
+        st.rerun()
+    st.markdown('<hr class="kale-hr"/>', unsafe_allow_html=True)
+
+# ────────────────────────────────────────────
 # ⏸ Pause / Skip Delivery
 # ────────────────────────────────────────────
 pause_col1, pause_col2 = st.columns([1, 2])
 with pause_col1:
     st.markdown(
-        f"<h2 style='color:{INK};font-weight:700;'>⏸ Pause or Skip</h2>",
+        f"<h2 style='color:{INK};font-weight:700;'>⏸ Skip or Donate</h2>",
         unsafe_allow_html=True,
     )
 with pause_col2:
     st.markdown(
         f"<p style='color:{MUTED};font-size:0.85rem;margin-top:0.4rem;'>"
-        f"Going on a trip or have travel plans? No penalty — "
-        f"pause your delivery and your crops keep growing.</p>",
+        f"Going on a trip? Your crops don't have to wait — "
+        f"skip the delivery <strong style='color:{KALE};'>or donate the harvest</strong> "
+        f"to someone who needs it.</p>",
         unsafe_allow_html=True,
     )
 
 st.write("")
-if st.button("⏸  Skip / Pause a Delivery", type="primary", use_container_width=True):
+if st.button("⏸  Skip or Donate a Delivery", type="primary", use_container_width=True):
     st.session_state.show_skip_panel = not st.session_state.show_skip_panel
+    st.session_state.show_donation_panel = False
     st.rerun()
 
 if st.session_state.show_skip_panel:
@@ -117,15 +164,92 @@ if st.session_state.show_skip_panel:
                         key=f"reason_{date_key.replace(' ','_')}",
                         label_visibility="collapsed",
                     )
-                    if st.button("Skip", key=f"skipbtn_{date_key.replace(' ','_')}", use_container_width=True):
+                    is_donation = reason and "ntuc" in reason.lower()
+                    btn_label = "💚 Donate" if is_donation else "Skip"
+                    btn_type = "primary" if is_donation else "secondary"
+                    if st.button(btn_label, key=f"skipbtn_{date_key.replace(' ','_')}",
+                                 use_container_width=True, type=btn_type):
                         if reason:
-                            st.session_state.skipped_dates.append(date_key)
-                            st.session_state.show_skip_panel = False
+                            if is_donation:
+                                # Show the donation panel for this delivery
+                                st.session_state.skip_target = date_key
+                                st.session_state.donation_reason = reason
+                                st.session_state.show_donation_panel = True
+                                st.session_state.show_skip_panel = False
+                            else:
+                                st.session_state.skipped_dates.append(date_key)
+                                st.session_state.show_skip_panel = False
                             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
-# Show skipped deliveries
-if st.session_state.skipped_dates:
+# ────────────────────────────────────────────
+# 💚 Skip-to-Donate Panel
+# ────────────────────────────────────────────
+if st.session_state.show_donation_panel:
+    target_date = st.session_state.skip_target
+    delivery = next((d for d in UPCOMING_DELIVERIES if d["date"] == target_date), None)
+    with st.container():
+        st.markdown(
+            f"<div style='background:linear-gradient(135deg,#065F46,#047857);"
+            f"border-radius:20px;padding:1.5rem;color:white;'>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f"<h3 style='color:white;margin:0 0 0.5rem 0;'>"
+            f"🎁 Convert to Donation</h3>"
+            f"<p style='color:rgba(255,255,255,0.85);font-size:0.9rem;margin:0 0 1.25rem 0;'>"
+            f"Your harvest from <strong>{target_date}</strong> doesn't have to be wasted. "
+            f"Choose where to donate it — and earn an ESG Guardian badge.</p>",
+            unsafe_allow_html=True,
+        )
+
+        # 3 donation recipient options
+        don_cols = st.columns(3)
+        recipient_keys = list(DONATION_RECIPIENTS.keys())
+        selected_recipient = None
+        for i, (key, recip) in enumerate(DONATION_RECIPIENTS.items()):
+            with don_cols[i]:
+                bg_inner = "rgba(255,255,255,0.15)" if i == 0 else "rgba(255,255,255,0.08)"
+                st.markdown(
+                    f"""
+                    <div style="background:{bg_inner};border-radius:16px;padding:1rem;
+                                border:2px solid {'rgba(255,255,255,0.4)' if i == 0 else 'transparent'};
+                                text-align:center;">
+                      <p style="font-size:2.5rem;margin:0 0 0.5rem 0;">{recip['emoji']}</p>
+                      <p style="font-weight:700;color:white;margin:0;font-size:0.9rem;">{recip['name']}</p>
+                      <p style="color:rgba(255,255,255,0.7);font-size:0.7rem;margin:0.3rem 0 0 0;">{recip['description']}</p>
+                      <p style="color:#C7E66B;font-size:0.75rem;font-weight:700;margin:0.4rem 0 0 0;">{recip['impact']}</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                if st.button(f"Select {recip['emoji']}", key=f"recip_{key}",
+                           use_container_width=True, type="secondary"):
+                    selected_recipient = key
+                    st.rerun()
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        if selected_recipient:
+            receipt = get_donation_receipt(selected_recipient, kg_donated=2.1)
+            st.session_state.donation_receipt = receipt
+            st.session_state.skipped_dates.append(target_date)
+            st.session_state.show_donation_panel = False
+            st.session_state.skip_target = None
+            st.session_state.donation_reason = None
+            st.rerun()
+
+        st.write("")
+        cancel_col, _ = st.columns([1, 3])
+        with cancel_col:
+            if st.button("← Cancel", use_container_width=True, type="secondary"):
+                st.session_state.show_donation_panel = False
+                st.session_state.skip_target = None
+                st.session_state.donation_reason = None
+                st.rerun()
+
+# Show skipped deliveries (not shown as donation receipt already shown)
+if st.session_state.skipped_dates and not st.session_state.donation_receipt:
     st.write("")
     st.markdown(
         f"<p style='font-size:0.65rem;font-weight:700;letter-spacing:0.2em;"
@@ -139,7 +263,8 @@ if st.session_state.skipped_dates:
             with undo_col1:
                 st.markdown(delivery_card_skip_html(d, is_skipped=True), unsafe_allow_html=True)
             with undo_col2:
-                if st.button("↩ Undo", key=f"undo_{d['date'].replace(' ','_')}", use_container_width=True):
+                if st.button("↩ Undo", key=f"undo_{d['date'].replace(' ','_')}",
+                           use_container_width=True):
                     st.session_state.skipped_dates.remove(d["date"])
                     st.rerun()
 
@@ -245,14 +370,27 @@ with st.sidebar:
     st.markdown(
         f"<div style='padding:0.5rem 1rem;background:{CREAM};border-radius:12px;'>"
         f"<p style='margin:0;font-size:0.65rem;font-weight:700;letter-spacing:0.15em;color:{MUTED};'>SKIP COUNT</p>"
-        f"<p style='margin:0.2rem 0;font-weight:800;color:{KALE};font-size:1.5rem;'>{len(st.session_state.skipped_dates)}</p>"
-        f"<p style='margin:0;font-size:0.7rem;color:{MUTED};'>deliveries skipped</p></div>",
+        f"<p style='margin:0.2rem 0;font-weight:800;color:{KALE};font-size:1.5rem;'>"
+        f"{len(st.session_state.skipped_dates)}</p>"
+        f"<p style='margin:0;font-size:0.7rem;color:{MUTED};'>deliveries skipped or donated</p></div>",
+        unsafe_allow_html=True,
+    )
+    st.markdown("---")
+    # K-Means cluster info
+    st.markdown(
+        f"<div style='padding:0.5rem 1rem;background:{CREAM};border-radius:12px;'>"
+        f"<p style='margin:0;font-size:0.65rem;font-weight:700;letter-spacing:0.15em;color:{MUTED};'>"
+        f"YOUR CLUSTER</p>"
+        f"<p style='margin:0.2rem 0;font-weight:700;color:{KALE};font-size:0.9rem;'>"
+        f"{SARAH_KMEANS_CLUSTER['emoji']} {SARAH_KMEANS_CLUSTER['label']}</p>"
+        f"<p style='margin:0;font-size:0.7rem;color:{MUTED};'>"
+        f"{SARAH_KMEANS_CLUSTER['size']} households matched</p></div>",
         unsafe_allow_html=True,
     )
     st.markdown("---")
     st.markdown(
         f"<p style='color:{MUTED};font-size:0.75rem;'>"
-        f"Skipped harvests are donated to NTUC Food Bank. "
-        f"You receive an ESG impact badge in your profile.</p>",
+        f"When you skip, your crops are donated to a charity you choose. "
+        f"Each donation earns an ESG Guardian badge 🌍.</p>",
         unsafe_allow_html=True,
     )
