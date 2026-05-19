@@ -8,12 +8,16 @@ import streamlit as st
 from lib.styles import (
     inject_css, inject_gamification_css, brand_header, eyebrow, pill, maturity_ring_html,
     progress_card, confetti_html, badge_card, leaderboard_row,
+    esg_card_html, growth_chart_svg, status_badge_html, alert_banner_html,
     KALE, LEAF, LIME, CORAL, CREAM, PAPER, HAIR, MUTED, INK, ASSETS, img_to_base64,
 )
 from lib.mock_data import (
     SARAH, CROPS, STATUS, UPCOMING_DELIVERIES, RECENT_EVENTS,
     MILESTONES, SARAH_BADGES, LEADERBOARD,
     get_earned_badges, get_next_badge, get_leaderboard_position,
+    SARAH_STATUS, WEEKLY_GROWTH_LOG,
+    get_status_tier, get_next_status_tier, get_esg_impact,
+    DEMO_ACTIVE_ALERTS,
 )
 
 # ── Gamification session state ─────────────────────
@@ -36,6 +40,16 @@ brand_header()
 if st.session_state.get("show_confetti"):
     st.markdown(confetti_html(), unsafe_allow_html=True)
     st.session_state.show_confetti = False
+
+# ── Active alerts session state ───────────────────────
+if "active_alerts" not in st.session_state:
+    st.session_state.active_alerts = DEMO_ACTIVE_ALERTS.copy()
+
+# ── Alert banners ───────────────────────────────────
+for alert in st.session_state.active_alerts:
+    st.markdown(alert_banner_html(alert), unsafe_allow_html=True)
+if st.session_state.active_alerts:
+    st.write("")
 
 # ───────────────────────────────────────────
 # Greeting
@@ -127,6 +141,54 @@ with btn_col3:
 with btn_col4:
     if st.button("🎉  Share & NFT", type="secondary", use_container_width=True):
         st.switch_page("pages/7_🎉_Celebration.py")
+
+# ────────────────────────────────────────────
+# 📊 My Portfolio — ESG + Growth Chart
+# ────────────────────────────────────────────
+esg = get_esg_impact(SARAH["total_kg_grown"])
+current_tier = get_status_tier(SARAH_STATUS["tenure_months"])
+market_value = SARAH["total_kg_grown"] * 8
+
+st.markdown(f"<h2 style='color:{INK};font-weight:700;margin-bottom:0.75rem;'>📊 My Portfolio</h2>", unsafe_allow_html=True)
+portfolio_col1, portfolio_col2 = st.columns([1, 1])
+with portfolio_col1:
+    st.markdown(esg_card_html(
+        water_saved_l=esg["water_saved_l"],
+        co2_saved_kg=esg["co2_saved_kg"],
+        trees_equiv=esg["trees_equiv"],
+    ), unsafe_allow_html=True)
+with portfolio_col2:
+    st.markdown(growth_chart_svg(WEEKLY_GROWTH_LOG), unsafe_allow_html=True)
+
+st.write("")
+# Asset value strip
+asset_col1, asset_col2, asset_col3 = st.columns(3)
+with asset_col1:
+    st.markdown(
+        f"<div class='kale-card' style='text-align:center;'>"
+        f"<p style='font-size:0.65rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:{MUTED};margin:0;'>Portfolio Value</p>"
+        f"<p style='font-size:1.8rem;font-weight:800;color:{KALE};margin:0.3rem 0 0 0;'>S${market_value:.0f}</p>"
+        f"<p style='font-size:0.65rem;color:{MUTED};margin:0;'>kg grown × S$8/kg premium</p></div>",
+        unsafe_allow_html=True,
+    )
+with asset_col2:
+    st.markdown(
+        f"<div class='kale-card' style='text-align:center;'>"
+        f"<p style='font-size:0.65rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:{MUTED};margin:0;'>Water Saved</p>"
+        f"<p style='font-size:1.8rem;font-weight:800;color:{KALE};margin:0.3rem 0 0 0;'>{esg['water_saved_l']:.0f}L</p>"
+        f"<p style='font-size:0.65rem;color:{MUTED};margin:0;'>vs conventional farming</p></div>",
+        unsafe_allow_html=True,
+    )
+with asset_col3:
+    st.markdown(
+        f"<div class='kale-card' style='text-align:center;'>"
+        f"<p style='font-size:0.65rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:{MUTED};margin:0;'>CO₂ Avoided</p>"
+        f"<p style='font-size:1.8rem;font-weight:800;color:{KALE};margin:0.3rem 0 0 0;'>{esg['co2_saved_kg']:.1f}kg</p>"
+        f"<p style='font-size:0.65rem;color:{MUTED};margin:0;'>vs conventional farming</p></div>",
+        unsafe_allow_html=True,
+    )
+
+st.markdown('<hr class="kale-hr"/>', unsafe_allow_html=True)
 
 st.markdown('<hr class="kale-hr"/>', unsafe_allow_html=True)
 
@@ -291,6 +353,58 @@ with act_col:
         """,
         unsafe_allow_html=True,
     )
+
+# ────────────────────────────────────────────
+# 🌿 My Gardener Status
+# ────────────────────────────────────────────
+next_tier = get_next_status_tier(SARAH_STATUS["tenure_months"])
+current_tier = get_status_tier(SARAH_STATUS["tenure_months"])
+next_tier_progress = 0
+if next_tier:
+    next_tier_progress = (SARAH_STATUS["tenure_months"] / next_tier["min_months"]) * 100
+
+st.markdown(f"<h2 style='color:{INK};font-weight:700;'>🌿 My Gardener Status</h2>", unsafe_allow_html=True)
+status_col1, status_col2, status_col3 = st.columns([1, 1, 1])
+with status_col1:
+    st.markdown(
+        f"<div class='kale-card' style='text-align:center;'>"
+        f"{status_badge_html(current_tier, glow=SARAH_STATUS['is_founding_gardener'], is_founding=SARAH_STATUS['is_founding_gardener'])}"
+        f"<p style='font-size:0.7rem;color:{MUTED};margin:0.5rem 0 0 0;'>{SARAH_STATUS['tenure_months']} month{'s' if SARAH_STATUS['tenure_months'] != 1 else ''} · {SARAH['hood']}</p>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+with status_col2:
+    perks_html = "".join([f"<p style='margin:0.15rem 0;font-size:0.75rem;color:{INK};'>✅ {p}</p>" for p in current_tier["perks"]])
+    st.markdown(
+        f"<div class='kale-card'>"
+        f"<p style='font-size:0.65rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:{MUTED};margin:0 0 0.5rem 0;'>YOUR PERKS</p>"
+        f"{perks_html}</div>",
+        unsafe_allow_html=True,
+    )
+with status_col3:
+    if next_tier:
+        st.markdown(
+            f"<div class='kale-card'>"
+            f"<p style='font-size:0.65rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:{MUTED};margin:0 0 0.5rem 0;'>NEXT: {next_tier['emoji']} {next_tier['id']}</p>"
+            f"<p style='font-size:0.8rem;color:{INK};margin:0 0 0.5rem 0;'>{next_tier['min_months'] - SARAH_STATUS['tenure_months']} months away</p>"
+            f"<div style='height:8px;background:{CREAM};border-radius:999px;overflow:hidden;'>"
+            f"<div style='height:100%;width:{next_tier_progress:.0f}%;background:{current_tier['color']};border-radius:999px;'></div>"
+            f"</div>"
+            f"<p style='font-size:0.7rem;color:{MUTED};margin:0.3rem 0 0 0;'>{', '.join(next_tier['perks'][:2])} + more</p>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f"<div class='kale-card' style='text-align:center;padding:2rem;'>"
+            f"<p style='font-size:2rem;margin:0;'>👑</p>"
+            f"<p style='font-weight:700;color:{INK};margin:0.5rem 0 0 0;'>Master Gardener</p>"
+            f"<p style='font-size:0.75rem;color:{MUTED};'>You have reached the top tier!</p>"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+st.markdown('<hr class="kale-hr"/>', unsafe_allow_html=True)
 
 # ───────────────────────────────────────────
 # Lifetime stats — dark card

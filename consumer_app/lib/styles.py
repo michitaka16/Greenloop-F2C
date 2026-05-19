@@ -518,3 +518,197 @@ def nft_card_html(nft: dict) -> str:
       </div>
     </div>
     """
+
+# ────────────────────────────────────────────
+# ESG Impact Card — water saved / CO2 reduced
+# ────────────────────────────────────────────
+def esg_card_html(water_saved_l: float, co2_saved_kg: float, trees_equiv: float) -> str:
+    return f"""
+    <div style='background:linear-gradient(135deg,#2D5016 0%,#1a3a0f 100%);border-radius:20px;padding:1.25rem;color:white;'>
+      <p style='font-size:0.65rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(199,230,107,0.7);margin:0 0 1rem 0;'>
+        🌱 Your ESG Impact Since Joining
+      </p>
+      <div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;'>
+        <div style='background:rgba(255,255,255,0.1);border-radius:14px;padding:0.75rem;text-align:center;'>
+          <p style='font-size:1.6rem;font-weight:800;color:#7BA05B;margin:0;'>💧</p>
+          <p style='font-size:1.3rem;font-weight:800;color:white;margin:0.2rem 0;'>-{water_saved_l:.0f}L</p>
+          <p style='font-size:0.6rem;color:rgba(255,255,255,0.6);margin:0;'>water saved</p>
+          <p style='font-size:0.55rem;color:rgba(255,255,255,0.4);margin:0.2rem 0 0 0;'>vs conventional</p>
+        </div>
+        <div style='background:rgba(255,255,255,0.1);border-radius:14px;padding:0.75rem;text-align:center;'>
+          <p style='font-size:1.6rem;font-weight:800;color:#7BA05B;margin:0;'>🌍</p>
+          <p style='font-size:1.3rem;font-weight:800;color:white;margin:0.2rem 0;'>-{co2_saved_kg:.1f}kg</p>
+          <p style='font-size:0.6rem;color:rgba(255,255,255,0.6);margin:0;'>CO2 avoided</p>
+          <p style='font-size:0.55rem;color:rgba(255,255,255,0.4);margin:0.2rem 0 0 0;'>vs conventional</p>
+        </div>
+        <div style='background:rgba(255,255,255,0.1);border-radius:14px;padding:0.75rem;text-align:center;'>
+          <p style='font-size:1.6rem;font-weight:800;color:#C7E66B;margin:0;'>🌳</p>
+          <p style='font-size:1.3rem;font-weight:800;color:#C7E66B;margin:0.2rem 0;'>~{trees_equiv:.1f}</p>
+          <p style='font-size:0.6rem;color:rgba(255,255,255,0.6);margin:0;'>trees worth</p>
+          <p style='font-size:0.55rem;color:rgba(255,255,255,0.4);margin:0.2rem 0 0 0;'>CO2 offset</p>
+        </div>
+      </div>
+    </div>
+    """
+
+
+# ────────────────────────────────────────────
+# Growth Chart — 8-week SVG bar chart
+# ────────────────────────────────────────────
+def growth_chart_svg(growth_log: list) -> str:
+    if not growth_log:
+        return "<p style='color:#6B7280;font-size:0.8rem;'>No growth data yet.</p>"
+    values = [d["kg"] for d in growth_log]
+    labels = [d["week"] for d in growth_log]
+    max_val = max(values) if values else 1
+    chart_w, chart_h = 560, 160
+    bar_w = chart_w / len(values) - 8
+    gap = 8
+    bars_svg = ""
+    for i, (v, lbl) in enumerate(zip(values, labels)):
+        bh = max(4, (v / max_val) * (chart_h - 30))
+        x = i * (bar_w + gap) + gap / 2
+        y = chart_h - bh - 20
+        bars_svg += (
+            f'<rect x="{x:.1f}" y="{y:.1f}" width="{bar_w:.1f}" height="{bh:.1f}" '
+            f'rx="4" fill="#2D5016" opacity="0.85"/>'
+            f'<text x="{x + bar_w/2:.1f}" y="{chart_h - 5}" '
+            f'text-anchor="middle" font-size="9" fill="#6B7280">{lbl}</text>'
+            f'<text x="{x + bar_w/2:.1f}" y="{y - 4}" '
+            f'text-anchor="middle" font-size="9" font-weight="700" fill="#2D5016">{v:.1f}kg</text>'
+        )
+    return f"""
+    <div style="background:white;border:1px solid #E5E1D8;border-radius:16px;padding:1rem;">
+      <p style="font-size:0.65rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#6B7280;margin:0 0 0.75rem 0;">
+        📈 8-Week Growth Portfolio
+      </p>
+      <svg viewBox="0 0 {chart_w} {chart_h}" width="100%" style="overflow:visible;">
+        {bars_svg}
+      </svg>
+    </div>
+    """
+
+
+# ────────────────────────────────────────────
+# Status Badge — loyalty tier with optional glow
+# ────────────────────────────────────────────
+def status_badge_html(tier: dict, glow: bool = False, is_founding: bool = False) -> str:
+    color = tier.get("color", "#7BA05B")
+    glow_cls = "pulse-glow" if glow else ""
+    founding_tag = "🌟" if is_founding else ""
+    return (
+        f'<span class="{glow_cls}" style="'
+        f'display:inline-flex;align-items:center;gap:0.3rem;'
+        f'background:{color};color:white;'
+        f'padding:0.3rem 0.75rem;border-radius:999px;'
+        f'font-size:0.7rem;font-weight:700;'
+        f'box-shadow:0 2px 8px rgba(0,0,0,0.15);">'
+        f'{founding_tag}{tier["emoji"]} {tier["id"]}</span>'
+    )
+
+
+# ────────────────────────────────────────────
+# Alert Banner — crisis notification
+# ────────────────────────────────────────────
+def alert_banner_html(alert: dict) -> str:
+    severity = alert.get("severity", "info")
+    configs = {
+        "critical": ("#DC2626", "#FEF2F2"),
+        "warning":  ("#D97706", "#FFFBEB"),
+        "info":     ("#2D5016", "#F0FDF4"),
+    }
+    bg, border = configs.get(severity, configs["info"])
+    action_btn = (
+        f'<button style="background:white;border:none;border-radius:999px;'
+        f'padding:0.4rem 1rem;font-weight:700;font-size:0.75rem;cursor:pointer;">'
+        f'{alert.get("action_label","Action")}</button>'
+        if alert.get("action_label") else ""
+    )
+    return f"""
+    <div style="background:{bg};border:1.5px solid {border};border-radius:16px;padding:0.9rem 1.25rem;
+                margin-bottom:0.75rem;display:flex;align-items:flex-start;gap:0.75rem;">
+      <div style="font-size:1.5rem;flex-shrink:0;">{alert.get("icon","ℹ️")}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
+          <p style="font-weight:800;color:white;font-size:0.9rem;margin:0;">{alert.get("title","")}</p>
+          {action_btn}
+        </div>
+        <p style="font-size:0.8rem;color:rgba(255,255,255,0.85);margin:0.3rem 0 0 0;line-height:1.5;">
+          {alert.get("body","")}
+        </p>
+      </div>
+    </div>
+    """
+
+
+# ────────────────────────────────────────────
+# Recipe Card — horizontal layout
+# ────────────────────────────────────────────
+def recipe_card_html(recipe: dict) -> str:
+    ingredients_html = " · ".join(recipe.get("ingredients", [])[:3])
+    return f"""
+    <div style="display:flex;align-items:center;gap:1rem;background:white;border:1px solid #E5E1D8;
+                border-radius:16px;padding:0.9rem 1.1rem;margin-bottom:0.6rem;">
+      <div style="font-size:2rem;flex-shrink:0;">{recipe.get("emoji","🍽️")}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+          <p style="font-weight:700;color:#1A1A1A;font-size:0.9rem;margin:0;">{recipe.get("name","")}</p>
+          <span style="background:#F8F4EC;color:#6B7280;font-size:0.6rem;font-weight:600;
+                       padding:0.15rem 0.5rem;border-radius:999px;">{recipe.get("meal","")}</span>
+        </div>
+        <p style="font-size:0.72rem;color:#6B7280;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          {ingredients_html}
+        </p>
+      </div>
+      <div style="font-size:0.65rem;font-weight:700;color:#2D5016;flex-shrink:0;">View →</div>
+    </div>
+    """
+
+
+# ────────────────────────────────────────────
+# Delivery Card with Skip — for Schedule page
+# ────────────────────────────────────────────
+def delivery_card_skip_html(delivery: dict, is_skipped: bool = False) -> str:
+    items_html = "".join([f"<p style='margin:0;font-size:0.85rem;color:#1A1A1A;'>{item}</p>"
+                          for item in delivery.get("items", [])])
+    status_color = "#6B7280" if is_skipped else "#2D5016"
+    strikethrough = "text-decoration:line-through;opacity:0.5;" if is_skipped else ""
+    date_parts = delivery["date"].split()
+    return f"""
+    <div style="display:flex;gap:1rem;padding:0.75rem 0;border-bottom:1px solid #E5E1D8;{strikethrough}">
+      <div style="text-align:center;flex-shrink:0;min-width:56px;">
+        <p style="font-size:0.6rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+                  color:{status_color};margin:0;">{date_parts[0]}</p>
+        <p style="font-size:1.5rem;font-weight:800;color:{status_color};line-height:1;margin:0.2rem 0 0 0;">
+          {date_parts[1]}</p>
+      </div>
+      <div style="flex:1;border-left:1px solid #E5E1D8;padding-left:1rem;">
+        {items_html}
+        <p style="margin:0.25rem 0 0 0;font-size:0.65rem;color:#6B7280;text-transform:capitalize;">
+          {delivery.get("status","")}{" · SKIPPED" if is_skipped else ""}
+        </p>
+      </div>
+    </div>
+    """
+
+# ────────────────────────────────────────────
+def alert_toast_html(alert: dict) -> str:
+    """Small toast notification for non-blocking alerts."""
+    sev = alert.get("severity", "info")
+    bg, border, text = {
+        "critical": ("#FEE2E2", "#DC2626", "#991B1B"),
+        "warning":  ("#FEF3C7", "#D97706", "#92400E"),
+        "info":     ("#D1FAE5", "#059669", "#065F46"),
+    }.get(sev, ("#D1FAE5", "#059669", "#065F46"))
+    return f"""
+    <div style="background:{bg};border-left:4px solid {border};
+                border-radius:8px;padding:0.6rem 1rem;margin-bottom:0.5rem;
+                display:flex;align-items:center;gap:0.75rem;">
+      <span style="font-size:1.1rem;">{alert.get("icon","ℹ️")}</span>
+      <div style="flex:1;">
+        <p style="font-weight:700;color:{text};font-size:0.8rem;margin:0;">{alert.get("title","")}</p>
+        <p style="color:{text};font-size:0.75rem;margin:0.15rem 0 0 0;opacity:0.85;">{alert.get("body","")[:80]}…</p>
+      </div>
+    </div>
+    """
+

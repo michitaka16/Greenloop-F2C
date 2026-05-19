@@ -8,8 +8,10 @@ import streamlit as st
 from lib.styles import (
     inject_css, brand_header, eyebrow, pill,
     KALE, LEAF, LIME, CORAL, CREAM, HAIR, MUTED, INK, ASSETS, img_to_base64,
+    recipe_card_html,
 )
 from lib.mock_data import mock_response, SUGGESTED_QUESTIONS
+from lib.mock_data import RECIPES, get_recipe_for_crops, CROPS
 
 st.set_page_config(page_title="Ask your kale — Adopt a Kale", page_icon="💬", layout="wide")
 inject_css()
@@ -105,6 +107,16 @@ for msg in st.session_state.chat_history:
                             """,
                             unsafe_allow_html=True,
                         )
+            # Recipe cards (if response contains recipes)
+            if msg.get("recipes"):
+                st.markdown(
+                    f"<p style='font-size:0.65rem;font-weight:700;letter-spacing:0.2em;"
+                    f"text-transform:uppercase;color:{CORAL};margin:0.75rem 0 0.5rem 0;'>"
+                    f"🍳 Recipes You Can Make</p>",
+                    unsafe_allow_html=True,
+                )
+                for recipe in msg["recipes"][:3]:
+                    st.markdown(recipe_card_html(recipe), unsafe_allow_html=True)
     st.write("")
 
 # Suggested questions (only if conversation is short)

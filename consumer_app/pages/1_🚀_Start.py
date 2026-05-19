@@ -72,6 +72,33 @@ if step == 0:
             st.rerun()
     st.caption("<center>No card needed for trial</center>", unsafe_allow_html=True)
 
+    # ── Founding Gardener callout ───────────────
+    st.markdown(
+        f"""
+        <div style="background:linear-gradient(135deg,#1a3a0f,#2D5016);
+                    border-radius:20px;padding:1.25rem 1.5rem;margin-top:2rem;
+                    border:1px solid #4a7c3f;">
+            <div style="display:flex;align-items:center;gap:1rem;">
+                <div style="font-size:2rem;">🌟</div>
+                <div style="flex:1;">
+                    <p style="font-weight:700;color:#C7E66B;margin:0;font-size:0.8rem;
+                               letter-spacing:0.1em;text-transform:uppercase;">Founding Gardener</p>
+                    <p style="color:rgba(255,255,255,0.9);margin:0.25rem 0 0 0;font-size:0.85rem;">
+                        Join before <strong style="color:#C7E66B;">May 31, 2026</strong> and lock in
+                        <strong style="color:#C7E66B;">founding member perks</strong> — pulsing badge,
+                        exclusive pre-launch crops, and name on the wall.
+                    </p>
+                </div>
+                <div style="background:#C7E66B;color:#1a3a0f;padding:0.4rem 0.8rem;
+                            border-radius:999px;font-size:0.7rem;font-weight:700;white-space:nowrap;">
+                    12 days left
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 # ─────────────────────────────────
 # Step 1: Tier selection
 # ─────────────────────────────────
@@ -265,6 +292,15 @@ elif step == 3:
                 <p style="font-size:1.8rem;font-weight:800;color:{KALE};margin:0.25rem 0;">~ 6 weeks</p>
                 <p style="font-size:0.85rem;color:{MUTED};margin:0;">
                     We'll WhatsApp you weekly, and your app shows live status anytime.
+                </p>
+            </div>
+            <div style="background:linear-gradient(135deg,#1a3a0f,#2D5016);
+                        border-radius:16px;padding:1rem 1.25rem;margin-top:1rem;
+                        border:1px solid #4a7c3f;text-align:left;">
+                <p style="font-weight:700;color:#C7E66B;margin:0;font-size:0.75rem;
+                           letter-spacing:0.1em;text-transform:uppercase;">🌟 You're a Founding Gardener!</p>
+                <p style="color:rgba(255,255,255,0.85);margin:0.4rem 0 0 0;font-size:0.8rem;">
+                    Pre-launch cohort · Exclusive badge · Named on the wall of fame
                 </p>
             </div>
         </div>
