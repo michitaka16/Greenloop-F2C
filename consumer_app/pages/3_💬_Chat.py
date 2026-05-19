@@ -16,6 +16,13 @@ from lib.styles import (
 from lib.mock_data import mock_response, SUGGESTED_QUESTIONS
 from lib.mock_data import RECIPES, get_recipe_for_crops, CROPS
 
+# Try to use real RAG client; fall back to mock if unavailable
+try:
+    from consumer_app.lib.llm_client import RAGClient
+    _rag_client = RAGClient()
+except Exception:
+    _rag_client = None
+
 st.set_page_config(page_title="Ask your kale — Adopt a Kale", page_icon="💬", layout="wide")
 inject_css()
 brand_header()
@@ -137,7 +144,10 @@ if user_msg_count <= 1:
         with sq_cols[i]:
             if st.button(q, key=f"sq_{i}", use_container_width=True, type="secondary"):
                 st.session_state.chat_history.append({"role": "user", "content": q, "citations": []})
-                response = mock_response(q)
+                if _rag_client is not None:
+                    response = _rag_client.ask(q)
+                else:
+                    response = mock_response(q)
                 st.session_state.chat_history.append({
                     "role": "kale",
                     "content": response["text"],
@@ -151,7 +161,10 @@ st.write("")
 user_input = st.chat_input("How's my kale today?")
 if user_input:
     st.session_state.chat_history.append({"role": "user", "content": user_input, "citations": []})
-    response = mock_response(user_input)
+    if _rag_client is not None:
+        response = _rag_client.ask(user_input)
+    else:
+        response = mock_response(user_input)
     st.session_state.chat_history.append({
         "role": "kale",
         "content": response["text"],

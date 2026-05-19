@@ -14,6 +14,13 @@ from lib.styles import (
 )
 from lib.mock_data import CAMERA, CAMERA_TIMELINE, CROPS
 
+# Try to load real sensor data; fall back to mock values
+try:
+    from consumer_app.lib.sensor_client import get_latest_readings
+    _sensor_data = get_latest_readings()
+except Exception:
+    _sensor_data = None
+
 st.set_page_config(page_title="Plant Camera — Adopt a Kale", page_icon="📷", layout="wide")
 inject_css()
 brand_header()
@@ -243,13 +250,22 @@ st.markdown(
 )
 
 sensor_cols = st.columns(5)
-sensor_data = [
-    ("🌡", "Temperature", "22.4°C", "Optimal 20–24°C"),
-    ("💧", "Humidity", "68%", "Target 65–70%"),
-    ("💡", "PPFD", "240 µmol/m²/s", "Optimal for kale"),
-    ("⚗️", "pH Level", "5.8", "Target 5.6–6.0"),
-    ("📈", "CO₂", "798 ppm", "Optimal < 800 ppm"),
-]
+if _sensor_data:
+    sensor_data = [
+        ("🌡", "Temperature", f"{_sensor_data['temperature']}°C", "Optimal 20–24°C"),
+        ("💧", "Humidity", f"{_sensor_data['humidity']}%", "Target 65–70%"),
+        ("💡", "PPFD", f"{_sensor_data['ppfd']} µmol/m²/s", "Optimal for kale"),
+        ("⚗️", "pH Level", f"{_sensor_data['ph']}", "Target 5.6–6.0"),
+        ("📈", "CO₂", f"{_sensor_data['co2']} ppm", "Optimal < 800 ppm"),
+    ]
+else:
+    sensor_data = [
+        ("🌡", "Temperature", "22.4°C", "Optimal 20–24°C"),
+        ("💧", "Humidity", "68%", "Target 65–70%"),
+        ("💡", "PPFD", "240 µmol/m²/s", "Optimal for kale"),
+        ("⚗️", "pH Level", "5.8", "Target 5.6–6.0"),
+        ("📈", "CO₂", "798 ppm", "Optimal < 800 ppm"),
+    ]
 for col, (emoji, label, value, note) in zip(sensor_cols, sensor_data):
     with col:
         st.markdown(

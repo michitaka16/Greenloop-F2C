@@ -58,6 +58,15 @@ if st.session_state.active_alerts:
 # Greeting (time-based)
 # ───────────────────────────────────────────
 import datetime
+
+# Try to load live weather from NEA API
+try:
+    from consumer_app.lib.weather_client import get_weather_note, get_weather_condition
+    _weather_note = get_weather_note()
+    _weather_condition = get_weather_condition()
+except Exception:
+    _weather_note = None
+    _weather_condition = None
 hour = datetime.datetime.now().hour
 if hour < 12:
     greet = "Good morning"
@@ -110,6 +119,18 @@ with st.container():
     st.markdown("</div>", unsafe_allow_html=True)
 
 st.write("")
+
+# Weather strip (live from NEA Singapore)
+if _weather_note:
+    st.markdown(
+        f"<div style='background:{CREAM};border-radius:12px;padding:0.6rem 1rem;display:flex;"
+        f"align-items:center;gap:0.5rem;margin-bottom:0.75rem;'>"
+        f"<span style='font-size:1rem;'>🌦️</span>"
+        f"<span style='font-size:0.85rem;color:{INK};'>Singapore now: <strong>{_weather_note}</strong></span>"
+        f"<span style='font-size:0.75rem;color:{MUTED};margin-left:auto;'>via NEA Data API</span>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
 # Stats row under hero
 stat_cols = st.columns(4)

@@ -21,6 +21,15 @@ from lib.mock_data import (
     SARAH_KMEANS_CLUSTER,
 )
 
+# Load NEA weather for delivery warnings
+try:
+    from consumer_app.lib.weather_client import get_weather_delivery_warning, get_weather_condition
+    _delivery_warning = get_weather_delivery_warning()
+    _weather_condition = get_weather_condition()
+except Exception:
+    _delivery_warning = None
+    _weather_condition = None
+
 # Session state for skip flow
 if "skipped_dates" not in st.session_state:
     st.session_state.skipped_dates = []
@@ -47,6 +56,18 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.write("")
+
+# Weather delivery advisory strip
+if _delivery_warning:
+    st.markdown(
+        f"<div style='background:rgba(224,120,86,0.1);border:1px solid rgba(224,120,86,0.4);"
+        f"border-radius:12px;padding:0.75rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;'>"
+        f"<span style='font-size:1rem;'>🌧️</span>"
+        f"<span style='font-size:0.85rem;color:{CORAL};font-weight:600;'>{_delivery_warning}</span>"
+        f"<span style='font-size:0.75rem;color:{MUTED};margin-left:auto;'>Current: {_weather_condition}</span>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
 # ────────────────────────────────────────────
 # 🍽️ This Week's Omakase — K-Means Marriage Suggestion
