@@ -2,7 +2,10 @@
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add consumer_app/ to sys.path (deduped to avoid breaking existing imports)
+_APP_DIR = str(Path(__file__).parent.parent)
+if _APP_DIR not in sys.path:
+    sys.path.insert(0, _APP_DIR)
 
 import streamlit as st
 from lib.styles import (
