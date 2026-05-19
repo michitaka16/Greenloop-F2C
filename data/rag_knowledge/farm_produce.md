@@ -1,8 +1,8 @@
-# GreenLoop Farm Produce Guide
+# Adopt a Kale — Farm Produce Guide
 
 ## Overview
 
-GreenLoop operates a 3-layer hydroponic vertical farm in Singapore, producing premium leafy greens and herbs year-round using 95% less water than conventional farming.
+Adopt a Kale operates a 3-layer hydroponic vertical farm in Singapore, producing premium leafy greens and herbs year-round using 95% less water than conventional farming.
 
 ## Crops We Grow
 
@@ -42,11 +42,11 @@ GreenLoop operates a 3-layer hydroponic vertical farm in Singapore, producing pr
 
 ## Seasonal Availability
 
-All crops are available year-round due to controlled environment agriculture (CEA). No seasonal gaps — GreenLoop guarantees 52-week supply continuity.
+All crops are available year-round due to controlled environment agriculture (CEA). No seasonal gaps — Adopt a Kale guarantees 52-week supply continuity.
 
 ## Farm Location
 
-**GreenLoop Jurong Innovation District Farm**
+**Adopt a Kale Jurong Innovation District Farm**
 - Address: Jurong Innovation District, Singapore
 - Coordinates: 1.3328°N, 103.7436°E
 - This is the depot for all VRP delivery routing — all routes start and end here.

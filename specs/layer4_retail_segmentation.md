@@ -2,7 +2,7 @@
 
 ## Overview
 
-Layer 4 is a read-only analytics page (`pages/2_retail.py`) that clusters GreenLoop's customer base into behavioural segments using K-Means. It does not affect Layer 1/2/3 outputs. It exists so the farm's sales team can prioritise outreach by segment.
+Layer 4 is a read-only analytics page (`pages/2_retail.py`) that clusters the platform's customer base into behavioural segments using K-Means. It does not affect Layer 1/2/3 outputs. It exists so the farm's sales team can prioritise outreach by segment.
 
 ---
 
@@ -156,7 +156,7 @@ One card per segment with:
 
 ```
 pages/2_retail.py
-├── st.set_page_config(page_title="GreenLoop — Retail AI")
+├── st.set_page_config(page_title="Adopt a Kale — Retail AI")
 ├── load data (customers.csv + orders.csv)
 ├── build features + scale
 ├── cluster with K-Means

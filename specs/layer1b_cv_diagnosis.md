@@ -1,13 +1,13 @@
 # Layer 1b: Computer Vision Crop Diagnosis
 
 ## Domain: ML / Computer Vision
-## Phase: Proposed addition to GreenLoop Farm OS
+## Phase: Proposed addition to Adopt a Kale
 
 ---
 
 ## 1. Overview
 
-Layer 1b adds Computer Vision diagnosis to the GreenLoop Farm OS pipeline. From a single crop rack image, a dual-head neural network classifies:
+Layer 1b adds Computer Vision diagnosis to the Adopt a Kale pipeline. From a single crop rack image, a dual-head neural network classifies:
 
 1. **Growth stage** (3-class): `early` / `mid` / `harvest-ready`
 2. **Nutrition status** (3-class): `nitrogen-low` / `water-stress` / `normal`

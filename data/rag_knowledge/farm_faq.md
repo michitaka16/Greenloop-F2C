@@ -1,11 +1,11 @@
-# GreenLoop Farm — Frequently Asked Questions
+# Adopt a Kale — Frequently Asked Questions
 
 ## About Our Farm
 
-**Q: Where is GreenLoop located?**
-A: GreenLoop is located 15km from Singapore's CBD in Jurong Innovation District. Our farm spans 500 m² across 3 vertical layers.
+**Q: Where is Adopt a Kale located?**
+A: Adopt a Kale is located 15km from Singapore's CBD in Jurong Innovation District. Our farm spans 500 m² across 3 vertical layers.
 
-**Q: How is GreenLoop different from a conventional farm?**
+**Q: How is Adopt a Kale different from a conventional farm?**
 A: We use hydroponic vertical farming with NFT (Nutrient Film Technique). We grow in stacked layers using 95% less water, zero pesticides, and 20x less land than conventional farming. All produce is harvested and delivered within 24 hours.
 
 **Q: How many crops can you grow?**

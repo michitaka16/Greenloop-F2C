@@ -49,7 +49,7 @@ def main() -> int:
     rows: list[dict] = []
 
     print("=" * 66)
-    print("PHASE 13 DRIFT MONITORING REPORT — Greenloop F2C")
+    print("PHASE 13 DRIFT MONITORING REPORT — Adopt a Kale")
     print(f"Generated: {datetime.now().isoformat()}")
     print(f"Checks: {len(checks)}")
     print("=" * 66)

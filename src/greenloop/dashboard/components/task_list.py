@@ -1,4 +1,4 @@
-"""Today's Actions — farm-manager task list for GreenLoop Farm OS.
+"""Today's Actions — farm-manager task list for Adopt a Kale.
 
 Renders a concise action list from the MILP plan and CV diagnosis results,
 framed from Amy Tan's perspective (Farm Manager, ACTF Farm #127).

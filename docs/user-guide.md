@@ -1,12 +1,12 @@
-# GreenLoop Farm OS — User Guide
+# Adopt a Kale — User Guide (Farm OS)
 
 **Version:** 1.0 | **Last updated:** April 2026
 
 ---
 
-## What is GreenLoop Farm OS?
+## What is Adopt a Kale Farm OS?
 
-GreenLoop Farm OS is an AI-powered vertical farm management dashboard that runs a 3-layer intelligent system to maximize profit while keeping crops healthy and operations within real-world constraints.
+Adopt a Kale Farm OS is an AI-powered vertical farm management dashboard that runs a 3-layer intelligent system to maximize profit while keeping crops healthy and operations within real-world constraints.
 
 Think of it as a **copilot for your farm manager** — it looks at tomorrow's likely demand, works out the cheapest way to fulfil it, checks the health of your crops, and adjusts the climate controls automatically.
 

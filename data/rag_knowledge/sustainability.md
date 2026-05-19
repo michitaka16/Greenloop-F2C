@@ -1,6 +1,6 @@
-# GreenLoop Sustainability Report
+# Adopt a Kale — Sustainability Report
 
-> **Live Dashboard:** The GreenLoop Farm OS dashboard computes all KPIs live from the Layer 2 optimizer plan.
+> **Live Dashboard:** The Adopt a Kale Farm OS dashboard computes all KPIs live from the Layer 2 optimizer plan.
 > Metrics below represent typical daily performance and are consistent with the live-computed values shown in the dashboard.
 >
 > | KPI | Live Metric | Delta vs Conventional |
@@ -14,10 +14,10 @@
 
 ### Water Conservation
 
-GreenLoop's hydroponic system uses **95% less water** than conventional Singapore soil farming:
+Adopt a Kale's hydroponic system uses **95% less water** than conventional Singapore soil farming:
 
 - Conventional farming: ~20 litres per kg of produce
-- GreenLoop hydroponic: ~2 litres per kg of produce
+- Adopt a Kale hydroponic: ~2 litres per kg of produce
 - Annual water savings: approximately 12 million litres vs equivalent soil farm
 
 **Water Recycling:** Nutrient solution is recirculated in a closed-loop NFT system. Evapotranspiration losses are topped up from collected rainwater. Total water recycle rate: 98.2%.
@@ -52,12 +52,12 @@ GreenLoop's hydroponic system uses **95% less water** than conventional Singapor
 ### Biodiversity Impact
 
 - Conventional Singapore agriculture has been displaced by urban development
-- Vertical farms like GreenLoop can produce food without competing for agricultural land
+- Vertical farms like Adopt a Kale can produce food without competing for agricultural land
 - Growing conditions support beneficial insect populations in urban environment
 
 ### Comparison to Imports
 
-| Metric | GreenLoop (Local) | Imported (Air Freight) | Imported (Sea Freight) |
+| Metric | Adopt a Kale (Local) | Imported (Air Freight) | Imported (Sea Freight) |
 |--------|-------------------|----------------------|---------------------|
 | CO₂e/kg | 0.042 kg         | 5.2 kg              | 0.3 kg             |
 | Shelf life | 7-10 days       | 3-5 days            | 5-7 days           |
@@ -66,7 +66,7 @@ GreenLoop's hydroponic system uses **95% less water** than conventional Singapor
 
 ### SDG Alignment
 
-GreenLoop supports the following UN Sustainable Development Goals:
+Adopt a Kale supports the following UN Sustainable Development Goals:
 - **SDG 2** (Zero Hunger) — Local food security through year-round production
 - **SDG 6** (Clean Water) — 95% water use reduction
 - **SDG 7** (Affordable Clean Energy) — 100% renewable power

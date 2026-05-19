@@ -1,5 +1,5 @@
-# Dimension A Evidence — GreenLoop F2C Decision Log
-**Project:** GreenLoop Farm-to-Consumer Vertical Hydroponics OS
+# Dimension A Evidence — Adopt a Kale Decision Log (formerly Adopt a Kale F2C)
+**Project:** Adopt a Kale Farm-to-Consumer Vertical Hydroponics OS
 **Course:** MGMT 655 — AI & Machine Learning
 **Dimension A:** Technical depth and justification across all AI/ML components
 **Last updated:** 2026-04-20
@@ -96,7 +96,7 @@ The farm planning problem has a mixed-integer structure: rack assignment (which 
 ## Decision 4: Uncertainty Propagation L1 → L2 via Upper-CI Targeting
 
 **Date:** 2026-03-18
-**Context:** The key architectural insight: Layer 1 produces probabilistic forecasts (q=0.05, 0.50, 0.95). Layer 2 must use these to build a plan that is robust to demand uncertainty. This is the foundational differentiator between GreenLoop's approach and a naive "predict mean, plan for mean" system.
+**Context:** The key architectural insight: Layer 1 produces probabilistic forecasts (q=0.05, 0.50, 0.95). Layer 2 must use these to build a plan that is robust to demand uncertainty. This is the foundational differentiator between the platform's approach and a naive "predict mean, plan for mean" system.
 
 **Options considered:**
 - Option A: **Upper-ci as hard production target (Robust Optimization)** — chosen
@@ -414,7 +414,7 @@ The emoji suffix (🌿, 📦, 📱, 🛒) serves as a visual mnemonic for dashbo
 ## Decision 14: ChromaDB as the Vector Store for RAG
 
 **Date:** 2026-04-01
-**Context:** Layer 5 Media AI must answer questions about GreenLoop's farm (location, crops, sustainability claims, food safety) using a RAG pipeline. The vector database must store document embeddings for semantic search.
+**Context:** Layer 5 Media AI must answer questions about the farm (location, crops, sustainability claims, food safety) using a RAG pipeline. The vector database must store document embeddings for semantic search.
 
 **Options considered:**
 - Option A: **ChromaDB (local, open-source)** — chosen
@@ -443,7 +443,7 @@ ChromaDB was chosen for its zero-infrastructure overhead (runs in-process as a l
 ## Decision 15: sentence-transformers for Embeddings
 
 **Date:** 2026-04-02
-**Context:** RAG requires embedding GreenLoop's knowledge documents (farm produce, sustainability, food safety) into vector representations. The embedding model must be high quality for semantic search to work correctly.
+**Context:** RAG requires embedding the platform's knowledge documents (farm produce, sustainability, food safety) into vector representations. The embedding model must be high quality for semantic search to work correctly.
 
 **Options considered:**
 - Option A: **all-MiniLM-L6-v2 (sentence-transformers)** — chosen
@@ -472,7 +472,7 @@ all-MiniLM-L6-v2 (22M parameters, 384-dimensional embeddings) was selected as th
 ## Decision 16: Claude API for RAG Answer Generation
 
 **Date:** 2026-04-03
-**Context:** After retrieving the top-k context chunks from ChromaDB, the RAG pipeline must generate a natural language answer. The generation model must produce fluent, factual responses aligned with GreenLoop's brand voice.
+**Context:** After retrieving the top-k context chunks from ChromaDB, the RAG pipeline must generate a natural language answer. The generation model must produce fluent, factual responses aligned with the Adopt a Kale brand voice.
 
 **Options considered:**
 - Option A: **Claude API (Anthropic, claude-3-haiku-20240307)** — chosen
@@ -511,7 +511,7 @@ Claude was selected for its industry-leading instruction-following accuracy, ref
 **Chosen:** Option A — Demo mode
 
 **Rationale:**
-Demo mode pre-caches answers for 4 high-priority investor questions (farm location, crops grown, water savings, pesticide-free claim) in `_DEMO_ANSWERS` dictionary. When the RAG pipeline encounters a query matching one of these 4 questions (exact phrase match), it returns the pre-written answer without calling the API. This ensures the Media AI page is functional in all demo scenarios: pitch room (no internet), API outage (Claude down), key expiry (忘记 to set `.env`), or rate limit hit. The demo mode answer for "where are you located" is: "GreenLoop is located 15km from Singapore's CBD in the Jurong Innovation District..." — factual, brand-aligned, and complete. The dashboard renders a "Demo Mode" indicator in the Media AI panel so investors know they're seeing curated content.
+Demo mode pre-caches answers for 4 high-priority investor questions (farm location, crops grown, water savings, pesticide-free claim) in `_DEMO_ANSWERS` dictionary. When the RAG pipeline encounters a query matching one of these 4 questions (exact phrase match), it returns the pre-written answer without calling the API. This ensures the Media AI page is functional in all demo scenarios: pitch room (no internet), API outage (Claude down), key expiry (忘记 to set `.env`), or rate limit hit. The demo mode answer for "where are you located" is: "Adopt a Kale is located 15km from Singapore's CBD in the Jurong Innovation District..." — factual, brand-aligned, and complete. The dashboard renders a "Demo Mode" indicator in the Media AI panel so investors know they're seeing curated content.
 
 **Rejected alternatives:**
 - **Hard requirement:** A Streamlit error message ("Claude API unavailable") during a pitch would be a demo-stopping failure. The entire 4-page pitch flow would be disrupted.
@@ -567,7 +567,7 @@ CVRPTW is the mathematically correct formulation for our problem: we have capaci
 **Chosen:** Option A — Jurong Innovation District
 
 **Rationale:**
-Jurong Innovation District (JID) was selected because it is Singapore's designated urban agriculture zone under Singapore Food Agency policy (previously the "30-by-30" mandate; superseded November 2025 by Food Story 2: veggies 20%, protein 30% by 2035). JID is specifically planned for high-tech farming including vertical hydroponics. Using the actual coordinates of the GreenLoop farm at JID (verified against the farm's business registration address) ensures consistency between the RAG knowledge base ("GreenLoop is located 15km from Singapore's CBD in the Jurong Innovation District") and the VRP solver's route calculations. The JID location is 15km from CBD, placing it within the 12-hour delivery window reachable to all 30 customers in our synthetic dataset (max customer distance: 20km radial from JID).
+Jurong Innovation District (JID) was selected because it is Singapore's designated urban agriculture zone under Singapore Food Agency policy (previously the "30-by-30" mandate; superseded November 2025 by Food Story 2: veggies 20%, protein 30% by 2035). JID is specifically planned for high-tech farming including vertical hydroponics. Using the actual coordinates of the the farm at JID (verified against the farm's business registration address) ensures consistency between the RAG knowledge base ("Adopt a Kale is located 15km from Singapore's CBD in the Jurong Innovation District") and the VRP solver's route calculations. The JID location is 15km from CBD, placing it within the 12-hour delivery window reachable to all 30 customers in our synthetic dataset (max customer distance: 20km radial from JID).
 
 **Rejected alternatives:**
 - **Lim Chu Kang:** Traditional kampong farming area but geographically distant from CBD and most restaurant/supermarket customers. VRP routes from Lim Chu Kang would be 20-30% longer, increasing total cost metric and potentially making the 12-hour delivery window infeasible for eastern customers.
@@ -628,7 +628,7 @@ water_saved_L = total_water_used_L × (CONVENTIONAL_WATER_L_PER_KG / HYDROPONIC_
               = total_water_used_L × (20.0 / 2.0 − 1)
               = total_water_used_L × 9.0
 ```
-This uses 20 L/kg (Singapore conventional farming average) vs 2 L/kg (GreenLoop NFT hydroponics). Source: AVA Singapore, 2019 agricultural water efficiency study.
+This uses 20 L/kg (Singapore conventional farming average) vs 2 L/kg (Adopt a Kale NFT hydroponics). Source: AVA Singapore, 2019 agricultural water efficiency study.
 
 **CO₂ avoided formula:**
 ```
@@ -636,7 +636,7 @@ co2_avoided_kg = total_kg_produced × (CONVENTIONAL_CO2_KG_PER_KG − GREENLOOP_
                = total_kg_produced × (2.5 − 0.3)
                = total_kg_produced × 2.2
 ```
-This uses 2.5 kg-CO₂/kg (conventional Singapore farming, including fertilizer and transport) vs 0.3 kg-CO₂/kg (GreenLoop hydroponics, renewable energy, local delivery). Source: SG Enable / SFA vertical farming lifecycle analysis, 2023.
+This uses 2.5 kg-CO₂/kg (conventional Singapore farming, including fertilizer and transport) vs 0.3 kg-CO₂/kg (Adopt a Kale hydroponics, renewable energy, local delivery). Source: SG Enable / SFA vertical farming lifecycle analysis, 2023.
 
 **Rejected alternatives:**
 - **Hardcoded values:** Would show the same "1,840 L" number regardless of what the Layer 2 plan actually produced. Investors would notice if the sustainability claims don't reflect the plan being displayed.

@@ -1,6 +1,6 @@
-"""Layer 5: Media AI — RAG Chatbot for GreenLoop Farm.
+"""Layer 5: Media AI — RAG Chatbot for Adopt a Kale Farm.
 
-Ask questions about GreenLoop's produce, sustainability, and operations.
+Ask questions about Adopt a Kale's produce, sustainability, and operations.
 RAG-powered by ChromaDB + sentence-transformers + Claude API.
 Falls back to demo-mode cache when no API key is configured.
 """
@@ -21,7 +21,7 @@ import streamlit as st
 # Page config
 # ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="GreenLoop — Media AI",
+    page_title="Adopt a Kale — Media AI",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -115,7 +115,7 @@ def render_chat_message(role: str, content: str, metadata: dict | None = None):
 # ---------------------------------------------------------------------------
 st.title("\U0001f4ac Media AI — Farm Knowledge Assistant")
 st.caption(
-    "RAG-powered chatbot for GreenLoop Farm — produce, sustainability, and operations. "
+    "RAG-powered chatbot for Adopt a Kale Farm — produce, sustainability, and operations. "
     "Powered by ChromaDB + sentence-transformers"
 )
 
@@ -159,7 +159,7 @@ with st.sidebar:
     st.divider()
     st.markdown("### About")
     st.caption(
-        "GreenLoop Farm OS · Layer 5: Media AI\n"
+        "Adopt a Kale · Layer 5: Media AI\n"
         "ChromaDB vector store · sentence-transformers embeddings"
     )
 
@@ -183,7 +183,7 @@ for msg in st.session_state.chat_history:
     render_chat_message(msg["role"], msg["content"], msg.get("metadata"))
 
 # ── Input ─────────────────────────────────────────────────────────────────
-if prompt := st.chat_input("Ask about GreenLoop Farm..."):
+if prompt := st.chat_input("Ask about Adopt a Kale Farm..."):
     # Add user message
     st.session_state.chat_history.append(
         {"role": "user", "content": prompt}

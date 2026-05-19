@@ -1,1 +1,1 @@
-"""GreenLoop governance package."""
+"""Adopt a Kale governance package."""

@@ -1,6 +1,6 @@
 # Adopt a Kale — Pitch Deck
 
-**Singapore's first AI-managed garden share.** MGMT 655 Capstone (GreenLoop F2C). May 14, 2026 提出。
+**Singapore's first AI-managed garden share.** MGMT 655 Capstone (Adopt a Kale, formerly Adopt a Kale F2C). May 14, 2026 提出。
 
 13 スライドのプログラム的に生成されるピッチデッキ。pptxgenjs でビルド、custom curly-kale leaf SVG → PNG via sharp、ビルド後に SHA-256 で画像重複を排除してスリム化。
 
@@ -135,7 +135,7 @@ D  Dingyao CHU     · Ops & Finance    · Multi-objective optimisation · Unit e
 - **Yili & Mengniu duopoly 85.7% → cracked**
 - **IPO 2024 年 2 月撤回** (申請は 2022 年 7 月)
 
-### GreenLoop production stats
+### Adopt a Kale production stats
 - **48ms** MILP solve time (OR-Tools)
 - **434 unit tests** + **38 adversarial tests**
 - **5 deployment gates**
@@ -201,9 +201,9 @@ git init
 git add . && git commit -m "Initial pitch deck v3 (self-grow narrative)"
 ```
 
-ピッチデッキは GreenLoop F2C 本体とは独立した成果物。プレゼン用ファイルは Capstone 終了後もポートフォリオとして残せる。
+ピッチデッキは Adopt a Kale 本体とは独立した成果物。プレゼン用ファイルは Capstone 終了後もポートフォリオとして残せる。
 
-### B. GreenLoop F2C 内のサブフォルダ
+### B. Adopt a Kale (greenloop) リポ内のサブフォルダ
 
 ```bash
 mv adopt-a-kale-pitch ~/Documents/GitHub/Greenloop-F2C/pitch

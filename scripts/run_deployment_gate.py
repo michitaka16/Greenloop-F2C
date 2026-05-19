@@ -48,7 +48,7 @@ def _print_gate(gate: GateResult) -> None:
 def _render_markdown_report(decision: DeploymentDecision) -> str:
     today = date.today().isoformat()
     lines = [
-        f"# GreenLoop F2C — Deployment Gate Decision",
+        f"# Adopt a Kale F2C — Deployment Gate Decision",
         f"",
         f"**Date:** {today}",
         f"**Phase:** Phase 0 Complete → Phase 1 Pilot Proposal",

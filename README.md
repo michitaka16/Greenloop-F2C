@@ -1,23 +1,35 @@
-# GreenLoop Farm OS
+# Adopt a Kale
 
-3-layer AI pipeline for Singapore vertical hydroponic farming (farm-to-consumer).
+**Farm-to-Consumer Vertical Hydroponics OS for Singapore.** Formerly known as **Adopt a Kale F2C**.
+
+A 5-layer AI platform (6 ML techniques) that runs Singapore vertical-hydroponic farms end-to-end — seed to delivery — and powers the consumer-facing *Adopt a Kale* subscription that lets Singapore residents adopt a named hydroponic plot and receive weekly harvests at home. The same six AI techniques drive both the B2B Farm OS dashboard and the B2C consumer app.
+
+> **Brand note:** the Python package, module names, and the GitHub repository slug retain the legacy name `greenloop` / `Greenloop-F2C` to keep imports and history stable. All marketing-facing materials use *Adopt a Kale*.
 
 | Layer | Responsibility | Tech |
 |---|---|---|
-| **Layer 1** | Weekly crop demand forecast with 90 % confidence intervals | XGBoost quantile regression (q=0.05 / 0.50 / 0.95), SHAP explainability |
-| **Layer 2** | Daily operating plan: LED schedule, staff shifts, rack layout, climate targets | Mixed-Integer Linear Programming via Google OR-Tools |
-| **Layer 3** | Real-time climate control (temperature, humidity, CO₂, moisture) | PPO reinforcement learning (`stable-baselines3`) + pre-action safety envelope |
-| **Dashboard** | Single-screen VC demo integrating all layers + Typhoon scenario re-optimization | Streamlit + Plotly |
+| **Layer 1** | Weekly crop demand forecast with 90 % confidence intervals | XGBoost quantile regression (q = 0.05 / 0.50 / 0.95) · SHAP explainability |
+| **Layer 1b** | Crop health diagnosis (growth stage + nutrition) from rack photography | EfficientNet-B0 dual-head CNN (transfer learning, PlantVillage) — simulation mode |
+| **Layer 2** | Daily operating plan: LED schedule, staff shifts, rack layout, climate targets | Mixed-Integer Linear Programming via Google OR-Tools (< 50 ms solve) |
+| **Layer 2b** | Last-mile delivery routes | Capacitated VRP with Time Windows (OR-Tools) — 30 / 30 Singapore customers, 147.1 km |
+| **Layer 3** | Real-time climate control (temperature, humidity, CO₂, moisture) | PPO reinforcement learning (`stable-baselines3`) + AutonomyGate (MANUAL / ADVISORY / AUTONOMOUS) |
+| **Layer 4** | Customer segmentation for B2C omakase pairing | K-Means k = 4 (silhouette 0.765) + UMAP visualisation |
+| **Layer 5** | Investor / consumer AI chat | RAG (ChromaDB + sentence-transformers + Claude) |
+| **Dashboards** | B2B *Farm OS* (4 pages) + B2C *Adopt a Kale* (9 pages) | Streamlit + Plotly |
 
-The upper CI from Layer 1 feeds the production target of Layer 2, so volatile crops automatically get larger buffers. Full rationale lives in [`specs/decision-log.md`](specs/decision-log.md) (7 Dimension A design decisions) and is surfaced in the dashboard sidebar.
+The upper CI from Layer 1 feeds the production target of Layer 2, so volatile crops automatically get larger buffers. Full rationale lives in [`specs/decision-log.md`](specs/decision-log.md) and [`journal/decision-log.md`](journal/decision-log.md), and is surfaced in the dashboard sidebar.
 
 ## Quick Start
 
-Requirements: `uv`, Python 3.11–3.13 (3.14 is not yet supported by `shap`/`llvmlite`).
+Requirements: `uv`, Python 3.11–3.13 (3.14 is not yet supported by `shap` / `llvmlite`).
 
 ```bash
 uv sync --extra dev
-uv run greenloop dashboard    # launches on http://localhost:8501
+uv run greenloop dashboard    # B2B Farm OS — launches on http://localhost:8501
+
+# Consumer-facing Adopt a Kale app:
+cd consumer_app
+streamlit run Home.py         # B2C Adopt a Kale — http://localhost:8501
 ```
 
 Other CLI commands:
@@ -43,10 +55,10 @@ ln -sf "$PWD/.venv/lib/python3.12/site-packages/sklearn/.dylibs/libomp.dylib" \
 ## Testing
 
 ```bash
-uv run pytest                 # 113 tests across unit + integration
+uv run pytest                 # 494 tests — unit · integration · adversarial · e2e
 ```
 
-The 3-tier layout:
+Test layout:
 
 ```
 tests/
@@ -55,27 +67,51 @@ tests/
 │   ├── test_dashboard/              Design-decision parser
 │   ├── test_data/                   CSV loaders
 │   ├── test_layer1/                 XGBoost quantile forecast
+│   ├── test_layer1b/                EfficientNet adversarial
 │   ├── test_layer2/                 MILP constraints + scenarios
-│   └── test_layer3/                 Gym environment
-├── integration/      Tier 2 — real pipeline (no mocks)
+│   ├── test_layer3/                 Gym environment
+│   ├── test_layer4/                 K-Means segmentation
+│   ├── test_layer5/                 RAG + HITL
+│   ├── test_vrp/                    CVRPTW capacity / time-windows / typhoon
+│   ├── test_governance/             Deployment gate + implications audit
+│   └── test_monitoring/             Drift detector
+├── adversarial/      Tier 2 — 38 red-team tests across all layers
+├── integration/      Tier 3 — real pipeline (no mocks)
+├── e2e/              Tier 4 — Playwright end-to-end
 └── sdk/              Standalone Kailash-SDK validator (not pytest)
 ```
 
 ## Repository Layout
 
 ```
-src/greenloop/
+src/greenloop/                # Python package (legacy name retained)
   layer1/   features.py, model.py (train/load), predict.py, explain.py
+  layer1b/  architecture.py (EfficientNet-B0), inference.py, simulation.py
   layer2/   optimizer.py (MILP), scenarios.py (typhoon re-opt), exceptions.py
-  layer3/   environment.py (gym), train.py (PPO), inference.py (escalation)
-  dashboard/ app.py (Streamlit), design_decisions.py (VC-pitch panel)
-  data/     loader.py, generate_seed_data.py
+  layer2b/  vrp_solver.py (CVRPTW)
+  layer3/   environment.py (gym), train.py (PPO), inference.py, autonomy_gate.py
+  layer4/   segmentation.py (K-Means), recommendations.py, visualization.py
+  rag/      agent.py (ChromaDB + Claude), hitl.py
+  governance/ deployment_gate.py, implications_audit.py
+  monitoring/ drift_detector.py
+  dashboard/ app.py (Streamlit Farm OS), design_decisions.py
+  data/     loader.py, generate_seed_data.py, ema.py (live electricity API)
   cli.py    CLI entrypoint (dashboard / solve / forecast)
+
+consumer_app/                 # B2C Adopt a Kale Streamlit app (9 pages)
+  Home.py                     Landing — tier comparison
+  pages/                      Start · My Plot · Chat · Schedule · Account ·
+                              Plant Camera · Celebration · Alerts
+  lib/                        styles.py, mock_data.py
+  assets/                     Kale leaf PNGs
 
 specs/      Domain truth (demand-forecasting, resource-optimization, climate-control,
             data-model, dashboard, decision-log)
-data/       Seed CSVs (crops, shipments, electricity, staff, sensors_sim)
+data/       Seed CSVs + farm_output.json (cross-page shared state)
 models/     Trained artifacts (demand_q05/q50/q95.json, layer3/ppo_hydrofarm_final.zip)
+journal/    COC decision log + phase reports (phase 5/7/8/13 audit trail)
+deliverables/ MGMT 655 submission — executive summary + pitch decks
+pitch/      VC pitch deck source
 ```
 
 ## License

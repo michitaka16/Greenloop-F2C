@@ -1,4 +1,4 @@
-"""GreenLoop Media AI — RAG Chatbot Module."""
+"""Adopt a Kale Media AI — RAG Chatbot Module."""
 
 from greenloop.rag.agent import FreshnessScore, RAGAnswer, RAGAgent
 

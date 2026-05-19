@@ -1,4 +1,4 @@
-"""RAG agent for GreenLoop Media AI — ChromaDB + sentence-transformers + Claude."""
+"""RAG agent for Adopt a Kale Media AI — ChromaDB + sentence-transformers + Claude."""
 
 from __future__ import annotations
 
@@ -19,31 +19,31 @@ logger = logging.getLogger(__name__)
 _DEMO_ANSWERS: dict[str, str] = {
     # Crops
     "crops": (
-        "GreenLoop grows 12 varieties of leafy greens and herbs: spinach, kale, arugula, "
+        "Adopt a Kale grows 12 varieties of leafy greens and herbs: spinach, kale, arugula, "
         "lettuce, kai lan, basil, cilantro, mint, choy sum, baby bok choy, watercress, and Swiss chard. "
         "All crops are hydroponically grown year-round with zero pesticides in our Jurong farm."
     ),
     # Water savings
     "water": (
-        "GreenLoop uses 95% less water than conventional farming — approximately 2 litres per kg "
+        "Adopt a Kale uses 95% less water than conventional farming — approximately 2 litres per kg "
         "of produce vs. 20 litres for soil farming. Our closed-loop NFT system recirculates "
         "nutrient solution with a 98.2% water recycle rate, supplemented by collected rainwater."
     ),
     # Pesticides
     "pesticide": (
-        "No pesticides, herbicides, or synthetic chemicals — ever. GreenLoop uses Integrated "
+        "No pesticides, herbicides, or synthetic chemicals — ever. Adopt a Kale uses Integrated "
         "Pest Management (IPM) with beneficial insects (predatory mites, lacewings). "
         "Produce has zero pesticide residue and is SS 590:2018 HACCP-certified."
     ),
     # Location / farm address
     "located": (
-        "GreenLoop is 15km from Singapore's CBD in Jurong Innovation District. "
+        "Adopt a Kale is 15km from Singapore's CBD in Jurong Innovation District. "
         "Our farm spans 500 m² across 3 vertical layers, delivering to restaurants "
         "within 2 hours of harvest. Morning slots cover Jurong, Clementi, Bukit Merah, and CBD."
     ),
     # Sustainability
     "sustainab": (
-        "GreenLoop is certified for environmental and food safety sustainability: "
+        "Adopt a Kale is certified for environmental and food safety sustainability: "
         "95% less water, 98% less land, 90% fewer food miles vs. imports, "
         "zero pesticides, and HSA / SFA-approved food safety protocols."
     ),
@@ -61,7 +61,7 @@ _DEMO_ANSWERS: dict[str, str] = {
     ),
     # Revenue / profit / financials
     "revenue": (
-        "GreenLoop's unit economics show: revenue of ~$8–12/kg produce, operating margin "
+        "Adopt a Kale's unit economics show: revenue of ~$8–12/kg produce, operating margin "
         "of 25–35% in normal tariff conditions, and payback period of ~3 years for the "
         "vertical farm infrastructure."
     ),
@@ -194,7 +194,7 @@ class RAGAgent:
 
         # Build prompt
         system_prompt = (
-            "You are a helpful assistant for GreenLoop Farm — a hydroponic vertical farm in Singapore. "
+            "You are a helpful assistant for Adopt a Kale Farm — a hydroponic vertical farm in Singapore. "
             "Answer questions using ONLY the provided context. "
             "If the answer is not in the context, say you don't know. "
             "Be concise, factual, and mention specific numbers when available."
@@ -248,7 +248,7 @@ class RAGAgent:
         self._collection = self._chroma_client.get_or_create_collection(
             name=self.collection_name,
             embedding_function=self._embedder,
-            metadata={"description": "GreenLoop Farm knowledge base"},
+            metadata={"description": "Adopt a Kale Farm knowledge base"},
         )
 
     def _load_documents(self) -> None:

@@ -65,7 +65,7 @@ def main() -> int:
         stakeholder_scores.append((s.stakeholder, net, s))
 
     print("=" * 64)
-    print("PHASE 5 IMPLICATIONS AUDIT — Greenloop F2C")
+    print("PHASE 5 IMPLICATIONS AUDIT — Adopt a Kale")
     print(f"Generated: {datetime.now().isoformat()}")
     print("=" * 64)
 
