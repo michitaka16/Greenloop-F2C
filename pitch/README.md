@@ -1,6 +1,6 @@
 # Adopt a Kale — Pitch Deck
 
-**Singapore's first AI-managed garden share.** MGMT 655 Capstone (Adopt a Kale, formerly Adopt a Kale F2C). May 14, 2026 提出。
+**Singapore's first AI-managed garden share.** MGMT 655 Capstone (Adopt a Kale, formerly GreenLoop F2C). May 14, 2026 提出。
 
 13 スライドのプログラム的に生成されるピッチデッキ。pptxgenjs でビルド、custom curly-kale leaf SVG → PNG via sharp、ビルド後に SHA-256 で画像重複を排除してスリム化。
 

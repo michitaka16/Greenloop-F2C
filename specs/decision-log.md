@@ -1,4 +1,4 @@
-# Dimension A Evidence — Adopt a Kale Decision Log (formerly Adopt a Kale F2C)
+# Dimension A Evidence — Adopt a Kale Decision Log (formerly GreenLoop F2C)
 **Project:** Adopt a Kale Farm-to-Consumer Vertical Hydroponics OS
 **Course:** MGMT 655 — AI & Machine Learning
 **Dimension A:** Technical depth and justification across all AI/ML components

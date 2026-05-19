@@ -2,7 +2,7 @@
 
 **Generated:** 2026-05-19
 **Repository:** `Greenloop-F2C` (legacy slug) · `main` branch
-**Brand:** Adopt a Kale (formerly Adopt a Kale F2C)
+**Brand:** Adopt a Kale (formerly GreenLoop F2C)
 
 ---
 

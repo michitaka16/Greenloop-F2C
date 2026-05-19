@@ -1,6 +1,6 @@
 # Adopt a Kale
 
-**Farm-to-Consumer Vertical Hydroponics OS for Singapore.** Formerly known as **Adopt a Kale F2C**.
+**Farm-to-Consumer Vertical Hydroponics OS for Singapore.** Formerly known as **GreenLoop F2C**.
 
 A 5-layer AI platform (6 ML techniques) that runs Singapore vertical-hydroponic farms end-to-end — seed to delivery — and powers the consumer-facing *Adopt a Kale* subscription that lets Singapore residents adopt a named hydroponic plot and receive weekly harvests at home. The same six AI techniques drive both the B2B Farm OS dashboard and the B2C consumer app.
 

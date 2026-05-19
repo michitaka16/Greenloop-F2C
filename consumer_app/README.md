@@ -1,6 +1,6 @@
 # Adopt a Kale — Consumer App (Streamlit)
 
-Sarah's app の Streamlit 実装。既存 Adopt a Kale (旧 Adopt a Kale F2C) と同じ Python / Streamlit スタックで構築。
+Sarah's app の Streamlit 実装。既存 Adopt a Kale (旧 GreenLoop F2C) と同じ Python / Streamlit スタックで構築。
 ピッチ Slide 10 をそのまま動かせるレベルまでスキャフォールド済み。モックデータ (`lib/mock_data.py`) で全ページ動作。後から既存 Adopt a Kale の AI コンポーネントを呼ぶように接続するだけ。
 
 ---

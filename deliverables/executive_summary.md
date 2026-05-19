@@ -6,7 +6,7 @@
 
 # Adopt a Kale — Executive Summary
 
-*Formerly known as Adopt a Kale F2C. The Python package and GitHub repository slug retain `greenloop` / `Greenloop-F2C` for technical continuity.*
+*Formerly known as GreenLoop F2C. The Python package and GitHub repository slug retain `greenloop` / `Greenloop-F2C` for technical continuity.*
 
 ## 1. The Opportunity
 
