@@ -1,6 +1,6 @@
 % GreenLoop Farm-to-Consumer Vertical Hydroponics OS
 % MGMT 655 — AI & Machine Learning | Week 8 Submission
-% 2026-04-24
+% 2026-05-19
 
 ---
 
@@ -104,31 +104,35 @@ A consumer-facing Streamlit app enabling Singapore residents to adopt a hydropon
 
 | Page | Purpose | Status |
 |------|---------|--------|
-| Home | Landing page — tier comparison, hero section | ✅ Complete |
-| Start | Onboarding wizard — tier selection + crop selection | ✅ Complete |
-| My Plot | Live dashboard — maturity ring, next harvest, crop status | ✅ Complete |
-| Plant Camera | Fixed-point rack camera — live feed, AI diagnosis, sensor readings | ✅ Complete |
-| Chat | AI chatbot — ask about your plot, growth, harvest | ⚠️ Mock (RAG pending) |
-| Schedule | Harvest calendar — upcoming deliveries, growth timeline | ✅ Complete |
-| Account | Subscription management — plan details, preferences | ⚠️ Partial (billing/stripe pending) |
-| Share & NFT | Harvest celebration — share card (IG/Twitter/WhatsApp) + NFT minting flow | ✅ Complete |
+| Home | Landing page — tier comparison, hero section, sidebar navigation | ✅ Complete |
+| Start | Onboarding wizard — tier selection + crop selection + Founding Gardener callout | ✅ Complete |
+| My Plot | Live dashboard — maturity ring, ESG portfolio, badges, leaderboard, status tier, alert banner | ✅ Complete |
+| Plant Camera | Fixed-point rack camera — live feed, AI diagnosis, sensor readings, quick actions | ✅ Complete |
+| Chat | AI chatbot — ask about your plot; supports food pairing, PPO defense reports, recipes | ⚠️ Mock (RAG pending) |
+| Schedule | Harvest calendar — omakase/marriage suggestions, skip-to-donate flow, ESG receipt | ✅ Complete |
+| Account | Subscription management — plan details, preferences, harvest certificate preview | ✅ Complete |
+| Celebration | Harvest celebration — share card (IG/Twitter/WhatsApp) + NFT minting flow | ✅ Complete |
+| Alerts | Crisis Center — live alert banners, alert history, demo trigger panel | ✅ Complete |
 
 **Implemented Differentiation Features**
 
 | Feature | Description | Production Requirement |
 |--------|-------------|----------------------|
-| **Maturity Ring** | Visual progress indicator (0–100%) showing days to harvest | Real sensor data integration |
+| **Maturity Ring** | Visual SVG progress indicator (0–100%) showing days to harvest | Real sensor data integration |
+| **ESG Portfolio Card** | Portfolio value (kg × S$8/kg), water saved (L), CO₂ avoided (kg) — live-computed from growth log | Real harvest weigh-in data |
+| **PPO Defense Reports** | 24-hour climate shield narrative: humidity/LED/nutrient defense action counts, reward bonus earned — AI storytelling UX | PPO agent event log |
+| **Crisis Center / Alerts** | Active alert banners (typhoon, power outage, surprise upgrade, defense report); dismiss → history; demo trigger panel | Real-time Farm OS push |
+| **K-Means Food Pairing** | Restaurant-quality omakase suggestions (e.g. Kale + Premium Wagyu at Ikyu Tokyo); cluster of 847 similar households; wine pairing + occasion | RAG + crop yield data |
+| **Skip-to-Donate** | One-tap skip → charity selection (NTUC Food Bank, Singapore Red Cross, AWWA); ESG Guardian badge; donation receipt | Stripe + charity API |
+| **Surprise Upgrade Alert** | Surplus yield → free rare herb upgrade (Edible Flowers for Sprout tier); automated AI decision | Real yield surplus detection |
+| **Founding Gardener Status** | Pre-launch cohort badge with pulsing glow; exclusive perks, named on wall of fame; 5-tier loyalty (Seedling → Master Gardener) | Real subscription start date |
 | **Plant Camera** | Fixed-point camera feed with AI crop diagnosis (EfficientNet-B0), growth timeline, live sensor readings | Real camera hardware + IoT API |
 | **Harvest Prediction** | AI-estimated yield (g) with confidence interval | Trained growth model |
 | **Growth Timeline** | Day-by-day crop history with milestone markers | Sensor event log |
-| **Growth Progress Reports** | Weekly PDF/email summary of plot activity | Report generation pipeline + email |
-| **Harvest Alerts** | Push notification when crop is ready to pick | WhatsApp/Stripe integration |
-| **Sensor Data Access** | Real-time humidity, temperature, pH readings | IoT sensor API |
-| **Harvest Certificate** | Digital proof of harvest with timestamp + photo | Photo capture + NFT/storage |
 | **Milestone Badges** | 6-level achievement system (Seed Planted → Harvest Master) | Real milestone event tracking |
 | **Leaderboard** | Singapore growers ranking by kg grown + deliveries | Real competitor data |
 | **Share Card** | Downloadable/shareable harvest card for Instagram, Twitter, WhatsApp | — |
-| **NFT Minting** | On-chain harvest certificate via MetaMask + Polygon | MetaMask wallet + MATIC tokens |
+| **NFT Minting** | On-chain harvest certificate via MetaMask + Polygon Mumbai testnet | MetaMask wallet + MATIC tokens |
 
 **Tech Stack:** Streamlit (Python) · CSS styling · Mock data → Production: real sensor data + RAG + Stripe + WhatsApp API · Multi-page navigation
 
@@ -153,7 +157,7 @@ A consumer-facing Streamlit app enabling Singapore residents to adopt a hydropon
 
 **Sustainability** (live-computed by Layer 2 plan): **95% less water** vs. conventional farming (2 L/kg vs. 20 L/kg; source: AVA Singapore 2019). **87% less CO2** (0.3 vs. 2.5 kg-CO2/kg; source: SFA 2023 lifecycle analysis).
 
-**Test suite:** 434 tests — all governance, monitoring, adversarial, and unit tests passing. See `tests/` for full breakdown.
+**Test suite:** 494 tests passing — governance, monitoring, adversarial, and unit tests. See `tests/` for full breakdown.
 
 ## 7. Team
 
@@ -180,4 +184,4 @@ A consumer-facing Streamlit app enabling Singapore residents to adopt a hydropon
 
 **What happens next:** Week 2 — install sensors on 3 pilot farms. Week 6 — first Singapore-specific model retraining with Phase 1 data. Week 12 — governance review and Phase 2 decision gate.
 
-*Submitted: 2026-04-24 | Greenloop-F2C | main | 434 tests passing | 13 of 14 phases complete*
+*Submitted: 2026-05-19 | Greenloop-F2C | main | 494 tests passing | 13 of 14 phases complete*

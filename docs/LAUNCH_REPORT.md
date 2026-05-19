@@ -1,13 +1,13 @@
 % GreenLoop F2C — Launch Report
 % MGMT 655 Capstone · Phase 8 Deployment Gate
-% 2026-05-18
+% 2026-05-19
 
 ---
 
 # GreenLoop F2C — Launch Report
 
 **Repository:** https://github.com/michitaka16/Greenloop-F2C
-**Submitted:** 2026-05-18 · main branch · 434 tests passing · 13/14 phases complete
+**Submitted:** 2026-05-19 · main branch · 494 tests passing · 13/14 phases complete
 **Deploy URL:** https://share.streamlit.io/michitaka16/Greenloop-F2C (Streamlit Community Cloud)
 
 ---
@@ -121,13 +121,18 @@ Three-step onboarding wizard:
 
 ### My Plot (`consumer_app/pages/2_🌿_My_Plot.py`) — Main Dashboard
 The centerpiece of the app. Shows:
-- **Maturity Ring** — an SVG progress circle showing crop maturity percentage
+- **Maturity Ring** — an SVG progress circle showing crop maturity percentage with a leaf centerpiece
 - **Next harvest date** — with auto-tuned timestamp and weather correction
+- **CTA button row** — links to Chat, Schedule, Plant Camera, Celebration, and Alerts pages
+- **ESG Portfolio** — portfolio value (kg × S$8/kg), water saved (L), CO₂ avoided (kg) vs. conventional farming
+- **Achievement Badges** — 6 badges with locked/unlocked states; next badge with unlock criteria
+- **Leaderboard** — Singapore growers ranking; highlights user's position
+- **Gardener Status** — 5-tier loyalty system (Seedling → Master Gardener) with perks and next-tier progress bar
 - **Crop cards** — one per crop, showing variety name, days elapsed, and progress bar
 - **Upcoming deliveries** — next 3 scheduled delivery dates with item lists
 - **Recent activity feed** — automated log of climate tuning, milestones, and pest scans
 - **Lifetime stats** — total kg grown, total deliveries (all on time)
-- CTA button to **Plant Camera** page
+- **Alert banner** — active alerts shown at top of page with severity coloring
 
 ### Plant Camera (`consumer_app/pages/6_📷_PlantCamera.py`)
 Fixed-point rack camera for 24-hour crop monitoring. Key features:
@@ -144,23 +149,36 @@ Data sourced from `consumer_app/lib/mock_data.py` (`CAMERA`, `CAMERA_TIMELINE`).
 AI chatbot grounded in your plot's data. Ask questions like:
 - "When will my kale be ready?"
 - "Why is the humidity changing today?"
-- "Is my Thai basil getting enough light?"
+- "What can I make with my kale this week?"
+- "What pairs best with my kale?"
+- "Show me the PPO defense report"
 - "How much have I grown this year?"
 
-Responses include citations sourced from plot sensors, climate logs, and harvest schedules. Suggested questions appear for new conversations.
+Responses include citations sourced from plot sensors, climate logs, and harvest schedules. Suggested questions appear for new conversations. Triggers food pairing suggestions, PPO climate defense reports, and recipe cards when relevant keywords are detected.
 
 > **Note:** Chat responses are currently mock (hardcoded in `mock_response()` in `consumer_app/lib/mock_data.py`). Production requires connecting to the RAG pipeline in `src/greenloop/rag/agent.py` and `hitl.py`.
 
 ### Schedule (`consumer_app/pages/4_📅_Schedule.py`)
-Harvest calendar showing upcoming delivery dates and the growth timeline for each crop. Includes tentative future deliveries.
+Harvest calendar showing upcoming delivery dates and the growth timeline for each crop. Includes:
+- **Omakase / K-Means Marriage Suggestion** — restaurant-quality pairing recommendation (e.g. Kale + Premium Wagyu) based on the user's K-Means cluster, with wine pairing and occasion
+- **Recipe Ideas** — weekly recipes based on upcoming crop harvest
+- **Skip-to-Donate Flow** — skip a delivery and convert it to a charity donation (NTUC Food Bank, Singapore Red Cross, AWWA Senior Nutrition); generates an ESG Guardian badge and a donation receipt
+- **Growth Timeline** — per-crop progress bars with day count
+
+### Alerts (`consumer_app/pages/9_🔔_Alerts.py`)
+Crisis notification center demonstrating how the AI protects your plot in real-time:
+- **Active Alert Banners** — full-width colored banners (red=critical, amber=warning, blue=info) with dismissible "Mark Clear" button; dismissed alerts move to history
+- **Alert History** — severity-coded cards showing all past alerts with timestamps and body text
+- **Demo Trigger Panel** — 6 simulated alert types: Typhoon Emergency Harvest, Power Outage, Surprise Upgrade (surplus yield → free Edible Flowers), PPO Defense Report (24h climate shield), K-Means Food Pairing (kale + edamame), Skip-to-Donate (ESG Guardian badge earned)
+- Sidebar shows unread alert count badge
 
 ### Account (`consumer_app/pages/5_👤_Account.py`)
 Manage your subscription:
 - View current tier, plot number, and account details
-- **Growth Progress Report** — weekly summary with day count, maturity %, kg grown, and delivery count. Download as PDF (coming soon).
-- **Harvest Certificate** — digital proof of harvest with timestamp. View full certificate or mint as NFT (coming soon).
+- **Preferences** — WhatsApp updates, delivery window, pause subscription; each with a descriptive note explaining current state and available actions
+- **Growth Progress Report** — weekly summary with day count, maturity %, kg grown, and delivery count
+- **Harvest Certificate** — preview card showing plot number and harvest badge; full certificate and NFT minting unlock at first harvest
 - **Harvest Alerts** — next harvest date, alert channel (WhatsApp + in-app). Test alert button available.
-- Billing portal and Upgrade to Pro buttons (coming soon).
 
 ## FAQ
 
@@ -275,7 +293,9 @@ Greenloop-F2C/
 │       ├── 3_💬_Chat.py     # AI chatbot UI
 │       ├── 4_📅_Schedule.py  # Harvest calendar
 │       ├── 5_👤_Account.py  # Subscription management
-│       └── 6_📷_PlantCamera.py  # Fixed-point rack camera + AI diagnosis
+│       ├── 6_📷_PlantCamera.py  # Fixed-point rack camera + AI diagnosis
+│       ├── 7_🎉_Celebration.py  # Share card + NFT minting
+│       └── 9_🔔_Alerts.py  # Crisis notification center + demo triggers
 ├── pages/                    # Farm OS dashboard sub-pages
 │   ├── 2_Logistics.py       # VRP map + delivery routes
 │   ├── 3_Retail_AI.py       # K-Means clusters + UMAP
@@ -421,4 +441,4 @@ Full cascade is automated. MILP re-solve confirmed < 50 ms even under emergency 
 
 ---
 
-*End of Launch Report · GreenLoop F2C · 2026-05-18 · 434 tests passing · 13/14 phases*
+*End of Launch Report · GreenLoop F2C · 2026-05-19 · 494 tests passing · 13/14 phases*
