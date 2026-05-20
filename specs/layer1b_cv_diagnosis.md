@@ -432,7 +432,7 @@ def diagnose_all_racks():
 ## 10. File Locations
 
 ```
-src/greenloop/
+src/adoptakale/
   layer1b/                      # NEW — CV module
     __init__.py
     architecture.py              # DualHeadClassifier model definition

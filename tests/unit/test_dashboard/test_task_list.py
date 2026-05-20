@@ -1,8 +1,8 @@
-"""Tests for greenloop.dashboard.components.task_list."""
+"""Tests for adoptakale.dashboard.components.task_list."""
 
 from __future__ import annotations
 
-from greenloop.dashboard.components.task_list import (
+from adoptakale.dashboard.components.task_list import (
     _build_priority_tasks,
     _build_routine_tasks,
     _harvest_time_for_tier,

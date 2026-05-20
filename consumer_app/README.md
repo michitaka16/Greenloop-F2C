@@ -107,7 +107,7 @@ def mock_response(question: str) -> dict:
         return {"text": "...", "citations": [...]}
 
 # After (real RAG)
-from src.greenloop.ai.rag import answer_question  # 既存コード
+from src.adoptakale.ai.rag import answer_question  # 既存コード
 
 def mock_response(question: str) -> dict:
     result = answer_question(plot_id="042", question=question)
@@ -125,7 +125,7 @@ def mock_response(question: str) -> dict:
 STATUS = {"maturity": 74, ...}
 
 # After
-from src.greenloop.ai.ppo_agent import get_plot_status
+from src.adoptakale.ai.ppo_agent import get_plot_status
 
 def get_status():
     return get_plot_status("042")  # returns dict with maturity, etc.
@@ -162,7 +162,7 @@ def get_status():
 
 ```bash
 # 1. リポジトリへ
-cd ~/Documents/GitHub/Greenloop-F2C
+cd ~/Documents/GitHub/Adopt-A-Kale
 git checkout -b feat/consumer-app
 
 # 2. zip 展開
@@ -176,14 +176,14 @@ streamlit run Home.py
 
 # 4. 既存 Adopt a Kale と同時起動 (デモ構成)
 # Terminal 1 — Operator dashboard (既存)
-#   cd ~/Documents/GitHub/Greenloop-F2C
-#   uv run streamlit run src/greenloop/dashboard/app.py --server.port 8501
+#   cd ~/Documents/GitHub/Adopt-A-Kale
+#   uv run streamlit run src/adoptakale/dashboard/app.py --server.port 8501
 # Terminal 2 — Consumer app (今回追加)
-#   cd ~/Documents/GitHub/Greenloop-F2C/consumer_app
+#   cd ~/Documents/GitHub/Adopt-A-Kale/consumer_app
 #   streamlit run Home.py --server.port 8502
 
 # 5. コミット
-cd ~/Documents/GitHub/Greenloop-F2C
+cd ~/Documents/GitHub/Adopt-A-Kale
 git add consumer_app
 git commit -m "feat(consumer): scaffold Adopt a Kale consumer Streamlit app
 

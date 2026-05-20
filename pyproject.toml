@@ -3,11 +3,11 @@ requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "greenloop-farm-os"
+name = "adopt-a-kale"
 version = "0.1.0"
 description = "3-layer AI pipeline for Singapore vertical hydroponic farming"
 authors = [
-    {name = "GreenLoop Team", email = "team@greenloop.sg"}
+    {name = "GreenLoop Team", email = "team@adoptakale.sg"}
 ]
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -56,7 +56,7 @@ dependencies = [
 ]
 
 [project.scripts]
-greenloop = "greenloop.cli:main"
+adoptakale = "adoptakale.cli:main"
 
 [project.optional-dependencies]
 dev = [

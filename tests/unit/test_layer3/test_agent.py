@@ -11,8 +11,8 @@ Tests:
 import numpy as np
 import pytest
 
-from greenloop.layer3.agent import HydroFarmAgent
-from greenloop.layer3.environment import HydroFarmEnv
+from adoptakale.layer3.agent import HydroFarmAgent
+from adoptakale.layer3.environment import HydroFarmEnv
 
 
 @pytest.fixture

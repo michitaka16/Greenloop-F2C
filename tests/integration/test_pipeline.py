@@ -8,11 +8,11 @@ import time
 
 import pytest
 
-from greenloop.data.loader import load_crops, load_electricity, load_staff
-from greenloop.layer2.exceptions import InfeasibleError
-from greenloop.layer2.optimizer import build_and_solve
-from greenloop.layer2.scenarios import apply_typhoon, compare_plans
-from greenloop.layer3.environment import HydroFarmEnv
+from adoptakale.data.loader import load_crops, load_electricity, load_staff
+from adoptakale.layer2.exceptions import InfeasibleError
+from adoptakale.layer2.optimizer import build_and_solve
+from adoptakale.layer2.scenarios import apply_typhoon, compare_plans
+from adoptakale.layer3.environment import HydroFarmEnv
 
 
 # Simulated Layer 1 output (used when XGBoost unavailable)
@@ -38,10 +38,10 @@ def common_data():
 def forecast():
     """Try real Layer 1 forecast; fall back to simulated."""
     try:
-        from greenloop.data.loader import load_shipments
-        from greenloop.layer1.features import build_features
-        from greenloop.layer1.model import train_models
-        from greenloop.layer1.predict import predict_demand
+        from adoptakale.data.loader import load_shipments
+        from adoptakale.layer1.features import build_features
+        from adoptakale.layer1.model import train_models
+        from adoptakale.layer1.predict import predict_demand
 
         shipments = load_shipments()
         features = build_features(shipments)

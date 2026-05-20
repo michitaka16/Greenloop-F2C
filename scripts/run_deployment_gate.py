@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 JOURNAL_DIR = ROOT / "journal"
 sys.path.insert(0, str(ROOT / "src"))
 
-from greenloop.governance.deployment_gate import (
+from adoptakale.governance.deployment_gate import (
     DeploymentDecision,
     GateResult,
     GateStatus,

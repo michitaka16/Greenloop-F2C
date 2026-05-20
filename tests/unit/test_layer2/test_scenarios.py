@@ -3,15 +3,15 @@
 import pandas as pd
 import pytest
 
-from greenloop.layer2.optimizer import build_and_solve
-from greenloop.layer2.scenarios import apply_typhoon, compare_plans
-from greenloop.utils.config import CROP_IDS
+from adoptakale.layer2.optimizer import build_and_solve
+from adoptakale.layer2.scenarios import apply_typhoon, compare_plans
+from adoptakale.utils.config import CROP_IDS
 
 
 @pytest.fixture
 def crops_df():
     """Load the real crops.csv so the fixture stays in lockstep with CROP_IDS."""
-    from greenloop.data.loader import load_crops
+    from adoptakale.data.loader import load_crops
 
     return load_crops()
 

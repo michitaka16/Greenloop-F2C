@@ -2,7 +2,7 @@
 
 import pytest
 
-from greenloop.layer2.objective import MODE_LABELS, ObjectiveWeights
+from adoptakale.layer2.objective import MODE_LABELS, ObjectiveWeights
 
 
 class TestObjectiveWeightsDefaults:

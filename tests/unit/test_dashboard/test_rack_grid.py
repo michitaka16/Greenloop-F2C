@@ -5,14 +5,14 @@ from __future__ import annotations
 import pytest
 from pathlib import Path
 
-from greenloop.layer1b.simulation import (
+from adoptakale.layer1b.simulation import (
     mock_diagnose_from_image,
     diagnose_batch,
     parse_filename_to_crop,
     parse_rack_number,
     filename_to_rack_id,
 )
-from greenloop.layer1b.architecture import DiagnosisResult
+from adoptakale.layer1b.architecture import DiagnosisResult
 
 
 class TestFilenameParsing:

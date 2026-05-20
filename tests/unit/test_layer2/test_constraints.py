@@ -3,15 +3,15 @@
 import pandas as pd
 import pytest
 
-from greenloop.layer2.optimizer import build_and_solve
-from greenloop.layer2.exceptions import InfeasibleError
-from greenloop.utils.config import CROP_IDS, MAX_SHIFT_HOURS, MAX_WEEKLY_HOURS
+from adoptakale.layer2.optimizer import build_and_solve
+from adoptakale.layer2.exceptions import InfeasibleError
+from adoptakale.utils.config import CROP_IDS, MAX_SHIFT_HOURS, MAX_WEEKLY_HOURS
 
 
 @pytest.fixture
 def crops_df():
     """Load the real crops.csv so the fixture stays in lockstep with CROP_IDS."""
-    from greenloop.data.loader import load_crops
+    from adoptakale.data.loader import load_crops
 
     return load_crops()
 

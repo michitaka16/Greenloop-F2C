@@ -203,7 +203,7 @@ git add . && git commit -m "Initial pitch deck v3 (self-grow narrative)"
 
 ピッチデッキは Adopt a Kale 本体とは独立した成果物。プレゼン用ファイルは Capstone 終了後もポートフォリオとして残せる。
 
-### B. Adopt a Kale (greenloop) リポ内のサブフォルダ
+### B. Adopt a Kale (adoptakale) リポ内のサブフォルダ
 
 ```bash
 mv adopt-a-kale-pitch ~/Documents/GitHub/Greenloop-F2C/pitch

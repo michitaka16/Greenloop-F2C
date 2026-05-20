@@ -90,7 +90,7 @@ def _start_dashboard(port: int) -> subprocess.Popen:
     env["PYTHONPATH"] = str(REPO / "src")
     proc = subprocess.Popen(
         ["uv", "run", "streamlit", "run",
-         str(REPO / "src/greenloop/dashboard/app.py"),
+         str(REPO / "src/adoptakale/dashboard/app.py"),
          "--server.headless", "true",
          "--server.port", str(port),
          "--browser.gatherUsageStats", "false"],

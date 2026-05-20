@@ -1,4 +1,4 @@
-"""Smoke tests for the greenloop CLI."""
+"""Smoke tests for the adoptakale CLI."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import subprocess
 
 def test_cli_shows_help():
     result = subprocess.run(
-        ["greenloop", "--help"],
+        ["adoptakale", "--help"],
         capture_output=True,
         text=True,
     )
@@ -19,7 +19,7 @@ def test_cli_shows_help():
 
 def test_cli_solve_prints_profit():
     result = subprocess.run(
-        ["greenloop", "solve"],
+        ["adoptakale", "solve"],
         capture_output=True,
         text=True,
         timeout=60,

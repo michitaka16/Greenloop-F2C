@@ -173,7 +173,7 @@ elif step == 1:
         )
         st.markdown(ent_html, unsafe_allow_html=True)
         if st.button(f"Contact sales", key=f"tier_{tier['id']}", use_container_width=True, type="secondary"):
-            st.info("Our corporate team will reach out within 24 hours. Email us at enterprise@greenloop.sg")
+            st.info("Our corporate team will reach out within 24 hours. Email us at enterprise@adoptakale.sg")
 
     st.write("")
     nav1, _, nav2 = st.columns([1, 2, 1])

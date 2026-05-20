@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from greenloop.layer3.autonomy_gate import AutonomyGate, AutonomyMode
+from adoptakale.layer3.autonomy_gate import AutonomyGate, AutonomyMode
 
 
 class DummyAgent:

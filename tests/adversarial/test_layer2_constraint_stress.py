@@ -8,9 +8,9 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from greenloop.layer2.optimizer import build_and_solve
-from greenloop.layer2.exceptions import InfeasibleError
-from greenloop.utils.config import CROP_IDS
+from adoptakale.layer2.optimizer import build_and_solve
+from adoptakale.layer2.exceptions import InfeasibleError
+from adoptakale.utils.config import CROP_IDS
 
 
 # ---------------------------------------------------------------------------
@@ -19,7 +19,7 @@ from greenloop.utils.config import CROP_IDS
 
 @pytest.fixture
 def crops_df():
-    from greenloop.data.loader import load_crops
+    from adoptakale.data.loader import load_crops
     return load_crops()
 
 

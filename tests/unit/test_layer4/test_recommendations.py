@@ -5,12 +5,12 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from greenloop.layer4.recommendations import (
+from adoptakale.layer4.recommendations import (
     CropRecommendation,
     get_segment_recommendations,
 )
-from greenloop.layer4.segmentation import cluster_customers
-from greenloop.layer4.features import load_features
+from adoptakale.layer4.segmentation import cluster_customers
+from adoptakale.layer4.features import load_features
 
 DATA_DIR = Path(__file__).parents[3] / "data"
 ORDERS_PATH = DATA_DIR / "orders.csv"

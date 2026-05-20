@@ -3,7 +3,7 @@ import pytest
 import sys
 from pathlib import Path
 
-from greenloop.layer2b.vrp_solver import solve_vrp
+from adoptakale.layer2b.vrp_solver import solve_vrp
 
 
 def test_vrp_deliveries_within_time_windows(customers_30):

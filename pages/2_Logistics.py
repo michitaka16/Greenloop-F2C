@@ -4,8 +4,8 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from greenloop.layer2b.vrp_solver import solve_vrp
-from greenloop.data.shared_data import load_farm_output
+from adoptakale.layer2b.vrp_solver import solve_vrp
+from adoptakale.data.shared_data import load_farm_output
 
 # ── Constants ────────────────────────────────────────────────────────────────
 DEPOT_LAT = 1.3328

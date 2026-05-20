@@ -3,14 +3,14 @@
 import pytest
 import pandas as pd
 
-from greenloop.data.loader import (
+from adoptakale.data.loader import (
     load_crops,
     load_electricity,
     load_sensors,
     load_shipments,
     load_staff,
 )
-from greenloop.utils.config import DATA_DIR
+from adoptakale.utils.config import DATA_DIR
 
 
 class TestLoadCrops:
@@ -20,7 +20,7 @@ class TestLoadCrops:
 
     def test_row_count_matches_config_crop_ids(self):
         """crops.csv length must equal the live CROP_IDS length."""
-        from greenloop.utils.config import CROP_IDS
+        from adoptakale.utils.config import CROP_IDS
 
         df = load_crops()
         assert len(df) == len(CROP_IDS)
@@ -33,13 +33,13 @@ class TestLoadCrops:
             assert col in df.columns
 
     def test_crop_ids_match_expected(self):
-        """crops.csv must stay in lockstep with greenloop.utils.config.CROP_IDS.
+        """crops.csv must stay in lockstep with adoptakale.utils.config.CROP_IDS.
 
         This test is the one structural gate that catches a new crop being
         added to the data file but forgotten in the runtime config (or
         vice versa). Adding a crop touches both files.
         """
-        from greenloop.utils.config import CROP_IDS
+        from adoptakale.utils.config import CROP_IDS
 
         df = load_crops()
         assert set(df["crop_id"]) == set(CROP_IDS)

@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from sklearn.preprocessing import StandardScaler
 
-from greenloop.layer4.segmentation import (
+from adoptakale.layer4.segmentation import (
     ClusteringResult,
     SegmentProfile,
     cluster_customers,

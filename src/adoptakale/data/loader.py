@@ -1,0 +1,101 @@
+"""Data loader module — loads CSV seed files into pandas DataFrames with validation."""
+
+from pathlib import Path
+
+import pandas as pd
+
+from adoptakale.utils.config import DATA_DIR
+
+
+def _validate_columns(df: pd.DataFrame, expected: list[str], file_name: str) -> None:
+    """Validate that DataFrame has expected columns."""
+    missing = set(expected) - set(df.columns)
+    if missing:
+        raise ValueError(f"{file_name} missing columns: {missing}")
+
+
+def load_crops(data_dir: Path | None = None) -> pd.DataFrame:
+    """Load crops.csv with schema validation."""
+    path = (data_dir or DATA_DIR) / "crops.csv"
+    df = pd.read_csv(path)
+    _validate_columns(
+        df,
+        ["crop_id", "name", "growth_days", "optimal_temp", "water_per_tray",
+         "led_hours_per_day", "price_sgd_per_kg", "spoilage_rate"],
+        "crops.csv",
+    )
+    return df
+
+
+def load_shipments(data_dir: Path | None = None) -> pd.DataFrame:
+    """Load shipments.csv with schema validation and date parsing."""
+    path = (data_dir or DATA_DIR) / "shipments.csv"
+    df = pd.read_csv(path, parse_dates=["date"])
+    _validate_columns(
+        df,
+        ["date", "crop_id", "kg_shipped", "price_sgd_per_kg"],
+        "shipments.csv",
+    )
+    return df
+
+
+def load_electricity(data_dir: Path | None = None) -> pd.DataFrame:
+    """Load electricity.csv with schema validation."""
+    path = (data_dir or DATA_DIR) / "electricity.csv"
+    df = pd.read_csv(path, parse_dates=["date"])
+    _validate_columns(
+        df,
+        ["date", "hour", "tariff_rate_sgd_per_kwh"],
+        "electricity.csv",
+    )
+    return df
+
+
+def load_staff(data_dir: Path | None = None) -> pd.DataFrame:
+    """Load staff.csv with schema validation."""
+    path = (data_dir or DATA_DIR) / "staff.csv"
+    df = pd.read_csv(path)
+    _validate_columns(
+        df,
+        ["staff_id", "name", "role", "availability", "hourly_rate_sgd"],
+        "staff.csv",
+    )
+    return df
+
+
+def load_sensors(data_dir: Path | None = None) -> pd.DataFrame:
+    """Load sensors_sim.csv with schema validation."""
+    path = (data_dir or DATA_DIR) / "sensors_sim.csv"
+    df = pd.read_csv(path, parse_dates=["timestamp"])
+    _validate_columns(
+        df,
+        ["timestamp", "temp_c", "humidity_pct", "co2_ppm",
+         "moisture_zone1", "moisture_zone2", "moisture_zone3", "moisture_zone4"],
+        "sensors_sim.csv",
+    )
+    return df
+
+
+def load_customers(data_dir: Path | None = None) -> pd.DataFrame:
+    """Load customers.csv with schema validation (Layer 4 behavioural features)."""
+    path = (data_dir or DATA_DIR) / "customers.csv"
+    df = pd.read_csv(path)
+    _validate_columns(
+        df,
+        ["customer_id", "purchase_frequency", "avg_order_sgd",
+         "organic_preference", "bulk_buyer", "live_commerce_active", "top_crop"],
+        "customers.csv",
+    )
+    return df
+
+
+def load_orders(data_dir: Path | None = None) -> pd.DataFrame:
+    """Load orders.csv with schema validation and date parsing."""
+    path = (data_dir or DATA_DIR) / "orders.csv"
+    df = pd.read_csv(path, parse_dates=["date"])
+    _validate_columns(
+        df,
+        ["order_id", "customer_id", "date", "crop_id", "kg", "sgd_total"],
+        "orders.csv",
+    )
+    return df

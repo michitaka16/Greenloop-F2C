@@ -17,7 +17,7 @@ _SRC = Path(__file__).resolve().parents[1] / "src"
 if _SRC.exists() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from greenloop.governance.implications_audit import (
+from adoptakale.governance.implications_audit import (
     ImpactSeverity,
     ImplicationCategory,
     get_all_implications,

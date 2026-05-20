@@ -10,7 +10,7 @@ import gymnasium as gym
 import numpy as np
 import pytest
 
-from greenloop.layer3.environment import HydroFarmEnv
+from adoptakale.layer3.environment import HydroFarmEnv
 
 
 # ---------------------------------------------------------------------------

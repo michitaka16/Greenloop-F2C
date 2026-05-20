@@ -10,7 +10,7 @@ if str(_SRC) not in sys.path:
 
 import pytest
 
-from greenloop.governance.implications_audit import (
+from adoptakale.governance.implications_audit import (
     ImpactSeverity,
     ImplicationCategory,
     Implication,

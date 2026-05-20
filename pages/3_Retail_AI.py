@@ -7,7 +7,7 @@ Read-only analytics — does not modify any data files.
 import sys
 from pathlib import Path
 
-# Ensure greenloop package is on path
+# Ensure adoptakale package is on path
 src_path = Path(__file__).resolve().parents[1] / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
@@ -29,11 +29,11 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 # Imports
 # ---------------------------------------------------------------------------
-from greenloop.data.loader import load_customers, load_orders
-from greenloop.data.shared_data import load_farm_output
-from greenloop.layer4.features import load_features
-from greenloop.layer4.segmentation import cluster_customers, name_segment
-from greenloop.layer4.visualization import reduce_pca, reduce_umap
+from adoptakale.data.loader import load_customers, load_orders
+from adoptakale.data.shared_data import load_farm_output
+from adoptakale.layer4.features import load_features
+from adoptakale.layer4.segmentation import cluster_customers, name_segment
+from adoptakale.layer4.visualization import reduce_pca, reduce_umap
 
 # ---------------------------------------------------------------------------
 # Helpers

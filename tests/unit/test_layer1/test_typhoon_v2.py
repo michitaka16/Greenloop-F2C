@@ -4,16 +4,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from greenloop.layer1.features import build_features
-from greenloop.layer1.model import train_models
-from greenloop.layer1.predict import predict_demand
-from greenloop.layer2.optimizer import build_and_solve
-from greenloop.layer2.scenarios import (
+from adoptakale.layer1.features import build_features
+from adoptakale.layer1.model import train_models
+from adoptakale.layer1.predict import predict_demand
+from adoptakale.layer2.optimizer import build_and_solve
+from adoptakale.layer2.scenarios import (
     TyphoonScenarioInput,
     apply_typhoon,
     compare_plans,
 )
-from greenloop.data.loader import load_crops, load_electricity, load_staff
+from adoptakale.data.loader import load_crops, load_electricity, load_staff
 
 
 def _make_base_kwargs(forecast, crops, electricity, staff):

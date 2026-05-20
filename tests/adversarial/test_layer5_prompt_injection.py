@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from greenloop.rag.agent import RAGAgent, RAGAnswer
+from adoptakale.rag.agent import RAGAgent, RAGAnswer
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +54,7 @@ class TestInjectedInstructions:
         # The farm identity should persist
         assert any(
             crop in answer_lower
-            for crop in ["spinach", "kale", "arugula", "lettuce", "greenloop"]
+            for crop in ["spinach", "kale", "arugula", "lettuce", "adoptakale"]
         ), (
             "Agent did not answer about Adopt a Kale's crops — "
             "prompt injection succeeded in breaking farm-domain identity"
