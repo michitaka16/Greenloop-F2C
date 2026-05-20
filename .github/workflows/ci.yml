@@ -59,7 +59,7 @@ jobs:
         with:
           context: .
           push: false
-          tags: greenloop-farm-os:ci
+          tags: adopt-a-kale:ci
           platforms: linux/amd64
           # GHA cache backend (type=gha) has been flaky since its v1→v2
           # migration; disable it until stability returns. Rebuild time is

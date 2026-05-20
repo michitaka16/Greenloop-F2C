@@ -109,7 +109,7 @@ export async function GET() {
 ```python
 # api/main.py
 from fastapi import FastAPI
-from src.greenloop.ai import ppo_agent, milp_solver, rag_chat  # 既存コード再利用
+from src.adoptakale.ai import ppo_agent, milp_solver, rag_chat  # 既存コード再利用
 
 app = FastAPI()
 
@@ -181,7 +181,7 @@ uvicorn api.main:app --reload --port 8000
 
 ```bash
 # 1. リポジトリへ
-cd ~/Documents/GitHub/Greenloop-F2C
+cd ~/Documents/GitHub/Adopt-A-Kale
 git checkout -b feat/consumer-app
 
 # 2. zip 展開
@@ -195,16 +195,16 @@ npm run dev
 
 # 4. 既存 Adopt a Kale (旧 Adopt a Kale) と同時起動 (デモ時の構成)
 # Terminal 1 (Operator dashboard):
-#   cd ~/Documents/GitHub/Greenloop-F2C
-#   uv run streamlit run src/greenloop/dashboard/app.py
+#   cd ~/Documents/GitHub/Adopt-A-Kale
+#   uv run streamlit run src/adoptakale/dashboard/app.py
 #   → localhost:8501
 # Terminal 2 (Consumer app):
-#   cd ~/Documents/GitHub/Greenloop-F2C/consumer
+#   cd ~/Documents/GitHub/Adopt-A-Kale/consumer
 #   npm run dev
 #   → localhost:3000
 
 # 5. コミット
-cd ~/Documents/GitHub/Greenloop-F2C
+cd ~/Documents/GitHub/Adopt-A-Kale
 git add consumer
 git commit -m "feat(consumer): scaffold Adopt a Kale consumer app
 

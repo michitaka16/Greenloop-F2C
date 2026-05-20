@@ -3,9 +3,9 @@
 import pandas as pd
 import pytest
 
-from greenloop.layer2.exceptions import InfeasibleError
-from greenloop.layer2.optimizer import build_and_solve
-from greenloop.utils.config import CROP_IDS, SHIFTS
+from adoptakale.layer2.exceptions import InfeasibleError
+from adoptakale.layer2.optimizer import build_and_solve
+from adoptakale.utils.config import CROP_IDS, SHIFTS
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def base_data():
 
 @pytest.fixture
 def crops_df():
-    from greenloop.data.loader import load_crops
+    from adoptakale.data.loader import load_crops
     return load_crops()
 
 

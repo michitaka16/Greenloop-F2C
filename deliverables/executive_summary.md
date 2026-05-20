@@ -6,7 +6,7 @@
 
 # Adopt a Kale — Executive Summary
 
-*Formerly known as GreenLoop F2C. The Python package and GitHub repository slug retain `greenloop` / `Greenloop-F2C` for technical continuity.*
+*Formerly known as GreenLoop F2C. The Python package and GitHub repository slug use `adoptakale` (Python package) and `Adopt-A-Kale` (GitHub repo). The legacy `Greenloop-F2C` URL 301-redirects to the new slug.*
 
 ## 1. The Opportunity
 
@@ -186,4 +186,4 @@ A consumer-facing Streamlit app enabling Singapore residents to adopt a hydropon
 
 **What happens next:** Week 2 — install sensors on 3 pilot farms. Week 6 — first Singapore-specific model retraining with Phase 1 data. Week 12 — governance review and Phase 2 decision gate.
 
-*Submitted: 2026-05-19 | Adopt a Kale (Greenloop-F2C) | main | 494 tests passing | 13 of 14 phases complete*
+*Submitted: 2026-05-19 | Adopt a Kale (Adopt-A-Kale) | main | 494 tests passing | 13 of 14 phases complete*

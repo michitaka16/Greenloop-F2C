@@ -7,7 +7,7 @@ that run MILP/RAG benchmarks are exercised by the integration test
 
 import pytest
 
-from greenloop.governance.deployment_gate import (
+from adoptakale.governance.deployment_gate import (
     GateStatus,
     CriterionResult,
     GateResult,
@@ -129,7 +129,7 @@ class TestGateModuleExports:
     """Module exports all required symbols."""
 
     def test_gate_functions_importable(self):
-        from greenloop.governance.deployment_gate import (
+        from adoptakale.governance.deployment_gate import (
             gate_1_technical,
             gate_2_business,
             gate_3_risk,

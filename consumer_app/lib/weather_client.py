@@ -7,13 +7,13 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-# Add project root/src for greenloop imports
+# Add project root/src for adoptakale imports
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 _SRC_DIR = str(_PROJECT_ROOT / "src")
 if _SRC_DIR not in sys.path:
     sys.path.insert(0, _SRC_DIR)
 
-from greenloop.data.nea import fetch_nea_weather
+from adoptakale.data.nea import fetch_nea_weather
 
 logger = logging.getLogger(__name__)
 

@@ -7,8 +7,8 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch
 
-from greenloop.layer1.features import build_features
-from greenloop.layer1.model import train_models, load_models
+from adoptakale.layer1.features import build_features
+from adoptakale.layer1.model import train_models, load_models
 
 
 @pytest.fixture

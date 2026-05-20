@@ -2,7 +2,7 @@
 
 ```yaml
 type: application
-name: greenloop-farm-os
+name: adopt-a-kale
 description: >
   Streamlit dashboard for a 3-layer AI farm-operations pipeline
   (XGBoost forecast → OR-Tools MILP → PPO RL). Shipped as a single
@@ -17,15 +17,15 @@ targets:
   local-docker:
     primary: true
     platform: docker
-    image: greenloop-farm-os:latest
-    container_name: greenloop
+    image: adopt-a-kale:latest
+    container_name: adoptakale
     port: 8501
     live_url: http://localhost:8501
 
   streamlit-cloud:
     primary: false
     platform: streamlit-community-cloud
-    repo: michitaka16/Greenloop-F2C
+    repo: michitaka16/Adopt-A-Kale
     branch: main
     entrypoint: streamlit_app.py
     # Public URL is assigned by Streamlit Cloud after first deploy.
@@ -35,7 +35,7 @@ targets:
 # ─── Production paths ──────────────────────────────────────────────────
 # Files that, when changed, require a redeploy.
 production_paths:
-  - src/greenloop/
+  - src/adoptakale/
   - streamlit_app.py
   - Dockerfile
   - pyproject.toml
@@ -53,7 +53,7 @@ gates:
          exit blocks deploy because a red suite means the feature under
          test does not behave as specified.
   - name: docker-build
-    command: docker build -t greenloop-farm-os:latest .
+    command: docker build -t adopt-a-kale:latest .
     why: Confirms the runtime image builds reproducibly from HEAD. Catches
          Dockerfile drift (missing libgomp1, wrong Python version) before
          the container is swapped in production.
@@ -63,14 +63,14 @@ gates:
 # into the container so the AI narrative expander works without baking
 # secrets into the image. The .env stays gitignored.
 deploy_command: |
-  docker rm -f greenloop 2>/dev/null || true
-  docker run -d --name greenloop --restart unless-stopped \
+  docker rm -f adoptakale 2>/dev/null || true
+  docker run -d --name adoptakale --restart unless-stopped \
     --env-file .env \
-    -p 8501:8501 greenloop-farm-os:latest
+    -p 8501:8501 adopt-a-kale:latest
 
 # ─── Post-deploy verification ──────────────────────────────────────────
 deploy_check_command: |
-  docker inspect --format='{{.Config.Image}} {{.State.Status}}' greenloop
+  docker inspect --format='{{.Config.Image}} {{.State.Status}}' adoptakale
 
 user_visible_check: |
   curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost:8501/
@@ -91,7 +91,7 @@ deploy_log_dir: deploy/deployments/
 Blocked on one credential step (SSH key paste → GitHub). Once `git push origin main` succeeds:
 
 1. Open <https://share.streamlit.io/deploy>
-2. Repo: `michitaka16/Greenloop-F2C`, branch `main`, main file: `streamlit_app.py`
+2. Repo: `michitaka16/Adopt-A-Kale`, branch `main`, main file: `streamlit_app.py`
 3. Click **Deploy**. Copy the assigned URL into the `streamlit-cloud.live_url` field above.
 
 ## Changelog

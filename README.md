@@ -4,7 +4,7 @@
 
 A 5-layer AI platform (6 ML techniques) that runs Singapore vertical-hydroponic farms end-to-end — seed to delivery — and powers the consumer-facing *Adopt a Kale* subscription that lets Singapore residents adopt a named hydroponic plot and receive weekly harvests at home. The same six AI techniques drive both the B2B Farm OS dashboard and the B2C consumer app.
 
-> **Brand note:** the Python package, module names, and the GitHub repository slug retain the legacy name `greenloop` / `Greenloop-F2C` to keep imports and history stable. All marketing-facing materials use *Adopt a Kale*.
+> **Brand note:** Python package is `adoptakale`; GitHub repo is `Adopt-A-Kale`. The legacy `Greenloop-F2C` repo URL 301-redirects to the new slug for backward compatibility.
 
 | Layer | Responsibility | Tech |
 |---|---|---|
@@ -25,7 +25,7 @@ Requirements: `uv`, Python 3.11–3.13 (3.14 is not yet supported by `shap` / `l
 
 ```bash
 uv sync --extra dev
-uv run greenloop dashboard    # B2B Farm OS — launches on http://localhost:8501
+uv run adoptakale dashboard    # B2B Farm OS — launches on http://localhost:8501
 
 # Consumer-facing Adopt a Kale app:
 cd consumer_app
@@ -35,13 +35,13 @@ streamlit run Home.py         # B2C Adopt a Kale — http://localhost:8501
 Other CLI commands:
 
 ```bash
-uv run greenloop forecast     # print Layer 1 demand forecast per crop
-uv run greenloop solve        # run a one-shot Layer 2 MILP solve
+uv run adoptakale forecast     # print Layer 1 demand forecast per crop
+uv run adoptakale solve        # run a one-shot Layer 2 MILP solve
 ```
 
 ### macOS — libomp
 
-`xgboost` on Apple Silicon expects `libomp.dylib` at `/opt/homebrew/opt/libomp/lib/`. If you don't have Homebrew, the `greenloop` CLI transparently redirects the dynamic linker to the copy bundled with `scikit-learn` inside the venv — no extra setup needed.
+`xgboost` on Apple Silicon expects `libomp.dylib` at `/opt/homebrew/opt/libomp/lib/`. If you don't have Homebrew, the `adoptakale` CLI transparently redirects the dynamic linker to the copy bundled with `scikit-learn` inside the venv — no extra setup needed.
 
 If you run `streamlit run` or import `xgboost` manually instead of through the CLI and see `Library not loaded: @rpath/libomp.dylib`:
 
@@ -84,7 +84,7 @@ tests/
 ## Repository Layout
 
 ```
-src/greenloop/                # Python package (legacy name retained)
+src/adoptakale/                # Python package (legacy name retained)
   layer1/   features.py, model.py (train/load), predict.py, explain.py
   layer1b/  architecture.py (EfficientNet-B0), inference.py, simulation.py
   layer2/   optimizer.py (MILP), scenarios.py (typhoon re-opt), exceptions.py

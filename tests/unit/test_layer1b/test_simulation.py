@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from greenloop.layer1b.architecture import GROWTH_LABELS, NUTRITION_LABELS, DiagnosisResult
-from greenloop.layer1b.simulation import (
+from adoptakale.layer1b.architecture import GROWTH_LABELS, NUTRITION_LABELS, DiagnosisResult
+from adoptakale.layer1b.simulation import (
     GROWTH_BADGES,
     NUTRITION_BADGES,
     RACK_SCENARIOS,

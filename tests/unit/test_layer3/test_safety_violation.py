@@ -9,7 +9,7 @@ Verifies that forcing temperature outside safety bounds triggers:
 import numpy as np
 import pytest
 
-from greenloop.layer3.environment import HydroFarmEnv
+from adoptakale.layer3.environment import HydroFarmEnv
 
 
 @pytest.fixture

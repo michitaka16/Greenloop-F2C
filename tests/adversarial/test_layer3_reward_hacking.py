@@ -8,8 +8,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from greenloop.layer3.environment import HydroFarmEnv
-from greenloop.utils.config import (
+from adoptakale.layer3.environment import HydroFarmEnv
+from adoptakale.utils.config import (
     TEMP_SAFETY_MIN,
     TEMP_SAFETY_MAX,
     HUMIDITY_SAFETY_MIN,
@@ -215,4 +215,4 @@ class TestEscalationOnConfusion:
 # Helpers for moisture constant
 # ---------------------------------------------------------------------------
 
-from greenloop.utils.config import MOISTURE_SAFETY_MIN
+from adoptakale.utils.config import MOISTURE_SAFETY_MIN

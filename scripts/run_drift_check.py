@@ -17,7 +17,7 @@ _SRC = Path(__file__).resolve().parents[1] / "src"
 if _SRC.exists() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from greenloop.monitoring.drift_detector import (
+from adoptakale.monitoring.drift_detector import (
     DriftSeverity,
     DriftType,
     get_all_drift_checks,

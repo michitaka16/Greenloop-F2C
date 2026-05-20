@@ -10,7 +10,7 @@ if str(_SRC) not in sys.path:
 
 import pytest
 
-from greenloop.monitoring.drift_detector import (
+from adoptakale.monitoring.drift_detector import (
     DriftSeverity,
     DriftType,
     DriftCheck,

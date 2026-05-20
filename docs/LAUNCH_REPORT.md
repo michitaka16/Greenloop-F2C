@@ -6,9 +6,9 @@
 
 # Adopt a Kale — Launch Report
 
-**Repository:** https://github.com/michitaka16/Greenloop-F2C
+**Repository:** https://github.com/michitaka16/Adopt-A-Kale
 **Submitted:** 2026-05-19 · main branch · 494 tests passing · 13/14 phases complete
-**Deploy URL:** https://share.streamlit.io/michitaka16/Greenloop-F2C (Streamlit Community Cloud)
+**Deploy URL:** https://share.streamlit.io/michitaka16/Adopt-A-Kale (Streamlit Community Cloud)
 
 ---
 
@@ -73,7 +73,7 @@ The Adopt a Cow precedent demonstrates that urban consumers will pay for partici
 |------|----------|-----------|
 | PlantVillage dataset bias → Asian crop misclassification | HIGH | Retrained with Asian crop data (Phase 6) |
 | MILP solve time > 50ms causing real-time replan failure | MEDIUM | q=0.95 upper CI buffer; proven < 50ms in testing |
-| PPO RL reward hacking (excessive LED exposure) | MEDIUM | `AutonomyGate` enforces human-in-the-loop; auto-degrades to ADVISORY during typhoon (`src/greenloop/layer3/autonomy_gate.py`) |
+| PPO RL reward hacking (excessive LED exposure) | MEDIUM | `AutonomyGate` enforces human-in-the-loop; auto-degrades to ADVISORY during typhoon (`src/adoptakale/layer3/autonomy_gate.py`) |
 | Data poisoning of Layer 1 inputs | MEDIUM | Adversarial test suite passing (`tests/adversarial/test_layer1_data_poisoning.py`) |
 | Singapore regulatory change (food labeling) | LOW | Gate 4 Compliance check passed |
 
@@ -156,7 +156,7 @@ AI chatbot grounded in your plot's data. Ask questions like:
 
 Responses include citations sourced from plot sensors, climate logs, and harvest schedules. Suggested questions appear for new conversations. Triggers food pairing suggestions, PPO climate defense reports, and recipe cards when relevant keywords are detected.
 
-> **Note:** Chat responses are currently mock (hardcoded in `mock_response()` in `consumer_app/lib/mock_data.py`). Production requires connecting to the RAG pipeline in `src/greenloop/rag/agent.py` and `hitl.py`.
+> **Note:** Chat responses are currently mock (hardcoded in `mock_response()` in `consumer_app/lib/mock_data.py`). Production requires connecting to the RAG pipeline in `src/adoptakale/rag/agent.py` and `hitl.py`.
 
 ### Schedule (`consumer_app/pages/4_📅_Schedule.py`)
 Harvest calendar showing upcoming delivery dates and the growth timeline for each crop. Includes:
@@ -218,24 +218,24 @@ Layer 5  RAG (ChromaDB + Claude) ────── Investor-facing AI chat
 
 | Layer | Technology | Key Files |
 |-------|-----------|-----------|
-| Demand forecasting | XGBoost (q=0.05/0.50/0.95) | `src/greenloop/layer1/model.py`, `features.py`, `predict.py` |
-| Production optimization | OR-Tools CP-SAT (MILP) | `src/greenloop/layer2/optimizer.py`, `objective.py`, `scenarios.py` |
-| Delivery routing | OR-Tools CVRPTW | `src/greenloop/layer2b/vrp_solver.py` |
-| Climate control | stable-baselines3 PPO + Gymnasium | `src/greenloop/layer3/agent.py`, `environment.py`, `train.py` |
-| Computer vision | EfficientNet-B0 (dual-head) | `src/greenloop/layer1b/train.py`, `inference.py`, `simulation.py` |
-| Customer segmentation | scikit-learn K-Means + UMAP | `src/greenloop/layer4/segmentation.py`, `visualization.py` |
-| RAG pipeline | ChromaDB + sentence-transformers + Claude | `src/greenloop/rag/agent.py`, `hitl.py` |
-| HITL safety | AutonomyGate (3 modes) | `src/greenloop/layer3/autonomy_gate.py` |
-| Monitoring | Drift detection (14 checks) | `src/greenloop/monitoring/drift_detector.py` |
-| Governance | Deployment gate + ethical audit | `src/greenloop/governance/deployment_gate.py`, `implications_audit.py` |
+| Demand forecasting | XGBoost (q=0.05/0.50/0.95) | `src/adoptakale/layer1/model.py`, `features.py`, `predict.py` |
+| Production optimization | OR-Tools CP-SAT (MILP) | `src/adoptakale/layer2/optimizer.py`, `objective.py`, `scenarios.py` |
+| Delivery routing | OR-Tools CVRPTW | `src/adoptakale/layer2b/vrp_solver.py` |
+| Climate control | stable-baselines3 PPO + Gymnasium | `src/adoptakale/layer3/agent.py`, `environment.py`, `train.py` |
+| Computer vision | EfficientNet-B0 (dual-head) | `src/adoptakale/layer1b/train.py`, `inference.py`, `simulation.py` |
+| Customer segmentation | scikit-learn K-Means + UMAP | `src/adoptakale/layer4/segmentation.py`, `visualization.py` |
+| RAG pipeline | ChromaDB + sentence-transformers + Claude | `src/adoptakale/rag/agent.py`, `hitl.py` |
+| HITL safety | AutonomyGate (3 modes) | `src/adoptakale/layer3/autonomy_gate.py` |
+| Monitoring | Drift detection (14 checks) | `src/adoptakale/monitoring/drift_detector.py` |
+| Governance | Deployment gate + ethical audit | `src/adoptakale/governance/deployment_gate.py`, `implications_audit.py` |
 | B2C consumer UI | Streamlit | `consumer_app/` |
-| Farm OS dashboard | Streamlit | `src/greenloop/dashboard/app.py` |
+| Farm OS dashboard | Streamlit | `src/adoptakale/dashboard/app.py` |
 
 ## Repository Structure
 
 ```
 Greenloop-F2C/
-├── src/greenloop/               # Farm OS core
+├── src/adoptakale/               # Farm OS core
 │   ├── layer1/                  # XGBoost demand forecasting
 │   │   ├── model.py            # Model training and loading
 │   │   ├── features.py         # Feature engineering (9 features)
@@ -300,7 +300,7 @@ Greenloop-F2C/
 │   ├── 2_Logistics.py       # VRP map + delivery routes
 │   ├── 3_Retail_AI.py       # K-Means clusters + UMAP
 │   └── 4_Media_AI.py        # RAG chatbot + demo mode
-├── streamlit_app.py           # Streamlit Cloud entry point → greenloop.dashboard.app.main
+├── streamlit_app.py           # Streamlit Cloud entry point → adoptakale.dashboard.app.main
 ├── conftest.py               # .env auto-load for pytest
 ├── pyproject.toml             # Package definition
 ├── DEPLOY.md                 # Deployment guide (Cloud, Docker, local)
@@ -316,7 +316,7 @@ cd ~/Documents/GitHub/Greenloop-F2C
 uv sync
 
 # Farm OS dashboard (runs on port 8501 by default)
-uv run greenloop dashboard
+uv run adoptakale dashboard
 
 # Adopt a Kale consumer app (separate port)
 uv run streamlit run consumer_app/Home.py --server.port 8501 --server.headless true
@@ -333,17 +333,17 @@ uv run pytest tests/adversarial/ -v
 See `DEPLOY.md` for full instructions. The short version:
 
 1. Sign in to https://share.streamlit.io/deploy with GitHub.
-2. Select repo `michitaka16/Greenloop-F2C`, branch `main`, main file path `streamlit_app.py`.
+2. Select repo `michitaka16/Adopt-A-Kale`, branch `main`, main file path `streamlit_app.py`.
 3. Click **Deploy**.
 
-The entry point `streamlit_app.py` calls `greenloop.dashboard.app.main()`. The file `consumer_app/Home.py` (Adopt a Kale) is a separate app started on a different port — it is not the Streamlit Cloud deployment.
+The entry point `streamlit_app.py` calls `adoptakale.dashboard.app.main()`. The file `consumer_app/Home.py` (Adopt a Kale) is a separate app started on a different port — it is not the Streamlit Cloud deployment.
 
 ## Key Module Responsibilities
 
-### `src/greenloop/layer2/optimizer.py` — `solve_milp()`
+### `src/adoptakale/layer2/optimizer.py` — `solve_milp()`
 OR-Tools CP-SAT solver for daily farm planning. Maximizes `Revenue − Electricity − Labour − Waste` across 10 LED tiers and 24-hour photoperiod. All SGD values scaled by `COST_SCALE = 100` to satisfy CP-SAT's integer requirement. Raises `InfeasibleError` when constraints cannot be satisfied. Solves in < 50 ms — enabling real-time re-planning when conditions change (e.g., typhoon trigger).
 
-### `src/greenloop/layer3/autonomy_gate.py` — `AutonomyGate`
+### `src/adoptakale/layer3/autonomy_gate.py` — `AutonomyGate`
 Human-in-the-loop safety wrapper for `HydroFarmAgent`. Three autonomy modes:
 - **`MANUAL`** — agent proposes; human must call `approve_pending()` before each action executes
 - **`ADVISORY`** — agent acts immediately; human can override on the next step
@@ -351,13 +351,13 @@ Human-in-the-loop safety wrapper for `HydroFarmAgent`. Three autonomy modes:
 
 During typhoon events, the dashboard (`app.py` line ~1834) automatically degrades to ADVISORY mode. The `mode_label` property returns a human-readable string for the dashboard status strip.
 
-### `src/greenloop/rag/agent.py` — `GreenLoopRAGAgent`
-RAG agent combining ChromaDB vector store + sentence-transformers + Claude. In demo mode (no ChromaDB connected), falls back to `_DEMO_ANSWERS` dictionary keyed by keyword substring match. The `hitl.py` module (`src/greenloop/rag/hitl.py`) extends this with three capabilities:
+### `src/adoptakale/rag/agent.py` — `GreenLoopRAGAgent`
+RAG agent combining ChromaDB vector store + sentence-transformers + Claude. In demo mode (no ChromaDB connected), falls back to `_DEMO_ANSWERS` dictionary keyed by keyword substring match. The `hitl.py` module (`src/adoptakale/rag/hitl.py`) extends this with three capabilities:
 1. **Feedback logging** — user rates responses "good" / "needs_refinement" → `data/rag_feedback.csv`
 2. **Query logging** — every Q&A pair logged to `data/rag_queries.csv` with latency and tone
 3. **Tone control** — system prompt modifier selectable per conversation: `SALES`, `NEUTRAL`, or `TECHNICAL` (defined in `TONE_MODIFIERS` dict)
 
-### `src/greenloop/dashboard/app.py` — `main()`
+### `src/adoptakale/dashboard/app.py` — `main()`
 Single-screen Farm OS dashboard integrating all 4 layers. Key components:
 - **Layer 1 panel** — XGBoost forecast chart + MILP solve time (target < 50 ms, shown in UI)
 - **Layer 2 panel** — production plan table with tariff-aware LED schedule
@@ -365,7 +365,7 @@ Single-screen Farm OS dashboard integrating all 4 layers. Key components:
 - **Typhoon Scenario button** (line ~2030–2037) — sets `st.session_state.typhoon_active`, triggers the resilience cascade
 - **AutonomyGate status strip** (line ~1834) — auto-degrades to ADVISORY when typhoon is active
 
-### `src/greenloop/governance/deployment_gate.py` — `run_deployment_gate()`
+### `src/adoptakale/governance/deployment_gate.py` — `run_deployment_gate()`
 Automates the Phase 8 Deployment Gate. Evaluates 5 gates across 25 criteria:
 - **Gate 1:** Technical (unit tests passing, adversarial tests passing)
 - **Gate 2:** Business Viability (unit economics, ARR projections)
@@ -375,7 +375,7 @@ Automates the Phase 8 Deployment Gate. Evaluates 5 gates across 25 criteria:
 
 Returns a `ShipDecision` enum: `GO`, `HOLD`, or `CONDITIONAL_SHIP`.
 
-### `src/greenloop/monitoring/drift_detector.py` — DriftDetector
+### `src/adoptakale/monitoring/drift_detector.py` — DriftDetector
 14 automated checks across 3 drift categories:
 - **Feature drift** — KS test on XGBoost inputs, weekly schedule
 - **Performance drift** — MILP infeasibility rate (hourly), EfficientNet confidence (daily), PPO reward ratio (weekly)

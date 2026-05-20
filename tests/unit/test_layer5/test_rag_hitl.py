@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from greenloop.rag.hitl import (
+from adoptakale.rag.hitl import (
     Tone,
     TONE_LABELS,
     FeedbackRecord,
@@ -88,7 +88,7 @@ class TestLogFeedback:
     def test_log_feedback_creates_file(self, tmp_path, monkeypatch):
         # Redirect data path
         monkeypatch.setattr(
-            "greenloop.rag.hitl._FEEDBACK_PATH",
+            "adoptakale.rag.hitl._FEEDBACK_PATH",
             tmp_path / "rag_feedback.csv",
         )
         record = FeedbackRecord(
@@ -112,7 +112,7 @@ class TestLogFeedback:
 
     def test_log_feedback_append_multiple(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            "greenloop.rag.hitl._FEEDBACK_PATH",
+            "adoptakale.rag.hitl._FEEDBACK_PATH",
             tmp_path / "rag_feedback.csv",
         )
         for i in range(3):
@@ -133,7 +133,7 @@ class TestLogFeedback:
 class TestLogQuery:
     def test_log_query_creates_file(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            "greenloop.rag.hitl._QUERY_PATH",
+            "adoptakale.rag.hitl._QUERY_PATH",
             tmp_path / "rag_queries.csv",
         )
         record = QueryRecord(
@@ -161,7 +161,7 @@ class TestLogQuery:
 class TestGetTopQuestions:
     def test_empty_file_returns_empty(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            "greenloop.rag.hitl._QUERY_PATH",
+            "adoptakale.rag.hitl._QUERY_PATH",
             tmp_path / "rag_queries.csv",
         )
         result = get_top_questions(10)
@@ -169,7 +169,7 @@ class TestGetTopQuestions:
 
     def test_top_questions_counted_correctly(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            "greenloop.rag.hitl._QUERY_PATH",
+            "adoptakale.rag.hitl._QUERY_PATH",
             tmp_path / "rag_queries.csv",
         )
         # Write some query records
@@ -213,7 +213,7 @@ class TestGetTopQuestions:
 class TestGetFeedbackSummary:
     def test_empty_file_returns_zeros(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            "greenloop.rag.hitl._FEEDBACK_PATH",
+            "adoptakale.rag.hitl._FEEDBACK_PATH",
             tmp_path / "rag_feedback.csv",
         )
         result = get_feedback_summary()
@@ -222,7 +222,7 @@ class TestGetFeedbackSummary:
 
     def test_summary_counts_correctly(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            "greenloop.rag.hitl._FEEDBACK_PATH",
+            "adoptakale.rag.hitl._FEEDBACK_PATH",
             tmp_path / "rag_feedback.csv",
         )
         path = tmp_path / "rag_feedback.csv"

@@ -620,7 +620,7 @@ Singapore's weather is tropical maritime — it does not experience typhoons (wh
 **Chosen:** Option A — Live computation from plan output
 
 **Rationale:**
-The sustainability KPIs are computed by `compute_sustainability_kpis()` in `src/greenloop/layer2/sustainability.py` using the actual Layer 2 plan's LED schedule, rack layout, and watering frequency. The formulas are:
+The sustainability KPIs are computed by `compute_sustainability_kpis()` in `src/adoptakale/layer2/sustainability.py` using the actual Layer 2 plan's LED schedule, rack layout, and watering frequency. The formulas are:
 
 **Water saved formula:**
 ```
@@ -660,10 +660,10 @@ This uses 2.5 kg-CO₂/kg (conventional Singapore farming, including fertilizer 
 - Option B: Single-page app with in-page tab navigation
 - Option C: Four separate Streamlit apps with a navigation landing page
 
-**Chosen:** Option A — Streamlit multi-page with pages/ directory at `src/greenloop/dashboard/pages/`
+**Chosen:** Option A — Streamlit multi-page with pages/ directory at `src/adoptakale/dashboard/pages/`
 
 **Rationale:**
-Streamlit's native multi-page architecture was chosen because it provides zero-effort page routing: the `pages/` directory alongside `app.py` automatically appears in the Streamlit sidebar with page titles derived from file names. This is the lowest-friction approach for a pitch demo — no custom router, no URL path handling, no state management between pages. The key technical decision was the `pages/` directory location: Streamlit convention requires `pages/` as a sibling of `app.py`, meaning `pages/` must be at `src/greenloop/dashboard/pages/` (not project root) since `app.py` lives at `src/greenloop/dashboard/app.py`. This was discovered during integration testing and fixed by copying the three page files to the correct location.
+Streamlit's native multi-page architecture was chosen because it provides zero-effort page routing: the `pages/` directory alongside `app.py` automatically appears in the Streamlit sidebar with page titles derived from file names. This is the lowest-friction approach for a pitch demo — no custom router, no URL path handling, no state management between pages. The key technical decision was the `pages/` directory location: Streamlit convention requires `pages/` as a sibling of `app.py`, meaning `pages/` must be at `src/adoptakale/dashboard/pages/` (not project root) since `app.py` lives at `src/adoptakale/dashboard/app.py`. This was discovered during integration testing and fixed by copying the three page files to the correct location.
 
 **Rejected alternatives:**
 - **Single-page with tabs:** Would require把所有 content into one `app.py` file, making it ~800 lines long and difficult to navigate during development. Tab content is still rendered (hidden/shown via JavaScript), which slows down the initial page load. Multi-page is cleaner for a pitch walk-through.
@@ -690,7 +690,7 @@ Streamlit's native multi-page architecture was chosen because it provides zero-e
 **Chosen:** Option A — Demo mode with simulated diagnosis
 
 **Rationale:**
-The `Layer1bDiagnosisSimulator` class (in `src/greenloop/layer1b/simulation.py`) produces synthetic `DiagnosisResult` objects with realistic confidence distributions when no trained model is available. This allows the Layer 1b → Layer 2 integration (MILP with CV diagnosis adjustments) to be demonstrated without requiring GPU training or model checkpoint management. The simulator generates plausible diagnoses: growth_stage distributed across {early, mid, harvest_ready} with confidence scores in the 0.72-0.89 range, matching the expected accuracy of the real EfficientNet model.
+The `Layer1bDiagnosisSimulator` class (in `src/adoptakale/layer1b/simulation.py`) produces synthetic `DiagnosisResult` objects with realistic confidence distributions when no trained model is available. This allows the Layer 1b → Layer 2 integration (MILP with CV diagnosis adjustments) to be demonstrated without requiring GPU training or model checkpoint management. The simulator generates plausible diagnoses: growth_stage distributed across {early, mid, harvest_ready} with confidence scores in the 0.72-0.89 range, matching the expected accuracy of the real EfficientNet model.
 
 **Rejected alternatives:**
 - **Require trained model:** If the model checkpoint is not loaded (no GPU, wrong path), the app would crash with a `RuntimeError: Model not found`. This is a demo-stopper. Training on the pitch laptop (even with GPU) would take 10+ minutes for 50 epochs, making the demo timing unpredictable.
@@ -758,4 +758,4 @@ The live animated avatar was removed for three reasons: (1) technical complexity
 
 ---
 
-*This decision log is the authoritative source for Dimension A evidence. Each decision is traceable to a specific code artifact in `src/greenloop/` and a specific course learning objective in MGMT 655.*
+*This decision log is the authoritative source for Dimension A evidence. Each decision is traceable to a specific code artifact in `src/adoptakale/` and a specific course learning objective in MGMT 655.*

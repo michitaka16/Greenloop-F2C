@@ -15,7 +15,7 @@ _dotenv = Path(__file__).parent.parent.parent / ".env"
 if _dotenv.exists():
     load_dotenv(_dotenv)
 
-# Ensure src/ is on sys.path for greenloop editable install
+# Ensure src/ is on sys.path for adoptakale editable install
 _src_dir = Path(__file__).parent.parent.parent / "src"
 if str(_src_dir) not in sys.path:
     sys.path.insert(0, str(_src_dir))
@@ -28,14 +28,14 @@ class RAGClient:
     """
 
     def __init__(self):
-        from greenloop.rag.agent import RAGAgent
+        from adoptakale.rag.agent import RAGAgent
 
         data_dir = Path(__file__).parent.parent.parent / "data"
         self._agent = RAGAgent(
             knowledge_dir=data_dir / "rag_knowledge",
             persist_dir=str(data_dir / "chroma_db"),
             embedding_model="all-MiniLM-L6-v2",
-            collection_name="greenloop_kb",
+            collection_name="adoptakale_kb",
             n_retrieval=5,
             llm_max_tokens=512,
         )

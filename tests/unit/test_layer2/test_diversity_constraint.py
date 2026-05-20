@@ -7,13 +7,13 @@ With 10 tiers and 0.3 cap, that's at most 3 racks per crop.
 import pandas as pd
 import pytest
 
-from greenloop.layer2.optimizer import build_and_solve
-from greenloop.utils.config import CROP_IDS
+from adoptakale.layer2.optimizer import build_and_solve
+from adoptakale.utils.config import CROP_IDS
 
 
 @pytest.fixture
 def crops_df():
-    from greenloop.data.loader import load_crops
+    from adoptakale.data.loader import load_crops
 
     return load_crops()
 

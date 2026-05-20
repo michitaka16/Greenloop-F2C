@@ -7,7 +7,7 @@ than silently shipping an empty VC-pitch panel.
 
 from __future__ import annotations
 
-from greenloop.dashboard.design_decisions import _load_decisions
+from adoptakale.dashboard.design_decisions import _load_decisions
 
 
 def test_load_decisions_returns_at_least_ten_entries():

@@ -36,8 +36,8 @@ def test_kpi_strip_with_full_plan():
             "waste_penalty": 0.0,
         },
     }
-    with patch("greenloop.dashboard.app.st", stub_st):
-        from greenloop.dashboard.app import _render_kpi_strip
+    with patch("adoptakale.dashboard.app.st", stub_st):
+        from adoptakale.dashboard.app import _render_kpi_strip
 
         _render_kpi_strip(plan)
 
@@ -60,8 +60,8 @@ def test_kpi_strip_with_none_plan_shows_placeholders():
     """When MILP is infeasible the KPI strip must still render — dashboard
     should never crash into a blank page on a bad solve."""
     stub_st, captured = _install_stub_streamlit()
-    with patch("greenloop.dashboard.app.st", stub_st):
-        from greenloop.dashboard.app import _render_kpi_strip
+    with patch("adoptakale.dashboard.app.st", stub_st):
+        from adoptakale.dashboard.app import _render_kpi_strip
 
         _render_kpi_strip(None)
     values = [c[1] for c in captured]
@@ -71,8 +71,8 @@ def test_kpi_strip_with_none_plan_shows_placeholders():
 def test_kpi_strip_missing_cost_breakdown_defaults_to_zero():
     """Zero-tolerance: missing keys must not raise — they show $0.00."""
     stub_st, captured = _install_stub_streamlit()
-    with patch("greenloop.dashboard.app.st", stub_st):
-        from greenloop.dashboard.app import _render_kpi_strip
+    with patch("adoptakale.dashboard.app.st", stub_st):
+        from adoptakale.dashboard.app import _render_kpi_strip
 
         _render_kpi_strip({"objective_value_sgd": 0, "solve_time_ms": 0})
     values = [c[1] for c in captured]

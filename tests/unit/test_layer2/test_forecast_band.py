@@ -2,7 +2,7 @@
 
 import pytest
 
-from greenloop.layer2.forecast_band import compute_profit_band, ProfitBand
+from adoptakale.layer2.forecast_band import compute_profit_band, ProfitBand
 
 
 class TestComputeProfitBand:

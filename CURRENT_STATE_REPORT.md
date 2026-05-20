@@ -14,7 +14,7 @@ Adopt a Kale is a 5-layer AI platform (6 ML techniques) for Singapore vertical h
 
 | Field | Value |
 |-------|-------|
-| Name | `greenloop-farm-os` |
+| Name | `adopt-a-kale` |
 | Version | `0.1.0` |
 | Python | `>=3.11,<3.14` |
 | License | Not declared (add to pyproject.toml) |
@@ -59,9 +59,9 @@ Adopt a Kale is a 5-layer AI platform (6 ML techniques) for Singapore vertical h
 ## 2. Directory Structure
 
 ```
-src/greenloop/
+src/adoptakale/
 ├── __init__.py
-├── cli.py                  # CLI entry point (greenloop CLI)
+├── cli.py                  # CLI entry point (adoptakale CLI)
 ├── dashboard/
 │   ├── app.py             # Main Streamlit app (Farm AI — Layer 0–2)
 │   ├── components/
@@ -127,7 +127,7 @@ pages/
 ├── 3_Retail_AI.py         # K-Means segmentation
 └── 4_Media_AI.py          # RAG chatbot
 
-streamlit_app.py            # Entry point: runs src/greenloop/dashboard/app.py
+streamlit_app.py            # Entry point: runs src/adoptakale/dashboard/app.py
 scripts/
 └── (scripts/)
 data/
@@ -154,7 +154,7 @@ tests/
 
 ### 3.1 Pages (Streamlit Multi-Page App)
 
-**`streamlit_app.py`** is the entry point that imports and runs `src/greenloop/dashboard/app.py`.
+**`streamlit_app.py`** is the entry point that imports and runs `src/adoptakale/dashboard/app.py`.
 
 | Page | File | Role |
 |------|------|------|
@@ -165,7 +165,7 @@ tests/
 
 ### 3.2 Cross-Page Data Sharing
 
-**`src/greenloop/data/shared_data.py`** implements the shared data manager:
+**`src/adoptakale/data/shared_data.py`** implements the shared data manager:
 
 ```
 data/farm_output.json (written by Farm AI after solve)
@@ -290,7 +290,7 @@ No GitHub Actions, no `.github/workflows/`. All deployment is manual.
 
 ### 6.3 Governance / Deployment Gate
 
-`src/greenloop/governance/deployment_gate.py` exists but has no tests and is not wired into the app execution path (only imported).
+`src/adoptakale/governance/deployment_gate.py` exists but has no tests and is not wired into the app execution path (only imported).
 
 ### 6.4 RAG Knowledge Base
 

@@ -9,9 +9,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from greenloop.layer1.features import build_features
-from greenloop.layer1.predict import predict_demand
-from greenloop.layer1.model import train_models
+from adoptakale.layer1.features import build_features
+from adoptakale.layer1.predict import predict_demand
+from adoptakale.layer1.model import train_models
 
 
 # ---------------------------------------------------------------------------

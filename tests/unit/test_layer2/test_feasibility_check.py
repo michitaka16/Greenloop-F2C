@@ -2,8 +2,8 @@
 
 import pytest
 
-from greenloop.layer2.feasibility_check import validate_constraints
-from greenloop.utils.config import CROP_IDS
+from adoptakale.layer2.feasibility_check import validate_constraints
+from adoptakale.utils.config import CROP_IDS
 
 
 @pytest.fixture

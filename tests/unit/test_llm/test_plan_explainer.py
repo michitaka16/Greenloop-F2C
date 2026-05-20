@@ -1,4 +1,4 @@
-"""Tests for `greenloop.llm.plan_explainer.explain_plan`.
+"""Tests for `adoptakale.llm.plan_explainer.explain_plan`.
 
 `explain_plan` takes a `chat_fn` injectable so we can stub the transport.
 No live API calls.
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from greenloop.llm import LLMUnavailable, explain_plan
+from adoptakale.llm import LLMUnavailable, explain_plan
 
 
 _FORECAST = {

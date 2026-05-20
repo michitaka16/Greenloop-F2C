@@ -3,11 +3,11 @@
 import pandas as pd
 import pytest
 
-from greenloop.layer2.sustainability import (
+from adoptakale.layer2.sustainability import (
     compute_sustainability_kpis,
     compute_weekly_sustainability,
 )
-from greenloop.utils.config import CROP_IDS, PEAK_HOURS
+from adoptakale.utils.config import CROP_IDS, PEAK_HOURS
 
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────

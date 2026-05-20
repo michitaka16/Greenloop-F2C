@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from greenloop.layer1.features import build_features
+from adoptakale.layer1.features import build_features
 
 
 def _shipments_for_crop(crop_id, dates, kg_values, price=5.0):

@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from sklearn.preprocessing import StandardScaler
 
-from greenloop.layer4.visualization import reduce_pca, reduce_umap
+from adoptakale.layer4.visualization import reduce_pca, reduce_umap
 
 DATA_DIR = Path(__file__).parents[3] / "data"
 

@@ -4,7 +4,7 @@ import sys
 sys.path.insert(0, "src")
 
 import csv
-from greenloop.layer2b.vrp_solver import solve_vrp
+from adoptakale.layer2b.vrp_solver import solve_vrp
 
 def main():
     with open("data/customers_geo.csv") as f:

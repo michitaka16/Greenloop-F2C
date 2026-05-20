@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 import torch
 
-from greenloop.layer1b.architecture import (
+from adoptakale.layer1b.architecture import (
     DiagnosisResult,
     DualHeadClassifier,
     GROWTH_LABELS,
@@ -27,7 +27,7 @@ from greenloop.layer1b.architecture import (
     compute_feature_norm,
     is_ood_by_feature_norm,
 )
-from greenloop.layer1b.inference import (
+from adoptakale.layer1b.inference import (
     check_ood,
     diagnose_rack,
     diagnose_all_racks,
@@ -37,7 +37,7 @@ from greenloop.layer1b.inference import (
     CONFIDENCE_WARN_THRESHOLD,
     CONFIDENCE_CRITICAL_THRESHOLD,
 )
-from greenloop.layer1b.simulation import (
+from adoptakale.layer1b.simulation import (
     mock_diagnose,
     RACK_SCENARIOS,
     diagnose_all_racks_simulated,
@@ -313,7 +313,7 @@ class TestDemoFallback:
     def test_diagnose_rack_falls_back_to_simulation_when_no_model(self):
         """When no model file exists, diagnose_rack should fall back to mock_diagnose."""
         # Patch load_cv_model to return None (no model file)
-        with patch("greenloop.layer1b.inference.load_cv_model", return_value=None):
+        with patch("adoptakale.layer1b.inference.load_cv_model", return_value=None):
             with patch.dict(os.environ, {"GREENLOOP_CV_MODE": "real"}):
                 result = diagnose_rack("tier_5", use_simulation=None)
                 # Should fall back to simulation since no model is loaded
@@ -382,9 +382,9 @@ class TestMILPIntegration:
 
     def test_cv_diagnosis_param_accepted(self):
         """build_and_solve should accept cv_diagnosis=None without error."""
-        from greenloop.layer2.optimizer import build_and_solve
+        from adoptakale.layer2.optimizer import build_and_solve
         import pandas as pd
-        from greenloop.data.loader import load_crops, load_electricity, load_shipments, load_staff
+        from adoptakale.data.loader import load_crops, load_electricity, load_shipments, load_staff
 
         crops = load_crops()
         shipments = load_shipments()
@@ -411,8 +411,8 @@ class TestMILPIntegration:
 
     def test_cv_diagnosis_summary_in_plan_output(self):
         """When cv_diagnosis is provided, plan should include cv_diagnosis_summary."""
-        from greenloop.layer2.optimizer import build_and_solve
-        from greenloop.data.loader import load_crops, load_electricity, load_shipments, load_staff
+        from adoptakale.layer2.optimizer import build_and_solve
+        from adoptakale.data.loader import load_crops, load_electricity, load_shipments, load_staff
 
         crops = load_crops()
         shipments = load_shipments()
@@ -444,8 +444,8 @@ class TestMILPIntegration:
 
     def test_cost_breakdown_includes_nutrient_adjustment(self):
         """When cv_diagnosis has nitrogen_low racks, cost_breakdown should include nutrient_adjustment."""
-        from greenloop.layer2.optimizer import build_and_solve
-        from greenloop.data.loader import load_crops, load_electricity, load_shipments, load_staff
+        from adoptakale.layer2.optimizer import build_and_solve
+        from adoptakale.data.loader import load_crops, load_electricity, load_shipments, load_staff
 
         crops = load_crops()
         shipments = load_shipments()

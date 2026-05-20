@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from greenloop.llm import LLMUnavailable, llm_is_configured
+from adoptakale.llm import LLMUnavailable, llm_is_configured
 
 
 _LLM_ENVS = [

@@ -7,7 +7,7 @@ It sits at Layer 4 alongside the retail segmentation module, consuming Layer 2 o
 output and producing delivery routes for the 3-truck fleet.
 
 **Scope:** Capacitated VRP with Time Windows (CVRPTW) using OR-Tools native solver.
-**Module:** `src/greenloop/layer2b/vrp_solver.py`
+**Module:** `src/adoptakale/layer2b/vrp_solver.py`
 **Map:** Folium + streamlit-folium (not Plotly)
 
 ---

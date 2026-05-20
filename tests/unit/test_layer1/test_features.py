@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from greenloop.layer1.features import build_features
+from adoptakale.layer1.features import build_features
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def sample_shipments():
 @pytest.fixture
 def real_shipments():
     """Load the actual shipments.csv from the data directory."""
-    from greenloop.data.loader import load_shipments
+    from adoptakale.data.loader import load_shipments
     return load_shipments()
 
 
@@ -136,7 +136,7 @@ class TestBuildFeaturesWithRealData:
         with <28 days of history would disappear. This test is the gate
         catching that class of regression.
         """
-        from greenloop.utils.config import CROP_IDS
+        from adoptakale.utils.config import CROP_IDS
 
         result = build_features(real_shipments)
         assert set(result["crop_id"].unique()) == set(CROP_IDS)
