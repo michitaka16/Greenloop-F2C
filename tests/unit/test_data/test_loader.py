@@ -74,7 +74,7 @@ class TestLoadElectricity:
 
     def test_has_correct_row_count(self):
         df = load_electricity()
-        assert len(df) == 4032  # 24 weeks * 7 days * 24 hours
+        assert len(df) == 5040  # 30 weeks * 7 days * 24 hours
 
     def test_tariff_values_are_valid(self):
         df = load_electricity()

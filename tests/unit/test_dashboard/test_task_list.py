@@ -104,7 +104,7 @@ class TestRoutineTasksFromMilpPlan:
         tasks = _build_routine_tasks(plan)
         harvest_tasks = [t for t in tasks if "Harvest" in t["action"]]
         assert len(harvest_tasks) == 1
-        assert harvest_tasks[0]["time"] == "07:00"
+        assert harvest_tasks[0]["time"] == "09:00"
         assert "Rack 0" in harvest_tasks[0]["action"]
         assert "Kai Lan" in harvest_tasks[0]["detail"]
 
@@ -137,10 +137,14 @@ class TestRoutineTasksFromMilpPlan:
         }
         tasks = _build_routine_tasks(plan)
         led_tasks = [t for t in tasks if "LED" in t["action"]]
-        assert len(led_tasks) == 1
-        # Earliest off-hour in peak window is 17:00
-        assert led_tasks[0]["time"] == "17:00"
-        assert "peak tariff" in led_tasks[0]["detail"].lower()
+        assert len(led_tasks) == 2
+        # First LED task: switch on at 05:00 (earliest on in 5-8am window)
+        assert led_tasks[0]["time"] == "05:00"
+        assert "LED Switch on" in led_tasks[0]["action"]
+        # Second LED task: switch off at 17:00 (earliest off-hour in PEAK_HOURS)
+        assert led_tasks[1]["time"] == "17:00"
+        assert "LED Switch off" in led_tasks[1]["action"]
+        assert "peak tariff" in led_tasks[1]["detail"].lower()
 
     def test_review_tomorrow_task_is_always_present(self):
         plan = {
